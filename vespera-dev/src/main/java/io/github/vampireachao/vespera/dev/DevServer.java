@@ -100,8 +100,13 @@ public final class DevServer {
     private static void prepare(Config config) throws IOException, InterruptedException {
         Path server = config.server;
         Files.createDirectories(server.resolve("plugins"));
-        ensurePort(config);
+        // 先占目录，再选端口。
+        //
+        // 反过来做过一次，结果很糟：端口被自己上一个实例占着，于是提示"改用 25566"，
+        // 让人以为换个端口就能起，接着却在目录锁上失败。真正的答案是"先把它停掉"，
+        // 而这句话只有在拿到目录锁之后才说得出来。
         acquireLock(config);
+        ensurePort(config);
         if (!config.keepState) {
             reset(server);
         }
@@ -182,11 +187,12 @@ public final class DevServer {
             String[] parts = Files.readString(lock).trim().split("\\s+");
             long pid = parts.length > 0 ? parseLong(parts[0]) : -1;
             if (pid > 0 && ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false)) {
-                throw new IOException("这个目录已经被另一个实例占着：pid " + pid
+                throw new IOException("这个目录已经有一个服务器在跑：pid " + pid
                         + (parts.length > 1 ? "，端口 " + parts[1] : "")
                         + "\n  目录：" + config.server
-                        + "\n  开发服与测试服要用不同的目录（默认已经是 server/dev 与 server/test），"
-                        + "\n  真要复用同一目录，先把那个实例停掉。");
+                        + "\n  先停掉它：   ./dev.sh stop"
+                        + "\n  或换端口没有用——同一个目录不能同时跑两个服务端，会写坏世界。"
+                        + "\n  要另起一个：加 -Dvespera.dir=server/别的名字。");
             }
         }
         Files.writeString(lock, ProcessHandle.current().pid() + " " + listenPort + "\n");
@@ -487,9 +493,23 @@ public final class DevServer {
         console.start();
         console.forward(System.in);
 
+        // 停这件事必须做到底：发完 stop 就走，子进程会变成孤儿——IDEA 点一次 Stop，
+        // 25565 就被一个没人认领的服务端占着，下一次启动只会看到"端口被占用"。
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (process.isAlive()) {
-                console.send("stop");
+            if (!process.isAlive()) {
+                return;
+            }
+            console.send("stop");
+            try {
+                if (!process.waitFor(30, TimeUnit.SECONDS)) {
+                    process.destroy();
+                    if (!process.waitFor(10, TimeUnit.SECONDS)) {
+                        process.destroyForcibly();
+                    }
+                }
+            } catch (InterruptedException e) {
+                process.destroyForcibly();
+                Thread.currentThread().interrupt();
             }
         }, "vespera-dev-stop"));
 
