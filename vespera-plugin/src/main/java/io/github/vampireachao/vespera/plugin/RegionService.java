@@ -86,7 +86,43 @@ public final class RegionService {
         if (location == null || location.getWorld() == null) {
             return Optional.empty();
         }
-        return book.at(location.getWorld().getName(), location.getX(), location.getY(), location.getZ());
+        return book.at(canonical(location.getWorld()), location.getX(), location.getY(), location.getZ());
+    }
+
+    /**
+     * 把 Bukkit 的世界名换成区域表里的标准名。
+     *
+     * <p>区域表写的是 {@code world / world_nether / world_the_end}，那是维度的名字；
+     * 而 Bukkit 的世界名带 {@code level-name} 前缀（平世界叫 {@code campus} 时，
+     * 下界就是 {@code campus_nether}）。不做这一层换算，换个 level-name 就会
+     * "所有区域都匹配不上、所有门规则都失效"，而且日志里一声不响。
+     */
+    public static String canonical(World world) {
+        if (world == null) {
+            return "";
+        }
+        return switch (world.getEnvironment()) {
+            case NETHER -> "world_nether";
+            case THE_END -> "world_the_end";
+            default -> "world";
+        };
+    }
+
+    /** 按标准名找世界；找不到再按维度找。找不到返回 null，调用方自己决定怎么退化。 */
+    public static World resolve(String name) {
+        World direct = Bukkit.getWorld(name == null ? "" : name);
+        if (direct != null) {
+            return direct;
+        }
+        World.Environment environment = switch (name == null ? "" : name) {
+            case "world_nether" -> World.Environment.NETHER;
+            case "world_the_end" -> World.Environment.THE_END;
+            default -> World.Environment.NORMAL;
+        };
+        return Bukkit.getWorlds().stream()
+                .filter(world -> world.getEnvironment() == environment)
+                .findFirst()
+                .orElse(null);
     }
 
     /** 给 {@code /vespera where} 的一句话。 */
@@ -119,25 +155,24 @@ public final class RegionService {
      * <p>只匹配"从哪个区域进"和"从哪个维度进"两件事，不匹配具体方块——因为玩家会在自家
      * 地下室搭门，位置根本不可预测。按区域匹配，才能做到"城里的门都通到熔炉之喉"，
      * 而"荒野里搭的门仍然通荒野"。
+     *
+     * <p>目标世界**不在解析时解析**。维度可能比插件晚加载，而且 {@code level-name} 一改
+     * （平世界叫 {@code campus}），{@code world_nether} 就变成了 {@code campus_nether}。
+     * 早解析的结果是"规则静默消失"，那是最难查的一类 bug。
      */
-    public record PortalRule(String id, String fromWorld, String fromRegion, Location target) {
+    public record PortalRule(String id, String fromWorld, String fromRegion,
+            String targetWorld, double x, double y, double z) {
 
         static PortalRule parse(Map<?, ?> raw) {
             Object to = raw.get("to");
             if (!(to instanceof Map<?, ?> target)) {
                 return null;
             }
-            World world = Bukkit.getWorld(String.valueOf(target.get("world")));
-            if (world == null) {
-                return null;
-            }
             String fromWorld = raw.get("from-world") == null ? null : String.valueOf(raw.get("from-world"));
             String fromRegion = raw.get("from-region") == null ? null : String.valueOf(raw.get("from-region"));
-            double x = number(target.get("x"));
-            double y = number(target.get("y"));
-            double z = number(target.get("z"));
             return new PortalRule(String.valueOf(raw.get("id")), fromWorld, fromRegion,
-                    new Location(world, x, y, z));
+                    String.valueOf(target.get("world")),
+                    number(target.get("x")), number(target.get("y")), number(target.get("z")));
         }
 
         private static double number(Object raw) {
@@ -147,11 +182,17 @@ public final class RegionService {
             return raw == null ? 0 : Double.parseDouble(String.valueOf(raw).trim());
         }
 
+        /** 解析后的落点；那个维度还没加载就是 null（这一次传送按原版处理）。 */
+        public Location target() {
+            World world = RegionService.resolve(targetWorld);
+            return world == null ? null : new Location(world, x, y, z);
+        }
+
         public boolean matches(Location from, Region region) {
             if (from == null || from.getWorld() == null) {
                 return false;
             }
-            if (fromWorld != null && !fromWorld.equals(from.getWorld().getName())) {
+            if (fromWorld != null && !fromWorld.equals(RegionService.canonical(from.getWorld()))) {
                 return false;
             }
             if (fromRegion == null) {

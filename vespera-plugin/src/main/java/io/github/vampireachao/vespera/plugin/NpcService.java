@@ -63,7 +63,8 @@ public final class NpcService {
     private void spawn(Map<?, ?> entry) {
         String id = text(entry.get("id"));
         String name = text(entry.get("name"));
-        World world = Bukkit.getWorld(text(entry.get("world")));
+        // 用标准名解析世界：平世界叫 campus 时，配置里写的 world 也要能找到。
+        World world = RegionService.resolve(text(entry.get("world")));
         if (id == null || world == null) {
             plugin.getLogger().warning("NPC 锚点缺少 id 或世界不存在：" + entry);
             return;
@@ -115,13 +116,22 @@ public final class NpcService {
     }
 
     /**
-     * {@code at} 支持两种写法：{@code world-spawn}（跟着世界出生点走，换地图不用改配置），
+     * {@code at} 支持三种写法：
+     * {@code world-spawn}（跟着世界出生点走）、{@code campus-gate}（站在校门外，跟着校区走）、
      * 或一串坐标 {@code "8.5 65 8.5"}。{@code offset} 是相对位移。
+     *
+     * <p>{@code campus-gate} 是后加的：校区建在远离出生点的地方，写死坐标的话，
+     * 一改校区原点 NPC 就跑到野地里去了。
      */
     private Location location(World world, String at, String offset) {
         Location base;
         if (at == null || at.equals("world-spawn")) {
             base = world.getSpawnLocation();
+        } else if (at.equals("campus-gate")) {
+            int ox = plugin.getConfig().getInt("campus.origin-x", 370);
+            int oz = plugin.getConfig().getInt("campus.origin-z", 0)
+                    + io.github.vampireachao.vespera.core.CampusPlan.WALL_MIN_Z - 6;
+            base = new Location(world, ox + 0.5, world.getHighestBlockYAt(ox, oz) + 1, oz + 0.5);
         } else {
             String[] parts = at.trim().split("\\s+");
             base = new Location(world,

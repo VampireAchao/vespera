@@ -37,12 +37,18 @@ public final class PortalGate implements Listener {
         }
         Optional<Region> region = regions.at(from);
         for (RegionService.PortalRule rule : regions.portals()) {
-            if (rule.matches(from, region.orElse(null))) {
-                event.setTo(rule.target());
-                // 不要顺手在对面的落点再生成一扇新门——那会让"入口平台"长出一堆门。
-                event.setCanCreatePortal(false);
+            if (!rule.matches(from, region.orElse(null))) {
+                continue;
+            }
+            Location target = rule.target();
+            if (target == null) {
+                // 目标维度还没加载：这次按原版走，不拦。
                 return;
             }
+            event.setTo(target);
+            // 不要顺手在对面的落点再生成一扇新门——那会让"入口平台"长出一堆门。
+            event.setCanCreatePortal(false);
+            return;
         }
     }
 }

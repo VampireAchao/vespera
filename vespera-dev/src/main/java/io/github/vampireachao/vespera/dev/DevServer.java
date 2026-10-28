@@ -245,11 +245,16 @@ public final class DevServer {
         Path file = config.server.resolve("server.properties");
         Files.writeString(config.server.resolve("eula.txt"),
                 "# 起这个服务器等于同意 Minecraft EULA：https://aka.ms/MinecraftEULA\neula=true\n");
-        if (Files.isRegularFile(file) && !config.smoke) {
+        if (Files.isRegularFile(file) && !config.smoke && !config.flat) {
             return;
         }
+        String layers = "{\"layers\":[{\"block\":\"minecraft:bedrock\",\"height\":1},"
+                + "{\"block\":\"minecraft:stone\",\"height\":3},"
+                + "{\"block\":\"minecraft:dirt\",\"height\":1},"
+                + "{\"block\":\"minecraft:grass_block\",\"height\":1}],"
+                + "\"biome\":\"minecraft:plains\"}";
         Files.writeString(file, String.join("\n",
-                "motd=维斯佩拉 · 开发服",
+                "motd=维斯佩拉 · " + config.profile.label() + "服",
                 "server-port=" + config.port,
                 "online-mode=" + config.onlineMode,
                 "enforce-secure-profile=" + config.onlineMode,
@@ -260,9 +265,10 @@ public final class DevServer {
                 "simulation-distance=6",
                 "allow-nether=true",
                 "enable-command-block=true",
-                "level-name=world",
+                "level-name=" + (config.flat ? "campus" : "world"),
                 "level-seed=" + config.seed,
-                "level-type=minecraft:normal",
+                "level-type=" + (config.flat ? "minecraft:flat" : "minecraft:normal"),
+                "generator-settings=" + (config.flat ? layers : ""),
                 "gamemode=survival",
                 "difficulty=normal") + "\n");
     }
@@ -460,6 +466,9 @@ public final class DevServer {
             System.out.println("服务端已就绪，敲一条自检……");
             console.send("vespera doctor");
             boolean answered = console.await("维斯佩拉 · 自检", Duration.ofSeconds(30));
+            // 再验一遍房子：八处探针，确认"校区真的盖出来了"而不是只写了个数字。
+            console.send("vespera verify");
+            console.await("校区校验", Duration.ofSeconds(30));
             console.tail(40).forEach(System.out::println);
             if (!answered) {
                 System.out.println("自检没有回应：插件可能没加载，或者命令没注册。");
@@ -689,7 +698,7 @@ public final class DevServer {
 
     /** 所有开关集中在一处，读起来像一份说明书而不是一堆散落的 getProperty。 */
     private record Config(Path project, Path server, Profile profile, int port, boolean onlineMode,
-            boolean keepState, boolean smoke, boolean debug, boolean debugSuspend, int debugPort,
+            boolean keepState, boolean smoke, boolean flat, boolean debug, boolean debugSuspend, int debugPort,
             String seed, String paperVersion, boolean build) {
 
         static Config from(String[] args) {
@@ -718,6 +727,8 @@ public final class DevServer {
                     // 固定环境的默认是保留世界；一次性冒烟默认重建，保证每次验的是同一块地。
                     Boolean.parseBoolean(System.getProperty("vespera.keepState", Boolean.toString(!smoke))),
                     smoke,
+                    // 平世界：看建筑用的。地形是一块干净的白地，房子才看得清。
+                    Boolean.parseBoolean(System.getProperty("vespera.flat", "false")),
                     debug,
                     Boolean.getBoolean("vespera.debugSuspend"),
                     Integer.getInteger("vespera.debugPort", 5005),

@@ -25,7 +25,8 @@ import org.jetbrains.annotations.NotNull;
 public final class VesperaCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS =
-            List.of("doctor", "where", "talk", "dialogues", "state", "clock", "npc", "reload");
+            List.of("doctor", "where", "talk", "dialogues", "state", "clock", "npc", "build", "verify",
+                    "reload");
 
     private final VesperaPlugin plugin;
 
@@ -52,6 +53,14 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
                 plugin.npcs().spawnAll();
                 sender.sendMessage(Component.text("锚点已重立：" + plugin.npcs().count() + " 个。"));
             }
+            case "build" -> {
+                if (!sender.hasPermission("vespera.admin")) {
+                    deny(sender);
+                    return true;
+                }
+                build(sender);
+            }
+            case "verify" -> verify(sender);
             case "reload" -> {
                 if (!sender.hasPermission("vespera.admin")) {
                     deny(sender);
@@ -126,6 +135,47 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         }
         player.sendMessage(Component.text(plugin.regions().describe(player.getLocation()))
                 .color(NamedTextColor.GRAY));
+    }
+
+    /**
+     * {@code /vespera build}：重建校区灰盒。
+     *
+     * <p>改了 {@code CampusPlan} 里的数字之后用它，比"删世界重来"体面得多。
+     * 它会先把每栋楼的体量清空再盖，所以反复执行是安全的。
+     */
+    private void build(CommandSender sender) {
+        org.bukkit.World world = Bukkit.getWorld(plugin.getConfig().getString("campus.world", "world"));
+        if (world == null) {
+            sender.sendMessage(Component.text("校区所在的世界不存在。"));
+            return;
+        }
+        int[] origin = CampusBuilder.originFrom(plugin);
+        long started = System.currentTimeMillis();
+        int placed = plugin.campus().build(world, origin[0], origin[1]);
+        sender.sendMessage(Component.text("校区已重建：" + placed + " 个方块，"
+                + (System.currentTimeMillis() - started) + "ms。出生点在世界出生点下方十二格处。"));
+    }
+
+    /**
+     * {@code /vespera verify}：抽查校区是否真的在那儿。
+     *
+     * <p>八处探针，每处问一句"这块该是石砖吧"。验不出好看，但验得出"根本没盖"
+     * 和"盖到别处去了"——这两种情况光看日志是看不出来的。
+     */
+    private void verify(CommandSender sender) {
+        org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("campus.world", "world"));
+        if (world == null) {
+            sender.sendMessage(Component.text("找不到校区世界。"));
+            return;
+        }
+        int[] origin = CampusBuilder.originFrom(plugin);
+        List<String> failures = plugin.campus().verify(world, origin[0], origin[1]);
+        if (failures.isEmpty()) {
+            sender.sendMessage(Component.text("校区校验：8 处探针全部通过。"));
+            return;
+        }
+        sender.sendMessage(Component.text("校区校验：" + failures.size() + " 处不符："));
+        failures.forEach(failure -> sender.sendMessage(Component.text("  " + failure).color(NamedTextColor.GRAY)));
     }
 
     private void talk(CommandSender sender, String[] args) {        if (!(sender instanceof Player player)) {

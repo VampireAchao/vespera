@@ -32,9 +32,9 @@ npcs:
   - id: bell-monk
     name: "老修士"
     world: world
-    # world-spawn 表示"主城出生点"，也可以写 "8.5 65 8.5" 这样的一串坐标
-    at: world-spawn
-    offset: "2 0 2"
+    # campus-gate 表示"站在校门外六格"，跟着校区原点走；也可以写 "8.5 65 8.5"
+    at: campus-gate
+    offset: "4 0 2"
     dialogue: bell-test
     enabled: true
 
@@ -44,6 +44,18 @@ npcs:
 # 插件按这一份做区域判定与下界门定向——坐标的真相只有一处。
 world:
   assets: vespera
+
+# 校区灰盒
+#
+# 这是"能走进去看一眼"的那一版：体量、动线、开口都是真的，材质是近似。
+# 真正的美术资产（layouts/college.yml 里那十一块 .schem）将来会一块一块替换掉它。
+#
+# 改了 CampusPlan 里的数字之后，把 built-version 加一，下次启动会重建。
+campus:
+  auto: true
+  world: world
+  origin-x: 370
+  origin-z: 0
 
 # 剧本目录。留空则用插件自带的那几份示例。
 dialogues:

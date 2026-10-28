@@ -1,8 +1,13 @@
 package io.github.vampireachao.vespera.plugin;
 
+import io.github.vampireachao.vespera.core.CampusPlan;
 import java.io.File;
 import java.util.logging.Level;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -33,6 +38,10 @@ public final class VesperaPlugin extends JavaPlugin {
     private DialogueService dialogues;
     private ClockService clock;
     private NpcService npcs;
+    private CampusBuilder campus;
+
+    /** 校区的"已建成"版本标记。改了平面就把它加一，下次启动重建。 */
+    public static final String CAMPUS_VERSION = "1";
 
     @Override
     public void onEnable() {
@@ -51,6 +60,8 @@ public final class VesperaPlugin extends JavaPlugin {
 
         int loaded = dialogues.load();
         npcs.spawnAll();
+        campus = new CampusBuilder(this);
+        buildCampusIfNeeded();
         getServer().getPluginManager().registerEvents(new VesperaListener(this), this);
         getServer().getPluginManager().registerEvents(new PortalGate(regions), this);
 
@@ -77,6 +88,42 @@ public final class VesperaPlugin extends JavaPlugin {
             // 锚点下线即撤：世界文件里不留一堆站着的村民，重开时按配置重建。
             npcs.clear();
         }
+    }
+
+    /**
+     * 世界刚加载时把校区盖出来。
+     *
+     * <p>同步盖、不延后：玩家进服第一眼看到的东西必须已经在那儿。代价是启动多几秒，
+     * 换来的是"进服就站在校门口"而不是"站在一片空地上等它长出来"。
+     *
+     * <p>用世界身上的 PDC 记版本，不记在配置里——世界和建筑是一体的，
+     * 换一张世界就该重建一次。
+     */
+    private void buildCampusIfNeeded() {
+        if (!getConfig().getBoolean("campus.auto", true)) {
+            return;
+        }
+        World world = RegionService.resolve(getConfig().getString("campus.world", "world"));
+        if (world == null) {
+            getLogger().warning("找不到可建造的世界（配置 campus.world="
+                    + getConfig().getString("campus.world") + "，已加载："
+                    + Bukkit.getWorlds().stream().map(World::getName).toList() + "），跳过校区建造。");
+            return;
+        }
+        NamespacedKey key = new NamespacedKey(this, "campus");
+        String built = world.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+        if (CAMPUS_VERSION.equals(built)) {
+            return;
+        }
+        int[] origin = CampusBuilder.originFrom(this);
+        getLogger().info("首次启动，开始盖校区灰盒（" + CampusPlan.summary() + "）……");
+        getLogger().info("  " + campus.build(world, origin[0], origin[1]) + " 个方块已放置，"
+                + "出生点在 (0, ?, " + (CampusPlan.WALL_MIN_Z - 12) + ") 相对校区的门外。");
+        world.getPersistentDataContainer().set(key, PersistentDataType.STRING, CAMPUS_VERSION);
+    }
+
+    public CampusBuilder campus() {
+        return campus;
     }
 
     /** 重载配置、剧本与锚点。玩家状态不动——那是玩家身上的东西，不该被 reload 抹掉。 */
