@@ -15,9 +15,10 @@
   <description>Paper 插件：校历时钟、原生对话界面、旗标状态、NPC 锚点、诊断</description>
 
   <properties>
-    <!-- 与 mmSupernaturals 的约定一致：产物直接落在服务器的 plugins 目录，
-         这样 IDE 里点一次 Debug 就是最新的一版，不需要手工拷 jar。 -->
-    <plugin.output.dir>${project.basedir}/../server/plugins</plugin.output.dir>
+    <!-- 构建产物落在一个中立的暂存区，不落进任何一个运行环境。
+         开发服、测试服、部署包各自从这里拷一份，谁也不会覆盖谁。
+         这是"三套环境互不踩脚"的第一块地基。 -->
+    <plugin.output.dir>${project.basedir}/../server/build/plugins</plugin.output.dir>
   </properties>
 
   <dependencies>

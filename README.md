@@ -23,12 +23,18 @@
 
 ## 快速开始
 
+需要 JDK 25 与 Maven 3.9+。**开发和测试是两个独立环境，目录与端口都分开。**
+
 ```bash
-# 需要 JDK 25 与 Maven 3.9+
-./dev.sh            # 起开发服（第一次会下 Paper，约 50 MB）
-./dev.sh smoke      # 起、验、退；退出码 0 表示插件真的加载并答了话
-./dev.sh debug      # 起服并挂上 JDWP 5005，插件可以打断点
+./dev.sh            # 开发服  server/dev/   端口 25565  世界保留
+./dev.sh debug      # 开发服 + 调试端口 5005（插件可打断点）
+./dev.sh test       # 测试服  server/test/  端口 25599  世界保留
+./dev.sh smoke      # 验收    server/test/  每次重建世界，起→验→退，退出码即结论
+./deploy.sh         # 出部署包 dist/（不碰上面两个目录）
 ```
+
+在 IDEA 里调试：仓库自带运行配置（`.run/`）。Run `Vespera 开发服` → 控制台会打出 attach 端口 →
+Debug `插件调试 (attach 5005)`。为什么要两步，见 [docs/07](docs/07-开发调试与部署.md)。
 
 进服之后：
 
@@ -45,12 +51,15 @@
 
 ```
 vespera/
-├── vespera-core/     纯逻辑：校历时钟、对话图、条件判定、音游谱面。不依赖 Bukkit，可单测
-├── vespera-world/    地图资源：建筑布置清单、结构文件（LFS）、数据包
-├── vespera-plugin/   Paper 插件：对话、状态、时钟、锚点、诊断
-├── vespera-dev/      开发服务器：下载 Paper、装插件、起服、冒烟
-├── docs/             方案、NPC 与地图、对话与交互、台本映射、合规
-├── dev.sh            一条命令的入口
+├── vespera-core/     纯逻辑：区域表、校历时钟、对话图、条件判定、音游谱面。不依赖 Bukkit，可单测
+├── vespera-world/    地图资源：区域表、布置清单、结构文件（LFS）
+├── vespera-plugin/   Paper 插件：对话、状态、时钟、区域、锚点、诊断
+├── vespera-dev/      启动器：按环境下载 Paper、装插件、起服、冒烟
+├── docs/             方案、NPC 与地图、对话与交互、台本映射、合规、开发调试
+├── .run/             IDEA 运行配置（开发服 / 测试服 / attach 调试）
+├── dev.sh            本地启动（开发 / 测试 / 冒烟）
+├── deploy.sh         出部署包（与本地环境完全隔离）
+├── server/           运行期目录（不进仓库）：dev/ · test/ · build/
 └── plugins.tsv       第三方插件清单（带校验和才自动下载）
 ```
 
@@ -77,6 +86,7 @@ vespera/
 | [docs/04-台本功能映射.md](docs/04-台本功能映射.md) | 从两份设计书抽出 35 条功能，逐条给实现方式 |
 | [docs/05-合规与版权.md](docs/05-合规与版权.md) | EULA、网易、未成年人内容、素材与许可证矩阵 |
 | [docs/06-合规改写与内容边界.md](docs/06-合规改写与内容边界.md) | 敏感题材的改写表、禁词表、内容闸门、私人服九条纪律 |
+| [docs/07-开发调试与部署.md](docs/07-开发调试与部署.md) | 三套环境如何隔离、IDEA 调试姿势、部署包 |
 
 ## 合规第一原则
 

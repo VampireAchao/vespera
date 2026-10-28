@@ -63,17 +63,27 @@ public final class DevServer {
     private static final String DOWNLOAD_PAGE = "https://papermc.io/downloads/paper";
     private static final Duration STARTUP = Duration.ofMinutes(6);
 
+    /** 目录锁。一个世界目录同时只能有一个服务端在写它。 */
+    private static final String LOCK_FILE = ".vespera.lock";
+
+    /** 本次运行给服务端 JVM 开的 JDWP 端口。为了在横幅里报出来，只能存在这里。 */
+    private static volatile int attachPort = -1;
+
     private DevServer() {
     }
 
     public static void main(String[] args) throws Exception {
         Config config = Config.from(args);
-        System.out.println("维斯佩拉 · 开发服务器");
+        System.out.println("维斯佩拉 · " + config.profile.label() + "服务器");
+        System.out.println("  目录    " + config.server);
+        System.out.println("  端口    " + config.port + (config.onlineMode ? "（正版验证）" : "（离线验证）"));
+        System.out.println("  形态    " + (config.smoke ? "无头：起、验、退" : "控制台，Ctrl+C 结束"));
         System.out.println();
 
         prepare(config);
 
         int exit = config.smoke ? smoke(config) : run(config);
+        System.out.println("已退出（" + exit + "），目录锁已释放。");
         System.exit(exit);
     }
 
@@ -82,13 +92,56 @@ public final class DevServer {
     private static void prepare(Config config) throws IOException, InterruptedException {
         Path server = config.server;
         Files.createDirectories(server.resolve("plugins"));
+        acquireLock(config);
         if (!config.keepState) {
             reset(server);
         }
+        ensureBuilt(config);
         ensurePaper(config);
         writeServerProperties(config);
         installPlugins(config);
         installAssets(config);
+    }
+
+    /**
+     * 一个目录同时只能有一个实例。
+     *
+     * <p>两套环境用两个目录，本来不会撞；但"忘了自己已经开着一个"是常见事，
+     * 而两个服务器共用一个世界目录，结果不是报错，是**世界被写坏**——那种损坏要几小时后
+     * 才会以"区块错乱"的形式出现，届时已经没法归因。
+     *
+     * <p>所以宁可启动失败。锁文件里写着 pid，进程还在就拒跑；进程没了就是上次没退干净，
+     * 直接覆盖。
+     */
+    private static void acquireLock(Config config) throws IOException {
+        Path lock = config.server.resolve(LOCK_FILE);
+        if (Files.isRegularFile(lock)) {
+            String[] parts = Files.readString(lock).trim().split("\\s+");
+            long pid = parts.length > 0 ? parseLong(parts[0]) : -1;
+            if (pid > 0 && ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false)) {
+                throw new IOException("这个目录已经被另一个实例占着：pid " + pid
+                        + (parts.length > 1 ? "，端口 " + parts[1] : "")
+                        + "\n  目录：" + config.server
+                        + "\n  开发服与测试服要用不同的目录（默认已经是 server/dev 与 server/test），"
+                        + "\n  真要复用同一目录，先把那个实例停掉。");
+            }
+        }
+        Files.writeString(lock, ProcessHandle.current().pid() + " " + config.port + "\n");
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                Files.deleteIfExists(lock);
+            } catch (IOException ignored) {
+                // 退出路径上没什么可做的
+            }
+        }, "vespera-dev-lock"));
+    }
+
+    private static long parseLong(String raw) {
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     /**
@@ -101,7 +154,8 @@ public final class DevServer {
             for (Path entry : entries.toList()) {
                 String name = entry.getFileName().toString();
                 if (name.equals("paper.jar") || name.equals("plugins") || name.equals("libraries")
-                        || name.equals("versions") || name.equals("cache") || name.equals("vespera")) {
+                        || name.equals("versions") || name.equals("cache") || name.equals("vespera")
+                        || name.equals(LOCK_FILE)) {
                     continue;
                 }
                 delete(entry);
@@ -109,9 +163,26 @@ public final class DevServer {
         }
     }
 
+    /**
+     * 服务端 jar：下载一次，所有环境共用。
+     *
+     * <p>Paper 的 jar 有 52 MB，而开发服、测试服是两个完全独立的目录。让它们各自下一次，
+     * 等于为了"隔离"多付 52 MB 和一次下载时间——而隔离要隔离的是**世界与插件状态**，
+     * 不是这个只读的服务端本体。
+     *
+     * <p>所以缓存放在 {@code server/build/paper.jar}，各环境启动时拷一份过去。
+     * 注意：{@code libraries/}、{@code versions/} 仍然是各环境自己的，Paper 会自己解压，
+     * 这里不插手——那部分和版本强相关，共用一个反而容易出事。
+     */
     private static void ensurePaper(Config config) throws IOException, InterruptedException {
         Path jar = config.server.resolve("paper.jar");
         if (Files.isRegularFile(jar)) {
+            return;
+        }
+        Path cache = config.project.resolve("server/build/paper.jar");
+        if (Files.isRegularFile(cache)) {
+            System.out.println("  从构建缓存取服务端：" + cache);
+            Files.copy(cache, jar, StandardCopyOption.REPLACE_EXISTING);
             return;
         }
         String version = config.paperVersion;
@@ -122,7 +193,8 @@ public final class DevServer {
             throw new IOException("没能从 fill API 里读出下载地址。手动下一个放到 " + jar
                     + "\n  下载页：" + DOWNLOAD_PAGE);
         }
-        Path partial = jar.resolveSibling("paper.jar.part");
+        Path partial = cache.resolveSibling("paper.jar.part");
+        Files.createDirectories(cache.getParent());
         HttpResponse<Path> response = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -134,7 +206,8 @@ public final class DevServer {
             Files.deleteIfExists(partial);
             throw new IOException("下载失败，HTTP " + response.statusCode() + "：" + url);
         }
-        Files.move(partial, jar, StandardCopyOption.REPLACE_EXISTING);
+        Files.move(partial, cache, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(cache, jar, StandardCopyOption.REPLACE_EXISTING);
         System.out.println("  已保存到 " + jar + "（" + Files.size(jar) / 1024 / 1024 + " MB）");
     }
 
@@ -194,12 +267,20 @@ public final class DevServer {
                 "difficulty=normal") + "\n");
     }
 
-    /** 插件 jar 已经由 Maven 直接产出到 {@code server/plugins/}，这里只补第三方的。 */
+    /**
+     * 把插件装进这个环境。
+     *
+     * <p>本插件从构建暂存区（{@code server/build/plugins/}）拷过来——不是软链、不是共用文件。
+     * 每个环境一份实体拷贝，是为了让"我这边升级插件"永远不会突然改变你正在测的那台服务器。
+     */
     private static void installPlugins(Config config) throws IOException, InterruptedException {
         Path plugins = config.server.resolve("plugins");
-        if (!Files.isRegularFile(plugins.resolve("vespera-plugin.jar"))) {
-            System.out.println("  警告：server/plugins/vespera-plugin.jar 不存在。");
-            System.out.println("        先跑 `mvn package`（./dev.sh 会替你做）。");
+        Path staged = config.project.resolve("server/build/plugins/vespera-plugin.jar");
+        if (Files.isRegularFile(staged)) {
+            Files.copy(staged, plugins.resolve("vespera-plugin.jar"), StandardCopyOption.REPLACE_EXISTING);
+        } else {
+            System.out.println("  警告：构建产物不存在（server/build/plugins/vespera-plugin.jar）。");
+            System.out.println("        先跑 `mvn package`。");
         }
         Path manifest = config.project.resolve("plugins.tsv");
         if (!Files.isRegularFile(manifest)) {
@@ -309,12 +390,13 @@ public final class DevServer {
                 "-Duser.language=zh",
                 "-Duser.country=CN"));
         if (config.debug) {
-            // 插件活在服务端那个 JVM 里，断点必须挂在那一边。
-            command.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend="
-                    + (config.debugSuspend ? "y" : "n") + ",address=127.0.0.1:" + freePort(config.debugPort));
-            if (config.debugSuspend) {
-                System.out.println("服务端会在第一行代码前停住，等调试器连 127.0.0.1:" + config.debugPort);
-            }
+            // 服务端是子进程，插件活在它里面。断点必须挂在子进程那一侧，
+            // 所以这里替它开一个 JDWP 监听端口，让第二个调试器连进来。
+            int port = freePort(config.debugPort);
+            attachPort = port;
+            String suspend = config.debugSuspend ? "y" : "n";
+            command.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=" + suspend
+                    + ",address=127.0.0.1:" + port);
         }
         command.add("-jar");
         command.add("paper.jar");
@@ -345,6 +427,15 @@ public final class DevServer {
         System.out.println("  自检      /vespera doctor");
         System.out.println("  说话      /vespera talk bell-test   或右键出生点旁边那个村民");
         System.out.println("  控制台    在这里直接敲服务器命令，stop 结束");
+        if (attachPort > 0) {
+            System.out.println("  插件调试  IDEA → Run → Attach to Process → 选 paper.jar（端口 " + attachPort + "）");
+            System.out.println("            或 Debug 一个 Remote JVM Debug：127.0.0.1:" + attachPort);
+            if (config.debugSuspend) {
+                System.out.println("            服务端正停在第一行等你，没连上之前不会继续");
+            } else {
+                System.out.println("            现在就能连；但 onEnable 已经跑过了，断点只对之后生效");
+            }
+        }
         System.out.println();
 
         int exit = process.waitFor();
@@ -387,6 +478,71 @@ public final class DevServer {
 
     private static String javaBinary() {
         return Path.of(System.getProperty("java.home"), "bin", "java").toString();
+    }
+
+    /**
+     * 这个 JVM 自己是不是被调试器启动的。
+     *
+     * <p>IDEA 的 Debug 会往 JVM 参数里塞一个 {@code -agentlib:jdwp=...}。认出它，
+     * 就能做到"在 IDE 里点 Debug 就直接能打断点"，而不是"点 Debug 之后发现断点不生效、
+     * 再去查为什么"——后者是所有调试体验里最浪费时间的一种。
+     */
+    private static boolean isDebuggingThisJvm() {
+        return java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
+                .anyMatch(argument -> argument.contains("jdwp"));
+    }
+
+    /**
+     * 插件源码比构建产物新时，自动补一次打包。
+     *
+     * <p>从 IDE 启动时不会自动跑 Maven（只有 {@code ./dev.sh} 会），所以很容易出现
+     * "改了代码、起了服务器、断点不生效"——因为跑的还是上一次的 jar。
+     * 与其写一段说明让人记住，不如让它自己补上。{@code -Dvespera.build=false} 可以关掉。
+     */
+    private static void ensureBuilt(Config config) throws IOException, InterruptedException {
+        Path staged = config.project.resolve("server/build/plugins/vespera-plugin.jar");
+        long newest = newestSource(config.project);
+        boolean stale = !Files.isRegularFile(staged)
+                || (newest > 0 && Files.getLastModifiedTime(staged).toMillis() < newest);
+        if (!stale) {
+            return;
+        }
+        if (!config.build) {
+            System.out.println("  注意：插件 jar 缺失或过期，已按 -Dvespera.build=false 跳过打包。");
+            return;
+        }
+        System.out.println("插件 jar 缺失或过期，先打一次包（mvn package -DskipTests）……");
+        int code;
+        try {
+            code = new ProcessBuilder("mvn", "-B", "-q", "-DskipTests", "package")
+                    .directory(config.project.toFile())
+                    .inheritIO()
+                    .start()
+                    .waitFor();
+        } catch (IOException e) {
+            System.out.println("  没能调用 mvn（" + e.getMessage() + "）。请手动跑一次 `mvn package`。");
+            return;
+        }
+        if (code != 0) {
+            throw new IllegalStateException("mvn package 失败（退出码 " + code + "），不启动服务器。");
+        }
+    }
+
+    /** 插件与核心两边的最新改动时间。core 改了也要重打包——它被 shade 进了插件里。 */
+    private static long newestSource(Path project) throws IOException {
+        long newest = 0;
+        for (String module : List.of("vespera-plugin/src", "vespera-core/src")) {
+            Path sources = project.resolve(module);
+            if (!Files.isDirectory(sources)) {
+                continue;
+            }
+            try (Stream<Path> files = Files.walk(sources)) {
+                for (Path file : files.filter(Files::isRegularFile).toList()) {
+                    newest = Math.max(newest, Files.getLastModifiedTime(file).toMillis());
+                }
+            }
+        }
+        return newest;
     }
 
     /** 调试端口被占时往下找，避免上一次没退干净的会话把这次拖垮。 */
@@ -493,29 +649,81 @@ public final class DevServer {
         }
     }
 
+    /**
+     * 两套环境，各自一个目录、一个端口。
+     *
+     * <p>为什么要分开：开发时改代码要重启、要删世界、要挂调试器；自动验证要每次干净、
+     * 要能随时被杀掉。这两件事共用一个目录，就一定会互相打断——最典型的是
+     * "我在跑冒烟，你的服务器突然被清空了"。
+     *
+     * <p>所以：目录分开，端口分开，插件 jar 各拷一份。共用的是构建产物与源码，那本来就该共用。
+     */
+    enum Profile {
+        /** 人用的：留着世界，挂着调试器，慢慢来。 */
+        DEV("开发", "dev", 25565),
+        /** 验收用的：可随时重建世界，可随时杀掉，不碰开发服任何东西。 */
+        TEST("测试", "test", 25599);
+
+        private final String label;
+        private final String directory;
+        private final int port;
+
+        Profile(String label, String directory, int port) {
+            this.label = label;
+            this.directory = directory;
+            this.port = port;
+        }
+
+        String label() {
+            return label;
+        }
+
+        String directory() {
+            return directory;
+        }
+
+        int port() {
+            return port;
+        }
+    }
+
     /** 所有开关集中在一处，读起来像一份说明书而不是一堆散落的 getProperty。 */
-    private record Config(Path project, Path server, int port, boolean onlineMode, boolean keepState,
-            boolean smoke, boolean debug, boolean debugSuspend, int debugPort, String seed, String paperVersion) {
+    private record Config(Path project, Path server, Profile profile, int port, boolean onlineMode,
+            boolean keepState, boolean smoke, boolean debug, boolean debugSuspend, int debugPort,
+            String seed, String paperVersion, boolean build) {
 
         static Config from(String[] args) {
             Path project = Path.of(System.getProperty("vespera.projectDir", System.getProperty("user.dir")))
                     .toAbsolutePath().normalize();
-            boolean smoke = args.length > 0 && args[0].equalsIgnoreCase("smoke");
-            boolean debug = (args.length > 0 && args[0].equalsIgnoreCase("debug"))
-                    || Boolean.getBoolean("vespera.debug");
+            String first = args.length > 0 ? args[0].toLowerCase(Locale.ROOT) : "";
+
+            // smoke 与 test 都进测试环境；其余进开发环境。
+            boolean smoke = first.equals("smoke");
+            Profile profile = smoke || first.equals("test") ? Profile.TEST : Profile.DEV;
+
+            // 三种情况都算"要调试"：显式参数、系统属性、以及 IDEA 用 Debug 跑起来
+            // （后者自己没传属性，但 JVM 参数里带着 jdwp）。这样在 IDE 里点 Debug 就有断点，
+            // 不需要先想起来改配置。
+            boolean debug = first.equals("debug")
+                    || Boolean.getBoolean("vespera.debug")
+                    || (!smoke && isDebuggingThisJvm());
+
             return new Config(
                     project,
-                    Path.of(System.getProperty("vespera.dir", project.resolve("server").toString())),
-                    Integer.getInteger("vespera.port", 25565),
+                    Path.of(System.getProperty("vespera.dir",
+                            project.resolve("server/" + profile.directory()).toString())),
+                    profile,
+                    Integer.getInteger("vespera.port", profile.port()),
                     Boolean.parseBoolean(System.getProperty("vespera.onlineMode", "true")),
-                    // 开发默认保留世界；smoke 默认重建，保证每次验的是同一个世界。
+                    // 固定环境的默认是保留世界；一次性冒烟默认重建，保证每次验的是同一块地。
                     Boolean.parseBoolean(System.getProperty("vespera.keepState", Boolean.toString(!smoke))),
                     smoke,
                     debug,
                     Boolean.getBoolean("vespera.debugSuspend"),
                     Integer.getInteger("vespera.debugPort", 5005),
                     System.getProperty("vespera.seed", String.valueOf(System.nanoTime())),
-                    System.getProperty("vespera.paperVersion", "26.3"));
+                    System.getProperty("vespera.paperVersion", "26.3"),
+                    Boolean.parseBoolean(System.getProperty("vespera.build", "true")));
         }
     }
 }

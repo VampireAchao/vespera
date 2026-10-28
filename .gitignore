@@ -23,3 +23,6 @@ dev.local.properties
 
 # 本地工作记忆与项目笔记，不进仓库
 .workbuddy/
+
+# 部署包，产出物，不进仓库
+dist/
