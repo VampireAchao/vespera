@@ -19,39 +19,44 @@ public final class PlanExport {
     }
 
     public static void main(String[] args) throws Exception {
-        Path svg = Path.of(args.length > 0 ? args[0] : "docs/设计图/学院平面图.svg");
-        Files.createDirectories(svg.toAbsolutePath().getParent());
-        String drawing = CampusPlan.svg();
-        Files.writeString(svg, drawing);
+        Path dir = Path.of(args.length > 0 ? args[0] : "docs/设计图");
+        Files.createDirectories(dir.toAbsolutePath());
 
-        // 同目录再写一个 HTML：SVG 单独打开不一定有预览器，包一层就一定能看。
-        Path html = svg.resolveSibling("学院平面图.html");
-        Files.writeString(html, page(drawing));
-
-        System.out.println("已写出 " + svg + "（" + Files.size(svg) + " 字节）");
-        System.out.println("已写出 " + html + "（" + Files.size(html) + " 字节）");
-        System.out.println(CampusPlan.summary());
+        // 主城优先：它是出生点，也是玩家第一眼看到的东西
+        write(dir.resolve("流明陨城平面图"), CityPlan.svg(), "流明陨城 · 平面灰盒",
+                "出生点在南门里，往北是广场与钟楼。城墙 300×300，四面各开一门。",
+                CityPlan.summary());
+        write(dir.resolve("学院平面图"), CampusPlan.svg(), "钟塔学院 · 平面灰盒",
+                "主城以东约 370 格，隔一条河。十一栋楼，七段有顶回廊。",
+                CampusPlan.summary());
     }
 
-    private static String page(String drawing) {
+    private static void write(Path base, String drawing, String title, String note, String summary)
+            throws Exception {
+        Path svg = base.resolveSibling(base.getFileName() + ".svg");
+        Files.writeString(svg, drawing);
+        Path html = base.resolveSibling(base.getFileName() + ".html");
+        Files.writeString(html, page(drawing, title, note));
+        System.out.println("已写出 " + svg.getFileName() + " / " + html.getFileName() + "　" + summary);
+    }
+
+    private static String page(String drawing, String title, String note) {
         return "<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n<meta charset=\"utf-8\">\n"
-                + "<title>钟塔学院 · 平面灰盒</title>\n<style>\n"
+                + "<title>" + title + "</title>\n<style>\n"
                 + "  body{margin:0;background:#efe6d4;font-family:'Songti SC',Palatino,serif;color:#2a231b}\n"
                 + "  .wrap{max-width:900px;margin:0 auto;padding:28px 20px 48px}\n"
                 + "  svg{width:100%;height:auto;display:block;background:#fbf5e6;border:1px solid #cbb894}\n"
                 + "  .note{margin-top:18px;font-size:13px;line-height:1.9;color:#5d5145}\n"
-                + "  .note b{color:#2a231b}\n"
                 + "  .tag{display:inline-block;padding:1px 8px;border:1px solid #cbb894;border-radius:2px;"
                 + "font-size:12px;color:#8a7a63;margin-right:8px}\n"
                 + "</style>\n</head>\n<body>\n<div class=\"wrap\">\n"
                 + drawing
                 + "<div class=\"note\">\n"
                 + "  <p><span class=\"tag\">怎么读</span>这张图与游戏里的房子<b>同源</b>："
-                + "都从 <code>CampusPlan</code> 生成。改一个数字，图纸和建筑一起变。</p>\n"
-                + "  <p><span class=\"tag\">灰盒</span>体量、动线、开口是真的，材质是近似。"
-                + "它要回答的不是「好看吗」，是「走进去这片空间对不对」。</p>\n"
-                + "  <p><span class=\"tag\">怎么进去</span>运行 <code>./dev.sh</code>，"
-                + "服务器会自己盖一遍，出生点就落在校门外十二格。</p>\n"
+                + "都从平面数据生成。改一个数字，图纸和建筑一起变。</p>\n"
+                + "  <p><span class=\"tag\">位置</span>" + note + "</p>\n"
+                + "  <p><span class=\"tag\">怎么进去</span>IDEA 运行配置只有一个"
+                + "「维斯佩拉 · 本地服务器」，进服就在出生点。</p>\n"
                 + "</div>\n</div>\n</body>\n</html>\n";
     }
 }

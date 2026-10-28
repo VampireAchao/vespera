@@ -58,9 +58,9 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
                     deny(sender);
                     return true;
                 }
-                build(sender);
+                build(sender, args.length > 1 ? args[1] : "all");
             }
-            case "verify" -> verify(sender);
+            case "verify" -> verify(sender, args.length > 1 ? args[1] : "city");
             case "reload" -> {
                 if (!sender.hasPermission("vespera.admin")) {
                     deny(sender);
@@ -138,43 +138,73 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * {@code /vespera build}：重建校区灰盒。
+     * {@code /vespera build [city|campus|all]}：重建灰盒。
      *
-     * <p>改了 {@code CampusPlan} 里的数字之后用它，比"删世界重来"体面得多。
-     * 它会先把每栋楼的体量清空再盖，所以反复执行是安全的。
+     * <p>改了平面数据之后用它，比"删世界重来"体面得多。它会先把体量清空再盖，
+     * 所以反复执行是安全的。
      */
-    private void build(CommandSender sender) {
-        org.bukkit.World world = Bukkit.getWorld(plugin.getConfig().getString("campus.world", "world"));
-        if (world == null) {
-            sender.sendMessage(Component.text("校区所在的世界不存在。"));
+    private void build(CommandSender sender, String target) {
+        long started = System.currentTimeMillis();
+        int total = 0;
+        boolean city = target.equals("all") || target.equals("city");
+        boolean campus = target.equals("all") || target.equals("campus");
+        if (!city && !campus) {
+            sender.sendMessage(Component.text("用法：/vespera build [city|campus|all]"));
             return;
         }
-        int[] origin = CampusBuilder.originFrom(plugin);
-        long started = System.currentTimeMillis();
-        int placed = plugin.campus().build(world, origin[0], origin[1]);
-        sender.sendMessage(Component.text("校区已重建：" + placed + " 个方块，"
-                + (System.currentTimeMillis() - started) + "ms。出生点在世界出生点下方十二格处。"));
+        if (city) {
+            org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("city.world", "world"));
+            if (world == null) {
+                sender.sendMessage(Component.text("主城所在的世界不存在。"));
+                return;
+            }
+            int[] origin = CityBuilder.originFrom(plugin);
+            total += plugin.city().build(world, origin[0], origin[1]);
+        }
+        if (campus) {
+            org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("campus.world", "world"));
+            if (world == null) {
+                sender.sendMessage(Component.text("校区所在的世界不存在。"));
+                return;
+            }
+            int[] origin = CampusBuilder.originFrom(plugin);
+            total += plugin.campus().build(world, origin[0], origin[1]);
+        }
+        sender.sendMessage(Component.text("灰盒已重建：" + total + " 个方块，"
+                + (System.currentTimeMillis() - started) + "ms。"));
     }
 
     /**
-     * {@code /vespera verify}：抽查校区是否真的在那儿。
+     * {@code /vespera verify [city|campus]}：抽查灰盒是否真的在那儿。
      *
      * <p>八处探针，每处问一句"这块该是石砖吧"。验不出好看，但验得出"根本没盖"
      * 和"盖到别处去了"——这两种情况光看日志是看不出来的。
      */
-    private void verify(CommandSender sender) {
-        org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("campus.world", "world"));
-        if (world == null) {
-            sender.sendMessage(Component.text("找不到校区世界。"));
-            return;
+    private void verify(CommandSender sender, String target) {
+        List<String> failures = new java.util.ArrayList<>();
+        if (!target.equals("campus")) {
+            org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("city.world", "world"));
+            if (world == null) {
+                sender.sendMessage(Component.text("找不到主城世界。"));
+                return;
+            }
+            int[] origin = CityBuilder.originFrom(plugin);
+            failures.addAll(plugin.city().verify(world, origin[0], origin[1]));
         }
-        int[] origin = CampusBuilder.originFrom(plugin);
-        List<String> failures = plugin.campus().verify(world, origin[0], origin[1]);
+        if (!target.equals("city")) {
+            org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("campus.world", "world"));
+            if (world == null) {
+                sender.sendMessage(Component.text("找不到校区世界。"));
+                return;
+            }
+            int[] origin = CampusBuilder.originFrom(plugin);
+            failures.addAll(plugin.campus().verify(world, origin[0], origin[1]));
+        }
         if (failures.isEmpty()) {
-            sender.sendMessage(Component.text("校区校验：8 处探针全部通过。"));
+            sender.sendMessage(Component.text("灰盒校验：全部探针通过。"));
             return;
         }
-        sender.sendMessage(Component.text("校区校验：" + failures.size() + " 处不符："));
+        sender.sendMessage(Component.text("灰盒校验：" + failures.size() + " 处不符："));
         failures.forEach(failure -> sender.sendMessage(Component.text("  " + failure).color(NamedTextColor.GRAY)));
     }
 

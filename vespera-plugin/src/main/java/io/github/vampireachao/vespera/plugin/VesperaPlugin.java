@@ -38,9 +38,11 @@ public final class VesperaPlugin extends JavaPlugin {
     private DialogueService dialogues;
     private ClockService clock;
     private NpcService npcs;
+    private CityBuilder city;
     private CampusBuilder campus;
 
-    /** 校区的"已建成"版本标记。改了平面就把它加一，下次启动重建。 */
+    /** 灰盒的"已建成"版本标记。改了平面就把它加一，下次启动重建。 */
+    public static final String CITY_VERSION = "1";
     public static final String CAMPUS_VERSION = "1";
 
     @Override
@@ -60,8 +62,13 @@ public final class VesperaPlugin extends JavaPlugin {
 
         int loaded = dialogues.load();
         npcs.spawnAll();
+        city = new CityBuilder(this);
         campus = new CampusBuilder(this);
-        buildCampusIfNeeded();
+        // 先城后校：城定出生点。反过来会让玩家站在学院门口，看不见主城。
+        buildIfNeeded("city", CITY_VERSION, getConfig().getBoolean("city.auto", true), CityBuilder::originFrom,
+                (world, ox, oz) -> city.build(world, ox, oz));
+        buildIfNeeded("campus", CAMPUS_VERSION, getConfig().getBoolean("campus.auto", false),
+                CampusBuilder::originFrom, (world, ox, oz) -> campus.build(world, ox, oz));
         getServer().getPluginManager().registerEvents(new VesperaListener(this), this);
         getServer().getPluginManager().registerEvents(new PortalGate(regions), this);
 
@@ -91,35 +98,45 @@ public final class VesperaPlugin extends JavaPlugin {
     }
 
     /**
-     * 世界刚加载时把校区盖出来。
+     * 世界刚加载时把灰盒盖出来。
      *
      * <p>同步盖、不延后：玩家进服第一眼看到的东西必须已经在那儿。代价是启动多几秒，
-     * 换来的是"进服就站在校门口"而不是"站在一片空地上等它长出来"。
+     * 换来的是"进服就站在主街上"而不是"站在一片空地上等它长出来"。
      *
      * <p>用世界身上的 PDC 记版本，不记在配置里——世界和建筑是一体的，
      * 换一张世界就该重建一次。
      */
-    private void buildCampusIfNeeded() {
-        if (!getConfig().getBoolean("campus.auto", true)) {
+    private void buildIfNeeded(String name, String version, boolean enabled,
+            java.util.function.Function<VesperaPlugin, int[]> originOf, BuildTask task) {
+        if (!enabled) {
             return;
         }
-        World world = RegionService.resolve(getConfig().getString("campus.world", "world"));
+        World world = RegionService.resolve(getConfig().getString(name + ".world", "world"));
         if (world == null) {
-            getLogger().warning("找不到可建造的世界（配置 campus.world="
-                    + getConfig().getString("campus.world") + "，已加载："
-                    + Bukkit.getWorlds().stream().map(World::getName).toList() + "），跳过校区建造。");
+            getLogger().warning("找不到可建造的世界（配置 " + name + ".world="
+                    + getConfig().getString(name + ".world") + "，已加载："
+                    + Bukkit.getWorlds().stream().map(World::getName).toList() + "），跳过。");
             return;
         }
-        NamespacedKey key = new NamespacedKey(this, "campus");
-        String built = world.getPersistentDataContainer().get(key, PersistentDataType.STRING);
-        if (CAMPUS_VERSION.equals(built)) {
+        NamespacedKey key = new NamespacedKey(this, name);
+        if (version.equals(world.getPersistentDataContainer().get(key, PersistentDataType.STRING))) {
             return;
         }
-        int[] origin = CampusBuilder.originFrom(this);
-        getLogger().info("首次启动，开始盖校区灰盒（" + CampusPlan.summary() + "）……");
-        getLogger().info("  " + campus.build(world, origin[0], origin[1]) + " 个方块已放置，"
-                + "出生点在 (0, ?, " + (CampusPlan.WALL_MIN_Z - 12) + ") 相对校区的门外。");
-        world.getPersistentDataContainer().set(key, PersistentDataType.STRING, CAMPUS_VERSION);
+        int[] origin = originOf.apply(this);
+        getLogger().info("首次启动，开始盖" + ("city".equals(name) ? "主城" : "校区") + "灰盒……");
+        int placed = task.build(world, origin[0], origin[1]);
+        world.getPersistentDataContainer().set(key, PersistentDataType.STRING, version);
+        getLogger().info("  已放置 " + placed + " 个方块。");
+    }
+
+    /** 建造任务。两个灰盒的签名一致，用一个函数式接口把它们统一起来。 */
+    @FunctionalInterface
+    private interface BuildTask {
+        int build(World world, int ox, int oz);
+    }
+
+    public CityBuilder city() {
+        return city;
     }
 
     public CampusBuilder campus() {

@@ -45,14 +45,22 @@ npcs:
 world:
   assets: vespera
 
-# 校区灰盒
+# 主城灰盒（流明陨城）
 #
-# 这是"能走进去看一眼"的那一版：体量、动线、开口都是真的，材质是近似。
-# 真正的美术资产（layouts/college.yml 里那十一块 .schem）将来会一块一块替换掉它。
-#
-# 改了 CampusPlan 里的数字之后，把 built-version 加一，下次启动会重建。
-campus:
+# 出生点在这里，四十二条主线从这里出发。所以它是第一个该建的东西。
+# 城 300×300，四面城墙、十字主街、中央广场、钟楼、大教堂、行会厅、市集、十五栋民居。
+city:
   auto: true
+  world: world
+  origin-x: 0
+  origin-z: 0
+
+# 校区灰盒（钟塔学院）
+#
+# 默认关闭：主城优先。想去看学院，控制台敲 `vespera build campus` 或把 auto 改 true。
+# 它建在主城以东约 370 格，与 regions.yml 里 college 的范围一致。
+campus:
+  auto: false
   world: world
   origin-x: 370
   origin-z: 0

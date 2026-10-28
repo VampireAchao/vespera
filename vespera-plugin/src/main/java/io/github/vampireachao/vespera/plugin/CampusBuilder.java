@@ -69,9 +69,6 @@ public final class CampusBuilder {
         }
         placed += perimeterWall(world, ox, oy, oz);
 
-        // 出生点放在校门外，抬头就是门与钟楼——第一眼得是对的。
-        world.setSpawnLocation(ox, oy + 1, oz + CampusPlan.WALL_MIN_Z - 12);
-
         long millis = System.currentTimeMillis() - started;
         plugin.getLogger().info("校区灰盒已就位：" + CampusPlan.summary() + "，"
                 + placed + " 个方块，" + millis + "ms。");

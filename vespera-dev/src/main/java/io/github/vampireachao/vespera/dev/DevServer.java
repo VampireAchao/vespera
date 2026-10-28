@@ -324,7 +324,7 @@ public final class DevServer {
                 "simulation-distance=6",
                 "allow-nether=true",
                 "enable-command-block=true",
-                "level-name=" + (config.flat ? "campus" : "world"),
+                "level-name=" + (config.flat ? "showcase" : "world"),
                 "level-seed=" + config.seed,
                 "level-type=" + (config.flat ? "minecraft:flat" : "minecraft:normal"),
                 "generator-settings=" + (config.flat ? layers : ""),
@@ -527,7 +527,7 @@ public final class DevServer {
             boolean answered = console.await("维斯佩拉 · 自检", Duration.ofSeconds(30));
             // 再验一遍房子：八处探针，确认"校区真的盖出来了"而不是只写了个数字。
             console.send("vespera verify");
-            console.await("校区校验", Duration.ofSeconds(30));
+            console.await("灰盒校验", Duration.ofSeconds(30));
             console.tail(40).forEach(System.out::println);
             if (!answered) {
                 System.out.println("自检没有回应：插件可能没加载，或者命令没注册。");
@@ -786,8 +786,9 @@ public final class DevServer {
                     // 固定环境的默认是保留世界；一次性冒烟默认重建，保证每次验的是同一块地。
                     Boolean.parseBoolean(System.getProperty("vespera.keepState", Boolean.toString(!smoke))),
                     smoke,
-                    // 平世界：看建筑用的。地形是一块干净的白地，房子才看得清。
-                    Boolean.parseBoolean(System.getProperty("vespera.flat", "false")),
+                    // 平世界：默认就是它。地形是一块干净的白地，房子才看得清。
+                    // 要看真地形，显式 -Dvespera.flat=false，并换一个没跑过的目录。
+                    Boolean.parseBoolean(System.getProperty("vespera.flat", "true")),
                     debug,
                     Boolean.getBoolean("vespera.debugSuspend"),
                     Integer.getInteger("vespera.debugPort", 5005),
