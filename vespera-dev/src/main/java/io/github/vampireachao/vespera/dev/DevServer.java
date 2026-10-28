@@ -107,6 +107,7 @@ public final class DevServer {
         // 而这句话只有在拿到目录锁之后才说得出来。
         acquireLock(config);
         ensurePort(config);
+        rewriteLock(config);
         if (!config.keepState) {
             reset(server);
         }
@@ -178,24 +179,45 @@ public final class DevServer {
      * 而两个服务器共用一个世界目录，结果不是报错，是**世界被写坏**——那种损坏要几小时后
      * 才会以"区块错乱"的形式出现，届时已经没法归因。
      *
-     * <p>所以宁可启动失败。锁文件里写着 pid，进程还在就拒跑；进程没了就是上次没退干净，
-     * 直接覆盖。
+     * <p>所以这里不是"发现旧实例就失败"，而是<b>先把它停掉再启动</b>：
+     * 在 IDE 里连按两次 Run 是常态，让人先去查 lsof 属于把工具的问题转嫁给使用者。
+     * 只有对方不像本工程的进程时才拒跑——那时停掉它才是危险的。
      */
     private static void acquireLock(Config config) throws IOException {
         Path lock = config.server.resolve(LOCK_FILE);
+        long pid = -1;
+        int port = -1;
         if (Files.isRegularFile(lock)) {
             String[] parts = Files.readString(lock).trim().split("\\s+");
-            long pid = parts.length > 0 ? parseLong(parts[0]) : -1;
-            if (pid > 0 && ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false)) {
+            pid = parts.length > 0 ? parseLong(parts[0]) : -1;
+            port = parts.length > 1 ? (int) parseLong(parts[1]) : -1;
+        }
+
+        if (pid > 0 && alive(pid)) {
+            if (!config.autoStop) {
                 throw new IOException("这个目录已经有一个服务器在跑：pid " + pid
-                        + (parts.length > 1 ? "，端口 " + parts[1] : "")
                         + "\n  目录：" + config.server
-                        + "\n  先停掉它：   ./dev.sh stop"
-                        + "\n  或换端口没有用——同一个目录不能同时跑两个服务端，会写坏世界。"
-                        + "\n  要另起一个：加 -Dvespera.dir=server/别的名字。");
+                        + "\n  -Dvespera.autoStop=false，所以没有替你停。"
+                        + "\n  要停掉它：./dev.sh stop");
+            }
+            if (!looksLikeOurs(pid)) {
+                throw new IOException("这个目录被另一个进程占着：pid " + pid + "（" + commandOf(pid) + "）"
+                        + "\n  目录：" + config.server
+                        + "\n  它不是本工程的启动器，我不敢替你杀。确认之后：kill " + pid);
+            }
+            System.out.println("  上一个实例还在跑（pid " + pid + "），先停掉它……");
+            stopInstance(pid);
+            System.out.println("  已停掉旧实例，继续启动。");
+        } else if (port > 0) {
+            // 启动器已经没了，但服务端可能还活着。锁里的端口就是线索。
+            long owner = pidOnPort(port);
+            if (owner > 0 && alive(owner) && sameDirectory(owner, config.server)) {
+                System.out.println("  端口 " + port + " 上还挂着上一个服务端（pid " + owner + "），先停掉它……");
+                stopInstance(owner);
             }
         }
-        Files.writeString(lock, ProcessHandle.current().pid() + " " + listenPort + "\n");
+
+        writeLock(config, lock);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 Files.deleteIfExists(lock);
@@ -203,6 +225,105 @@ public final class DevServer {
                 // 退出路径上没什么可做的
             }
         }, "vespera-dev-lock"));
+    }
+
+    /** 端口选好之后把锁补成真实端口，下次就能顺着端口找回旧服务端。 */
+    private static void rewriteLock(Config config) {
+        try {
+            writeLock(config, config.server.resolve(LOCK_FILE));
+        } catch (IOException e) {
+            // 锁写不进去不该拦住启动
+        }
+    }
+
+    private static void writeLock(Config config, Path lock) throws IOException {
+        Files.createDirectories(lock.getParent());
+        Files.writeString(lock, ProcessHandle.current().pid() + " " + listenPort + "\n");
+    }
+
+    private static boolean alive(long pid) {
+        return ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
+    }
+
+    /** 命令行长什么样。取不到就返回空串——那时宁可拒跑，也不误杀。 */
+    private static String commandOf(long pid) {
+        return ProcessHandle.of(pid).flatMap(handle -> handle.info().commandLine()).orElse("");
+    }
+
+    private static boolean looksLikeOurs(long pid) {
+        String command = commandOf(pid);
+        return command.contains("vespera.dev.DevServer") || command.contains("vespera-dev");
+    }
+
+    /**
+     * 停掉一个实例：先礼后兵。
+     *
+     * <p>先给它 SIGTERM，让启动器的 shutdown hook 有机会对服务端说 {@code stop}——
+     * 服务端会自己存盘退出。等不到才强杀，强杀的对象包括它名下的子进程。
+     */
+    private static void stopInstance(long pid) {
+        ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
+        if (handle == null) {
+            return;
+        }
+        List<ProcessHandle> tree = new ArrayList<>(handle.descendants().toList());
+        tree.add(handle);
+        handle.destroy();
+
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(35);
+        while (System.nanoTime() < deadline) {
+            if (tree.stream().noneMatch(ProcessHandle::isAlive)) {
+                break;
+            }
+            try {
+                Thread.sleep(400);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        for (ProcessHandle child : tree) {
+            if (child.isAlive()) {
+                child.destroyForcibly();
+            }
+        }
+        try {
+            Thread.sleep(600);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** 端口现在被谁听着。读 lsof 的机器可读格式（p=pid, c=命令）。 */
+    private static long pidOnPort(int port) {
+        try {
+            Process process = new ProcessBuilder("lsof", "-nP", "-iTCP:" + port, "-sTCP:LISTEN", "-Fpc")
+                    .redirectErrorStream(true).start();
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            process.waitFor(3, TimeUnit.SECONDS);
+            return output.lines().filter(line -> line.startsWith("p"))
+                    .map(line -> parseLong(line.substring(1)))
+                    .filter(value -> value > 0)
+                    .findFirst().orElse(-1L);
+        } catch (IOException | InterruptedException e) {
+            return -1;
+        }
+    }
+
+    /** 这个进程的工作目录是不是同一处——用来区分"我们的服务端"和"别人的服务端"。 */
+    private static boolean sameDirectory(long pid, Path dir) {
+        try {
+            Process process = new ProcessBuilder("lsof", "-a", "-p", Long.toString(pid), "-d", "cwd", "-Fn")
+                    .redirectErrorStream(true).start();
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            process.waitFor(3, TimeUnit.SECONDS);
+            Path normalized = dir.toAbsolutePath().normalize();
+            return output.lines().filter(line -> line.startsWith("n"))
+                    .map(line -> Path.of(line.substring(1)))
+                    .anyMatch(path -> path.toAbsolutePath().normalize().startsWith(normalized));
+        } catch (IOException | InterruptedException e) {
+            return false;
+        }
     }
 
     private static long parseLong(String raw) {
@@ -783,7 +904,7 @@ public final class DevServer {
     /** 所有开关集中在一处，读起来像一份说明书而不是一堆散落的 getProperty。 */
     private record Config(Path project, Path server, Profile profile, int port, boolean onlineMode,
             boolean keepState, boolean smoke, boolean flat, boolean debug, boolean debugSuspend, int debugPort,
-            String seed, String paperVersion, boolean build) {
+            String seed, String paperVersion, boolean build, boolean autoStop) {
 
         static Config from(String[] args) {
             Path project = Path.of(System.getProperty("vespera.projectDir", System.getProperty("user.dir")))
@@ -819,7 +940,10 @@ public final class DevServer {
                     Integer.getInteger("vespera.debugPort", 5005),
                     System.getProperty("vespera.seed", "20261028"),
                     System.getProperty("vespera.paperVersion", "26.3"),
-                    Boolean.parseBoolean(System.getProperty("vespera.build", "true")));
+                    Boolean.parseBoolean(System.getProperty("vespera.build", "true")),
+                    // 发现同一目录的旧实例就自动停掉。IDE 里连按两次 Run 是常态，
+                    // 报"目录被占用"等于把工具的问题转给使用者。
+                    Boolean.parseBoolean(System.getProperty("vespera.autoStop", "true")));
         }
     }
 }
