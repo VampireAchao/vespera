@@ -2,7 +2,7 @@
   <configuration default="false" name="Vespera 看建筑（平世界）" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="io.github.vampireachao.vespera.dev.DevServer" />
     <module name="vespera-dev" />
-    <option name="VM_PARAMETERS" value="-Dvespera.flat=true -Dvespera.dir=$PROJECT_DIR$/server/showcase" />
+    <option name="VM_PARAMETERS" value="-Dvespera.flat=true -Dvespera.port=25599 -Dvespera.dir=$PROJECT_DIR$/server/showcase" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />

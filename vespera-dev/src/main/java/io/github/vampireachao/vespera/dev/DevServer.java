@@ -69,6 +69,9 @@ public final class DevServer {
     /** 本次运行给服务端 JVM 开的 JDWP 端口。为了在横幅里报出来，只能存在这里。 */
     private static volatile int attachPort = -1;
 
+    /** 真正使用的游戏端口。可能不等于配置值——被占用时会顺延。 */
+    private static volatile int listenPort = -1;
+
     private DevServer() {
     }
 
@@ -76,7 +79,7 @@ public final class DevServer {
         Config config = Config.from(args);
         System.out.println("维斯佩拉 · " + config.profile.label() + "服务器");
         System.out.println("  目录    " + config.server);
-        System.out.println("  端口    " + config.port + (config.onlineMode ? "（正版验证）" : "（离线验证）"));
+        System.out.println("  端口    " + config.port + (config.onlineMode ? "（正版验证）" : "（离线验证）") + "，被占用会自动顺延");
         System.out.println("  形态    " + (config.smoke ? "无头：起、验、退" : "控制台，Ctrl+C 结束"));
         System.out.println();
 
@@ -92,6 +95,7 @@ public final class DevServer {
     private static void prepare(Config config) throws IOException, InterruptedException {
         Path server = config.server;
         Files.createDirectories(server.resolve("plugins"));
+        ensurePort(config);
         acquireLock(config);
         if (!config.keepState) {
             reset(server);
@@ -101,6 +105,60 @@ public final class DevServer {
         writeServerProperties(config);
         installPlugins(config);
         installAssets(config);
+    }
+
+    /**
+     * 选一个真的能用的端口。
+     *
+     * <p>本地同时开着好几个 Minecraft 服务端是常态——另一个仓库的测试服、朋友借你的端口、
+     * 上一次没退干净的进程。撞上端口时直接失败，等于让人自己去查 {@code lsof}；
+     * 顺延一个端口，并且把占用者名字打出来，才是"一键"该有的样子。
+     *
+     * <p>顺延只往上找 20 个。找不着就明说，不要假装找到了。
+     */
+    private static void ensurePort(Config config) {
+        listenPort = pickPort(config.port);
+        if (listenPort == config.port) {
+            return;
+        }
+        System.out.println("  端口 " + config.port + " 被占用（" + occupant(config.port) + "），改用 " + listenPort + "。");
+        System.out.println("        想让服务器用它：先把那个进程停掉；或者加 -Dvespera.port=25xxx 指定。");
+    }
+
+    private static int pickPort(int preferred) {
+        for (int port = preferred; port < preferred + 20; port++) {
+            try (ServerSocket probe = new ServerSocket()) {
+                probe.setReuseAddress(true);
+                probe.bind(new java.net.InetSocketAddress(port), 1);
+                return port;
+            } catch (IOException taken) {
+                // 下一个
+            }
+        }
+        throw new IllegalStateException("端口 " + preferred + " 到 " + (preferred + 19) + " 全被占用，"
+                + "先用 -Dvespera.port=25xxx 换一个。");
+    }
+
+    /**
+     * 谁占着这个端口。尽力而为：macOS/Linux 有 {@code lsof} 就问它，没有就说不认识。
+     *
+     * <p>{@code -Fpc} 让它输出机器可读的两行：pid 与命令名。这样比解析人类可读的表格稳。
+     */
+    private static String occupant(int port) {
+        try {
+            Process process = new ProcessBuilder("lsof", "-nP", "-iTCP:" + port, "-sTCP:LISTEN", "-Fpc")
+                    .redirectErrorStream(true)
+                    .start();
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            process.waitFor(3, TimeUnit.SECONDS);
+            String command = output.lines().filter(line -> line.startsWith("c")).map(line -> line.substring(1))
+                    .findFirst().orElse("未知进程");
+            String pid = output.lines().filter(line -> line.startsWith("p")).map(line -> line.substring(1))
+                    .findFirst().orElse("?");
+            return command + " pid " + pid;
+        } catch (IOException | InterruptedException e) {
+            return "占用者未知";
+        }
     }
 
     /**
@@ -126,7 +184,7 @@ public final class DevServer {
                         + "\n  真要复用同一目录，先把那个实例停掉。");
             }
         }
-        Files.writeString(lock, ProcessHandle.current().pid() + " " + config.port + "\n");
+        Files.writeString(lock, ProcessHandle.current().pid() + " " + listenPort + "\n");
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 Files.deleteIfExists(lock);
@@ -245,7 +303,8 @@ public final class DevServer {
         Path file = config.server.resolve("server.properties");
         Files.writeString(config.server.resolve("eula.txt"),
                 "# 起这个服务器等于同意 Minecraft EULA：https://aka.ms/MinecraftEULA\neula=true\n");
-        if (Files.isRegularFile(file) && !config.smoke && !config.flat) {
+        // 端口变了就得重写，否则配置文件里还是那个被占用的号码，服务端起来仍会失败。
+        if (Files.isRegularFile(file) && !config.smoke && !config.flat && listenPort == config.port) {
             return;
         }
         String layers = "{\"layers\":[{\"block\":\"minecraft:bedrock\",\"height\":1},"
@@ -255,7 +314,7 @@ public final class DevServer {
                 + "\"biome\":\"minecraft:plains\"}";
         Files.writeString(file, String.join("\n",
                 "motd=维斯佩拉 · " + config.profile.label() + "服",
-                "server-port=" + config.port,
+                "server-port=" + listenPort,
                 "online-mode=" + config.onlineMode,
                 "enforce-secure-profile=" + config.onlineMode,
                 "white-list=false",
@@ -429,7 +488,7 @@ public final class DevServer {
 
         System.out.println();
         System.out.println("服务器起来之后：");
-        System.out.println("  进服      localhost:" + config.port + (config.onlineMode ? "（正版验证）" : "（离线验证）"));
+        System.out.println("  进服      localhost:" + listenPort + (config.onlineMode ? "（正版验证）" : "（离线验证）"));
         System.out.println("  自检      /vespera doctor");
         System.out.println("  说话      /vespera talk bell-test   或右键出生点旁边那个村民");
         System.out.println("  控制台    在这里直接敲服务器命令，stop 结束");
