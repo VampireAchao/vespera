@@ -51,6 +51,26 @@ public final class DialogueService {
     private final RaceBridge races;
     private final ContentPolicy policy;
     private final Map<String, DialogueGraph> graphs = new LinkedHashMap<>();
+    private final Map<String, Style> styles = new LinkedHashMap<>();
+    /** 每个玩家这一轮用哪种渲染器。开口时定下，谈完清掉。 */
+    private final Map<java.util.UUID, Style> sessions = new java.util.HashMap<>();
+
+    /**
+     * 两种渲染器，同一张剧本。
+     *
+     * <p>这不是"两套对话系统"，是同一棵对话树的两副皮：界面（Dialog）挡路、看得清；
+     * 聊天栏（tellraw）不挡路、读得快。选哪个是**场景决定**，不是技术限制。
+     */
+    public enum Style {
+        /** 原生 Dialog 界面。用于有分量的对话、需要排版与输入的地方。 */
+        DIALOG,
+        /** 聊天栏可点击文本。用于路边一句话、不想打断走路的时候。 */
+        CHAT;
+
+        static Style of(Object raw) {
+            return raw != null && "chat".equalsIgnoreCase(String.valueOf(raw).trim()) ? CHAT : DIALOG;
+        }
+    }
 
     public DialogueService(VesperaPlugin plugin, StoryState state, RaceBridge races, ContentPolicy policy) {
         this.plugin = plugin;
@@ -75,9 +95,10 @@ public final class DialogueService {
         for (File file : files) {
             String id = file.getName().substring(0, file.getName().length() - ".yml".length());
             try {
-                DialogueGraph graph = DialogueGraphParser.parse(id,
-                        plainMap(YamlConfiguration.loadConfiguration(file)));
+                Map<String, Object> plain = plainMap(YamlConfiguration.loadConfiguration(file));
+                DialogueGraph graph = DialogueGraphParser.parse(id, plain);
                 graphs.put(graph.id(), graph);
+                styles.put(graph.id(), Style.of(plain.get("style")));
                 for (String problem : graph.problems()) {
                     plugin.getLogger().warning("剧本 " + graph.id() + "：" + problem);
                 }
@@ -142,8 +163,16 @@ public final class DialogueService {
                     .decorate(TextDecoration.ITALIC));
             return false;
         }
+        // 每次"开口"都重定渲染器：同一个人上一段是聊天栏，这一段可能是界面。
+        // 用 put 而不是 computeIfAbsent——沿用上一段的皮肤，是这里最容易犯的错。
+        sessions.put(player.getUniqueId(), styleOf(graph.id()));
         openNode(player, graph, graph.entryId());
         return true;
+    }
+
+    /** 这个玩家这一轮会看到哪种界面。外部（比如右键 NPC）想知道时问这里。 */
+    public Style styleOf(String graphId) {
+        return styles.getOrDefault(graphId, Style.DIALOG);
     }
 
     public void openNode(Player player, DialogueGraph graph, String nodeId) {
@@ -152,7 +181,53 @@ public final class DialogueService {
             plugin.getLogger().warning("剧本 " + graph.id() + " 没有节点 " + nodeId);
             return;
         }
-        player.showDialog(build(state.view(player, races), graph, node));
+        Style style = sessions.computeIfAbsent(player.getUniqueId(), key -> styleOf(graph.id()));
+        if (style == Style.CHAT) {
+            renderChat(player, graph, node);
+        } else {
+            player.showDialog(build(state.view(player, races), graph, node));
+        }
+    }
+
+    /**
+     * 聊天栏渲染：一段话，加一行可点的方括号。
+     *
+     * <p>三条刻意的选择：
+     *
+     * <ul>
+     *   <li>台词逐行发，不做成一段——聊天栏换行难对齐，一行一句反而像说话。</li>
+     *   <li>选项用方括号，不用"请回复 1 2 3"。玩家不需要记数字，也不需要打字。</li>
+     *   <li>点完不重绘历史，只续上新的一句。聊天记录本身就是演出的时间轴。</li>
+     * </ul>
+     */
+    private void renderChat(Player player, DialogueGraph graph, DialogueNode node) {
+        String speaker = node.speaker() == null ? graph.speaker() : node.speaker();
+        player.sendMessage(Component.text("　" + speaker).color(NamedTextColor.DARK_GRAY));
+        for (String line : node.lines()) {
+            player.sendMessage(Component.text(line).color(NamedTextColor.GRAY));
+        }
+        List<DialogueOption> options = graph.visible(node, state.view(player, races)).stream()
+                .filter(option -> policy.allows(option.gate()))
+                .toList();
+        if (options.isEmpty()) {
+            sessions.remove(player.getUniqueId());
+            return;
+        }
+        Component row = Component.text("　");
+        for (DialogueOption option : options) {
+            row = row.append(Component.text("[" + option.label() + "]")
+                    .color(NamedTextColor.AQUA)
+                    .clickEvent(net.kyori.adventure.text.event.ClickEvent.callback(audience -> {
+                        if (audience instanceof Player clicker) {
+                            choose(clicker, graph, option);
+                        }
+                    }))
+                    .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+                            Component.text(option.tooltip() == null ? "点一下" : option.tooltip())
+                                    .color(NamedTextColor.DARK_GRAY))))
+                    .append(Component.space());
+        }
+        player.sendMessage(row);
     }
 
     /**
@@ -227,6 +302,12 @@ public final class DialogueService {
             Bukkit.getScheduler().runTask(plugin, () -> openNode(player, graph, option.target()));
         } else {
             player.closeDialog();
+            sessions.remove(player.getUniqueId());
         }
+    }
+
+    /** 玩家下线时清掉他的渲染器记录，免得下次开口时继承了上一轮的界面。 */
+    public void forget(java.util.UUID player) {
+        sessions.remove(player);
     }
 }

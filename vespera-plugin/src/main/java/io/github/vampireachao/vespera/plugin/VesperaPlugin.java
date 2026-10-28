@@ -22,12 +22,14 @@ public final class VesperaPlugin extends JavaPlugin {
             "content.yml",
             "dialogues/bell-test.yml",
             "dialogues/altar-warning.yml",
-            "dialogues/dorm-night.yml"
+            "dialogues/dorm-night.yml",
+            "dialogues/patrol.yml"
     };
 
     private StoryState state;
     private RaceBridge races;
     private ContentPolicy policy;
+    private RegionService regions;
     private DialogueService dialogues;
     private ClockService clock;
     private NpcService npcs;
@@ -41,6 +43,8 @@ public final class VesperaPlugin extends JavaPlugin {
         races = new RaceBridge(this);
         policy = new ContentPolicy(this);
         policy.load();
+        regions = new RegionService(this);
+        regions.load();
         dialogues = new DialogueService(this, state, races, policy);
         clock = new ClockService(this);
         npcs = new NpcService(this);
@@ -48,6 +52,7 @@ public final class VesperaPlugin extends JavaPlugin {
         int loaded = dialogues.load();
         npcs.spawnAll();
         getServer().getPluginManager().registerEvents(new VesperaListener(this), this);
+        getServer().getPluginManager().registerEvents(new PortalGate(regions), this);
 
         PluginCommand command = getCommand("vespera");
         if (command != null) {
@@ -78,6 +83,7 @@ public final class VesperaPlugin extends JavaPlugin {
     public void reload() {
         reloadConfig();
         policy.load();
+        regions.load();
         dialogues.load();
         npcs.spawnAll();
         clock.stop();
@@ -99,6 +105,10 @@ public final class VesperaPlugin extends JavaPlugin {
 
     public ContentPolicy policy() {
         return policy;
+    }
+
+    public RegionService regions() {
+        return regions;
     }
 
     public StoryState state() {

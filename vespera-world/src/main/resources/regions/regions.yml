@@ -1,0 +1,168 @@
+# 维斯佩拉 · 区域表
+#
+# 这一份是**唯一**的坐标来源：插件读它做区域判定与下界门定向，地图组按它建造，
+# 文档按它画图。`layouts/world.yml` 只讲关系与手法，不重复坐标——重复的坐标迟早会漂。
+#
+# 混合形态：一块连续的生存大陆 + 原版下界 + 原版末地外岛 + 一个独立终局世界。
+# 四个维度全是原版维度，玩家用原版传送门与折跃门就能走完，不靠命令传送。
+#
+# 字段：
+#   world       维度名（world / world_nether / world_the_end / world_sunwheel）
+#   from / to   两个对角（闭区间，含边界），单位是方块
+#   biome       绑定的原版生物群系：地形、植被、天气、刷怪都靠它，不靠手摆
+#   kind        city / school / abbey / wood / lake / crypt / tower / forge / waste / final
+#   tags        给规则用的标签：safe（无 PvP）、night（夜行生物）、water、fall、heat……
+#   blend       怎么"融进"环境——这是建造时真正要守的东西
+#   transition  边界怎么过渡（不允许出现硬边）
+#   entrance    玩家怎么到达（能走过去的就不要传送）
+
+regions:
+  # ── 主世界 ────────────────────────────────────────────────────────────
+  - id: lumenfall
+    name: 流明陨城
+    world: world
+    from: [-200, 40, -200]
+    to: [200, 160, 200]
+    biome: minecraft:plains
+    kind: city
+    tags: [safe, trade, spawn]
+    blend: 建在平原河湾的北岸。城墙用石砖与苔石，越靠外越旧；城内不铺满，留出耕地与院子。
+    transition: 城外三百格内由农田→疏林→密林渐变，看不到一条笔直的边界。
+    entrance: 出生点就在城里。
+
+  - id: college
+    name: 钟塔学院
+    world: world
+    from: [220, 40, -160]
+    to: [520, 140, 160]
+    biome: minecraft:forest
+    kind: school
+    tags: [safe, class, gate]
+    blend: 校区在城东，隔一条河。旧钟匠行会的废墟抬高了地基，所以整块台地比河面高八格。
+    transition: 西侧过石桥进城；东、南、北三面被林线包住，围墙只有一人高——看得见外面，出不去而已。
+    entrance: 走石桥，或从北边林子里翻墙（会被记名）。
+
+  - id: greybell
+    name: 灰钟修道院
+    world: world
+    from: [-900, 60, -700]
+    to: [-500, 220, -300]
+    biome: minecraft:windswept_hills
+    kind: abbey
+    tags: [storm, holy, climb]
+    blend: 修道院嵌在山脊的背风面，主体是从山体里切出来的平台，只有钟楼是独立结构。
+    transition: 山脚是云杉林线，往上岩石裸露，雪线以上没有植被——不需要围栏，海拔就是边界。
+    entrance: 从城北出城，沿河谷上溯两天（约 900 格）或骑马半天。
+
+  - id: moonring
+    name: 环月林
+    world: world
+    from: [300, 50, 300]
+    to: [900, 140, 900]
+    biome: minecraft:dark_forest
+    kind: wood
+    tags: [night, wolf, forage]
+    blend: 黑橡木密林，林间有几片花原缺口。狼群刷新率调高，但只在夜里；白天是采药场。
+    transition: 林缘用 dark_forest → forest → plains 三层过渡，最外圈是稀疏的桦树。
+    entrance: 城南出城，穿过麦田即入林。
+
+  - id: drowned-bell
+    name: 沉钟湖
+    world: world
+    from: [-600, 30, 300]
+    to: [-100, 90, 800]
+    biome: minecraft:river
+    kind: lake
+    tags: [water, dive, drown]
+    blend: 一条大河在这里变宽成湖。湖底沉着一口钟与半座钟楼，水下通道连着岸边的渔村。
+    transition: 河岸是沼泽化的浅滩，芦苇与浮萍一路长到水里。
+    entrance: 城西出城，沿河走；或从湖对岸游过去。
+
+  - id: silent-choir
+    name: 无声墓道
+    world: world
+    from: [200, 20, -900]
+    to: [700, 90, -400]
+    biome: minecraft:swamp
+    kind: crypt
+    tags: [dark, undead, water]
+    blend: 沼泽下面是溶洞系统。入口是几处塌陷坑，坑边长着不该长在这里的菌类。
+    transition: 沼泽水面 → 洞口雾气 → 地下；地上部分保持原版沼泽，不修路。
+    entrance: 城东北出城，穿过沼泽；塌陷坑就是门。
+
+  - id: white-tower
+    name: 白塔原
+    world: world
+    from: [-400, 120, -1400]
+    to: [100, 320, -900]
+    biome: minecraft:jagged_peaks
+    kind: tower
+    tags: [fall, wind, cold]
+    blend: 高山孤塔，塔身与山体共用一段崖壁。风大，粒子常驻。
+    transition: 雪线以上寸草不生，雪线以下才有云杉——高度自己会说话。
+    entrance: 从修道院继续往北，翻两道垭口；没有路，只有岩钉。
+
+  # ── 下界：熔炉之喉 ────────────────────────────────────────────────────
+  # 走特定传送门能到；自己搭门也能到——因为主城的门与这里的入口在同一组坐标上。
+  # 主世界 x/z ÷ 8 = 下界 x/z，所以城里的门永远落在这块区域里，荒野的门落在荒野。
+  - id: furnace-throat
+    name: 熔炉之喉
+    world: world_nether
+    from: [-200, 30, -200]
+    to: [200, 100, 200]
+    biome: minecraft:basalt_deltas
+    kind: forge
+    tags: [heat, fire, hazard]
+    blend: 玄武岩三角洲上的铸炉群，中央是熔岩海上的平台。恶魔"归炉"的回血点就在岩浆边。
+    transition: 用黑石与玄武岩自然过渡到原版下界地形，不加墙、不加顶。
+    entrance: ① 主城任何一扇下界门（会被定向到这里）；② 自己在地图别处搭门，从荒野走过来。
+
+  # ── 末地：珍珠荒原（外岛）──────────────────────────────────────────────
+  # 末地主岛杀龙之后开折跃门，穿过折跃门到外岛；外岛西北象限就是测绘局的地盘。
+  # 也可以扔末影珍珠硬闯——那本来就是这块地方的主题。
+  - id: pearl-waste
+    name: 珍珠荒原
+    world: world_the_end
+    from: [900, 30, -1400]
+    to: [1500, 120, -800]
+    biome: minecraft:end_highlands
+    kind: waste
+    tags: [void, pearl, survey]
+    blend: 外岛的末地石台地上立着测绘局的三角标与黏土台。所有结构都顺着地形走，不削平。
+    transition: 外岛边缘就是虚空，不加边界；掉下去是真的掉下去。
+    entrance: 末地折跃门（原版），或一颗珍珠。
+
+  # ── 终局：日轮庭院 ────────────────────────────────────────────────────
+  # 独立维度，只通过终局入口进入。这一块的坐标在终局定稿前不填死。
+  - id: sunwheel
+    name: 日轮庭院
+    world: world_sunwheel
+    from: [-300, 0, -300]
+    to: [300, 200, 300]
+    biome: minecraft:the_end
+    kind: final
+    tags: [final, no-supernatural]
+    blend: 轮心内部：黄铜、齿轮、没有天空。地形是机器，不是地貌。
+    transition: 没有过渡——这一步是"进去"，不是"走到"。
+    entrance: 第四幕终局入口；独立世界，超自然规则按路线开关。
+
+# ── 传送门定向 ──────────────────────────────────────────────────────────
+#
+# 原版下界门按 1:8 换算，谁也没法"指定"它通向哪里——除非我们替它决定。
+# 规则：从某区域走进下界门，就把落点改写成这里；落点之外的门一律不动。
+# 这样"走特定传送门"与"自己搭门探索"两件事同时成立，而且互不破坏。
+portals:
+  - id: throat-gate
+    from-world: world
+    from-region: lumenfall
+    to: {world: world_nether, x: 0.5, y: 40, z: 0.5}
+    note: 城里任何一扇门 → 熔炉之喉入口平台
+
+  - id: throat-return
+    from-world: world_nether
+    from-region: furnace-throat
+    to: {world: world, x: 0.5, y: 66, z: 40.5}
+    note: 熔炉之喉 → 回城，落在城门内的广场
+
+# 末地不需要规则：折跃门是原版机制，落点由世界种子决定。
+# 若将来要固定外岛落点，在这里加一条 from-world: world_the_end 的规则即可。

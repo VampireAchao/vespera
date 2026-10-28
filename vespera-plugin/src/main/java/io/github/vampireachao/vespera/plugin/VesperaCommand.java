@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 public final class VesperaCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS =
-            List.of("doctor", "talk", "dialogues", "state", "clock", "npc", "reload");
+            List.of("doctor", "where", "talk", "dialogues", "state", "clock", "npc", "reload");
 
     private final VesperaPlugin plugin;
 
@@ -39,6 +39,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         String sub = args.length == 0 ? "doctor" : args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
             case "doctor" -> doctor(sender);
+            case "where" -> where(sender);
             case "talk" -> talk(sender, args);
             case "dialogues" -> dialogues(sender);
             case "state" -> state(sender, args);
@@ -84,6 +85,9 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
                 ? "全部节点可渲染"
                 : renderProblems.size() + " 处失败：" + renderProblems.get(0)));
         lines.add("  NPC 锚点  " + plugin.npcs().count() + " 个");
+        lines.add("  区域      " + (plugin.regions().book().isEmpty()
+                ? "未载入（server/vespera/regions/regions.yml）"
+                : plugin.regions().book().all().size() + " 块 · 门规则 " + plugin.regions().portals().size() + " 条"));
         lines.add("  时钟      " + plugin.clock().describe());
         lines.add("  软依赖    " + softDependencies());
         lines.add("  内容闸门  " + plugin.policy().describe());
@@ -109,8 +113,22 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         return text.toString();
     }
 
-    private void talk(CommandSender sender, String[] args) {
+    /**
+     * {@code /vespera where}：我在哪一块地方。
+     *
+     * <p>看起来是个调试命令，实际上是建造时最常用的一个：站在现场，一行就知道这块地
+     * 在区域表里叫什么、绑的是哪个群系、带哪些标签。地图组没人愿意翻 YAML 找坐标。
+     */
+    private void where(CommandSender sender) {
         if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text("只有站在世界里的人才有「在哪儿」。"));
+            return;
+        }
+        player.sendMessage(Component.text(plugin.regions().describe(player.getLocation()))
+                .color(NamedTextColor.GRAY));
+    }
+
+    private void talk(CommandSender sender, String[] args) {        if (!(sender instanceof Player player)) {
             sender.sendMessage(Component.text("只有玩家能开口说话。"));
             return;
         }

@@ -36,5 +36,6 @@ public final class VesperaListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.clock().forget(event.getPlayer().getUniqueId());
+        plugin.dialogues().forget(event.getPlayer().getUniqueId());
     }
 }

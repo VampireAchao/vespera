@@ -38,6 +38,13 @@ npcs:
     dialogue: bell-test
     enabled: true
 
-# 剧本目录。留空则用插件自带的那两份示例。
+# 世界资产目录（相对服务器根目录）。
+#
+# regions.yml、结构文件、布置清单都在这里，由 vespera-world 模块产出，./dev.sh 自动同步。
+# 插件按这一份做区域判定与下界门定向——坐标的真相只有一处。
+world:
+  assets: vespera
+
+# 剧本目录。留空则用插件自带的那几份示例。
 dialogues:
   directory: dialogues

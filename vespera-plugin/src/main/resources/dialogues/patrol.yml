@@ -1,0 +1,34 @@
+# 巡夜人 · 路边的一句话。
+#
+# 这份剧本是"聊天栏渲染器"的示范（`style: chat`）：
+#   - 不打开任何界面，玩家可以边走边看
+#   - 选项是聊天栏里的方括号，点一下就选，不用打字、不用记数字
+#   - 谈完不留界面，聊天记录自己就是时间轴
+#
+# 什么时候用 chat、什么时候用 dialog，判断只有一句：**玩家此刻该不该还能走路。**
+# 该 → chat。不该（要看清、要选重要的、要输入）→ dialog。
+
+id: patrol
+speaker: 巡夜人
+style: chat
+entry: hail
+
+nodes:
+  hail:
+    lines:
+      - "「晚钟散了还往外走？」他提着灯，没有拦你。"
+    options:
+      - label: "我有事。"
+        goto: pass
+      - label: "（点头，继续走）"
+        close: true
+
+  pass:
+    lines:
+      - "「城北那圈灯，过了桥就不归我管了。」"
+      - "他把灯举高了一点，照了照你身后的路。"
+    options:
+      - label: "（记住了）"
+        close: true
+        flags:
+          - warned_north
