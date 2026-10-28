@@ -81,6 +81,11 @@ public final class DevServer {
         System.out.println("  目录    " + config.server);
         System.out.println("  端口    " + config.port + (config.onlineMode ? "（正版验证）" : "（离线验证）") + "，被占用会自动顺延");
         System.out.println("  形态    " + (config.smoke ? "无头：起、验、退" : "控制台，Ctrl+C 结束"));
+        if (!config.onlineMode) {
+            System.out.println();
+            System.out.println("  ⚠ 离线验证：谁都能用任意名字进来。只在本机玩，别把这个端口暴露到公网。");
+            System.out.println("    要回正版验证：去掉 -Dvespera.onlineMode=false。");
+        }
         System.out.println();
 
         prepare(config);
@@ -295,9 +300,11 @@ public final class DevServer {
     }
 
     /**
-     * 写配置。{@code online-mode=true} 是默认值，而且故意不给"方便"的默认关闭：
-     * 一个跑在公网上的离线验证服务器，等于把所有人的账号摆在门口。要本地离线测试，
-     * 显式加 {@code -Dvespera.onlineMode=false}，并知道自己在做什么。
+     * 写配置。
+     *
+     * <p>{@code online-mode} 的默认值是 true，但本地开发经常要关：第三方启动器、离线登录、
+     * 或者只是想用一个名字进去看看。关掉不是问题，**忘了开回来才是问题**——所以这里
+     * 在关掉的时候打一行显眼的字，每次启动都打。
      */
     private static void writeServerProperties(Config config) throws IOException {
         Path file = config.server.resolve("server.properties");
