@@ -1,0 +1,80 @@
+# 宿舍，熄灯之后。
+#
+# 这份剧本是给两道闸门做示范的：
+#   1. 整张图挂 `gate: bonds` —— 闸门关着时，这张图在游戏里不存在，
+#      右键室友只会得到一句「今天没什么可说的。」没有空白，没有提示，没有可猜的东西。
+#   2. 其中一项挂 `gate: conflict` —— 就算图开了，那一项也仍然需要单独打开。
+#
+# 写法上的三条自我约束（docs/06）：
+#   - 不命名。没有"霸凌""欺负""流言"这些词，只有一张被折起来的纸。
+#   - 不解释。她为什么不说，文本不解释。玩家自己会懂，或者不懂——都行。
+#   - 不描写。所有事情发生在门口、在背后、在第二天早上。
+#
+# 这不是"隐晦处理"，是"把镜头交给玩家"。镜头不进去，就不存在越界的画面。
+
+id: dorm-night
+speaker: 米拉
+gate: bonds
+entry: light-out
+
+nodes:
+  light-out:
+    lines:
+      - "熄灯之后，她翻了个身，面朝墙。"
+      - "「你今天回来得晚。」她没有问为什么。"
+    options:
+      - label: "我在钟楼下面待了一会儿。"
+        goto: bell
+        set:
+          aff_mira: 3
+        tell: "「钟楼下面冷。」"
+
+      - label: "你怎么还没睡？"
+        goto: awake
+        set:
+          aff_mira: 2
+
+      - label: "（问她桌上那张纸。）"
+        tooltip: "纸被折了两折，压在一本书下面。"
+        gate: conflict
+        goto: paper
+
+      - label: "（回避）"
+        tooltip: "明天有早课。"
+        tell: "你说明天有早课，把被子拉到头顶。"
+        close: true
+        flags:
+          - avoided
+
+  bell:
+    lines:
+      - "「你要是再去，带件外套。」"
+      - "她说完就把脸埋进枕头，像是后悔多说了这半句。"
+    options:
+      - label: "（记住了）"
+        close: true
+        flags:
+          - promised_coat
+
+  awake:
+    lines:
+      - "「窗户没关严。」她说，「风一直响。」"
+      - "其实窗户是关着的。你没有拆穿。"
+    options:
+      - label: "（去把窗推一下）"
+        close: true
+        set:
+          aff_mira: 1
+
+  paper:
+    lines:
+      - "「不是我写的字。」"
+      - "她把纸折起来，塞进书里，动作很轻，像在收一件易碎的东西。"
+      - "然后她说：「睡吧。」"
+    options:
+      - label: "（不再问）"
+        close: true
+        set:
+          aff_mira: 2
+        flags:
+          - saw_paper

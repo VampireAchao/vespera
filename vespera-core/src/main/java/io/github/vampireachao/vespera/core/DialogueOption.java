@@ -21,6 +21,7 @@ import java.util.Set;
  * @param set     计数增量（不是重置）：{@code aff_luka: 5} 意思是加 5
  * @param flags   置位的旗标
  * @param when    这个选项什么时候出现
+ * @param gate    内容闸门名；为 null 表示不设闸。闸门关着时这一项不存在
  */
 public record DialogueOption(
         String label,
@@ -30,7 +31,8 @@ public record DialogueOption(
         boolean close,
         Map<String, Integer> set,
         Set<String> flags,
-        Condition when) {
+        Condition when,
+        String gate) {
 
     public DialogueOption {
         if (label == null || label.isBlank()) {
@@ -48,7 +50,7 @@ public record DialogueOption(
     /** 安全阀：任何标记为"可以走开"的选项，都是这一句话的变体。 */
     public static DialogueOption avoid(String tell) {
         return new DialogueOption("（回避）", "你不必看完这一场。", null, tell, true, Map.of(), Set.of("avoided"),
-                Condition.ALWAYS);
+                Condition.ALWAYS, null);
     }
 
     public List<String> counters() {

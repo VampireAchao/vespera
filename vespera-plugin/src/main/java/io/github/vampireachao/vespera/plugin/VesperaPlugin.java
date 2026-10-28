@@ -17,14 +17,17 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class VesperaPlugin extends JavaPlugin {
 
-    /** 首次启动写进 {@code plugins/Vespera/dialogues/} 的两份示例。 */
-    private static final String[] BUNDLED_DIALOGUES = {
+    /** 首次启动写进 {@code plugins/Vespera/} 的默认文件。 */
+    private static final String[] BUNDLED_FILES = {
+            "content.yml",
             "dialogues/bell-test.yml",
-            "dialogues/altar-warning.yml"
+            "dialogues/altar-warning.yml",
+            "dialogues/dorm-night.yml"
     };
 
     private StoryState state;
     private RaceBridge races;
+    private ContentPolicy policy;
     private DialogueService dialogues;
     private ClockService clock;
     private NpcService npcs;
@@ -32,11 +35,13 @@ public final class VesperaPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        saveBundledDialogues();
+        saveBundledFiles();
 
         state = new StoryState(this);
         races = new RaceBridge(this);
-        dialogues = new DialogueService(this, state, races);
+        policy = new ContentPolicy(this);
+        policy.load();
+        dialogues = new DialogueService(this, state, races, policy);
         clock = new ClockService(this);
         npcs = new NpcService(this);
 
@@ -72,23 +77,28 @@ public final class VesperaPlugin extends JavaPlugin {
     /** 重载配置、剧本与锚点。玩家状态不动——那是玩家身上的东西，不该被 reload 抹掉。 */
     public void reload() {
         reloadConfig();
+        policy.load();
         dialogues.load();
         npcs.spawnAll();
         clock.stop();
         clock.start();
     }
 
-    private void saveBundledDialogues() {
-        for (String resource : BUNDLED_DIALOGUES) {
+    private void saveBundledFiles() {
+        for (String resource : BUNDLED_FILES) {
             File target = new File(getDataFolder(), resource);
             if (!target.isFile()) {
                 try {
                     saveResource(resource, false);
                 } catch (IllegalArgumentException e) {
-                    getLogger().log(Level.WARNING, "自带剧本 " + resource + " 没能写出来", e);
+                    getLogger().log(Level.WARNING, "自带文件 " + resource + " 没能写出来", e);
                 }
             }
         }
+    }
+
+    public ContentPolicy policy() {
+        return policy;
     }
 
     public StoryState state() {

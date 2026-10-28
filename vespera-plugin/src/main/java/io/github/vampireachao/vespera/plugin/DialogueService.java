@@ -49,12 +49,14 @@ public final class DialogueService {
     private final VesperaPlugin plugin;
     private final StoryState state;
     private final RaceBridge races;
+    private final ContentPolicy policy;
     private final Map<String, DialogueGraph> graphs = new LinkedHashMap<>();
 
-    public DialogueService(VesperaPlugin plugin, StoryState state, RaceBridge races) {
+    public DialogueService(VesperaPlugin plugin, StoryState state, RaceBridge races, ContentPolicy policy) {
         this.plugin = plugin;
         this.state = state;
         this.races = races;
+        this.policy = policy;
     }
 
     /** 读盘。返回加载成功的张数；有问题的图仍然加载，只是把问题记进日志。 */
@@ -126,11 +128,18 @@ public final class DialogueService {
         return graphs.get(id);
     }
 
-    /** 从入口开始谈。玩家不在线、图不存在，都安静返回——NPC 不该因为剧本写错而报错给玩家看。 */
+    /** 从入口开始谈。玩家不在线、图不存在、闸门关着，都安静返回——NPC 不该因为剧本写错而报错给玩家看。 */
     public boolean open(Player player, String graphId) {
         DialogueGraph graph = graphs.get(graphId);
         if (graph == null) {
             plugin.getLogger().warning("没有这张对话图：" + graphId);
+            return false;
+        }
+        if (!policy.allows(graph.gate())) {
+            // 不解释、不提示"这里本来有什么"。关着的线就是不发生。
+            // 给一句世界里的话，是因为沉默比拒绝更让人起疑。
+            player.sendMessage(Component.text("「今天没什么可说的。」").color(NamedTextColor.GRAY)
+                    .decorate(TextDecoration.ITALIC));
             return false;
         }
         openNode(player, graph, graph.entryId());
@@ -175,6 +184,11 @@ public final class DialogueService {
 
         List<ActionButton> buttons = new ArrayList<>();
         for (DialogueOption option : graph.visible(node, vars)) {
+            // 闸门在渲染前判：关着的选项根本不进界面。留一个灰按钮说"未解锁"，
+            // 等于在告诉玩家"这里有东西"，那正是最不该做的事。
+            if (!policy.allows(option.gate())) {
+                continue;
+            }
             ActionButton.Builder button = ActionButton.builder(Component.text(option.label())).width(220);
             if (option.tooltip() != null) {
                 button = button.tooltip(Component.text(option.tooltip()).color(NamedTextColor.DARK_GRAY));

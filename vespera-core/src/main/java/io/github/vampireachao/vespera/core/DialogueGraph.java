@@ -16,9 +16,10 @@ public final class DialogueGraph {
     private final String id;
     private final String speaker;
     private final String entry;
+    private final String gate;
     private final Map<String, DialogueNode> nodes;
 
-    public DialogueGraph(String id, String speaker, String entry, Map<String, DialogueNode> nodes) {
+    public DialogueGraph(String id, String speaker, String entry, Map<String, DialogueNode> nodes, String gate) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("对话必须有 id");
         }
@@ -29,10 +30,21 @@ public final class DialogueGraph {
         this.speaker = speaker == null || speaker.isBlank() ? id : speaker;
         this.nodes = Map.copyOf(new LinkedHashMap<>(nodes));
         this.entry = entry == null || entry.isBlank() ? nodes.keySet().iterator().next() : entry;
+        this.gate = gate;
     }
 
     public String id() {
         return id;
+    }
+
+    /**
+     * 整张图的内容闸门。闸门关着，这整张图在游戏里不存在——不是隐藏，是不加载给玩家。
+     *
+     * <p>闸门放在图这一层，是因为有些线整段都不该被表面提及（一张图就是一场戏）。
+     * 只遮某一句、留个"这里本来有点什么"的空洞，是最糟的做法：它反而把注意力引过去。
+     */
+    public String gate() {
+        return gate;
     }
 
     public String speaker() {

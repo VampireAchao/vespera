@@ -126,4 +126,24 @@ class DialogueGraphParserTest {
         assertTrue(avoid.flags().contains("avoided"));
         assertEquals(null, avoid.target());
     }
+
+    @Test
+    @DisplayName("闸门分两级：整张图一个，单个选项一个，互不覆盖")
+    void parsesGates() {
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("lines", List.of("熄灯之后，她翻了个身。"));
+        node.put("options", List.of(Map.of("label", "（问她桌上那张纸。）", "gate", "conflict", "close", true)));
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("id", "dorm-night");
+        root.put("gate", "bonds");
+        root.put("entry", "a");
+        root.put("nodes", Map.of("a", node));
+
+        DialogueGraph graph = DialogueGraphParser.parse("dorm-night", root);
+        assertEquals("bonds", graph.gate());
+        assertEquals("conflict", graph.entry().options().get(0).gate());
+        // 没写 gate 的选项就是"不设闸"，不是"闸门名叫 null"
+        assertEquals(null, DialogueOption.avoid("走开。").gate());
+    }
 }

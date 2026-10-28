@@ -46,7 +46,7 @@ public final class DialogueGraphParser {
                     lines(body.get("lines"), nodeId),
                     options(body.get("options"), nodeId)));
         }
-        return new DialogueGraph(id, speaker, text(root.get("entry"), null), nodes);
+        return new DialogueGraph(id, speaker, text(root.get("entry"), null), nodes, text(root.get("gate"), null));
     }
 
     private static List<String> lines(Object raw, String nodeId) {
@@ -90,7 +90,8 @@ public final class DialogueGraphParser {
                     truth(body.get("close")),
                     counters(body.get("set"), nodeId),
                     flags(body.get("flags")),
-                    Condition.parse(body.get("when"))));
+                    Condition.parse(body.get("when")),
+                    text(body.get("gate"), null)));
         }
         return options;
     }

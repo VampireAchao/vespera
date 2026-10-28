@@ -86,6 +86,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         lines.add("  NPC 锚点  " + plugin.npcs().count() + " 个");
         lines.add("  时钟      " + plugin.clock().describe());
         lines.add("  软依赖    " + softDependencies());
+        lines.add("  内容闸门  " + plugin.policy().describe());
         if (sender instanceof Player player) {
             lines.add("  你        " + plugin.races().race(player)
                     + "，血势 " + plugin.races().power(player)
