@@ -42,7 +42,7 @@ public final class VesperaPlugin extends JavaPlugin {
     private CampusBuilder campus;
 
     /** 灰盒的"已建成"版本标记。改了平面就把它加一，下次启动重建。 */
-    public static final String CITY_VERSION = "1";
+    public static final String CITY_VERSION = "2";
     public static final String CAMPUS_VERSION = "1";
 
     @Override

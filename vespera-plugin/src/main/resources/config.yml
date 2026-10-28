@@ -54,6 +54,7 @@ city:
   world: world
   origin-x: 0
   origin-z: 0
+  pull-strays: true
 
 # 校区灰盒（钟塔学院）
 #
@@ -64,6 +65,7 @@ campus:
   world: world
   origin-x: 370
   origin-z: 0
+  pull-strays: true
 
 # 剧本目录。留空则用插件自带的那几份示例。
 dialogues:

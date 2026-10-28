@@ -2,9 +2,7 @@
   <configuration default="false" name="维斯佩拉 · 本地服务器" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="io.github.vampireachao.vespera.dev.DevServer" />
     <module name="vespera-dev" />
-    <!-- 平世界 + 主城就在出生点，进服直接看见城。端口被占用会自动顺延，看控制台那行 localhost。 -->
     <option name="VM_PARAMETERS" value="-Dvespera.flat=true -Dvespera.port=25565 -Dvespera.dir=$PROJECT_DIR$/server/dev" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
