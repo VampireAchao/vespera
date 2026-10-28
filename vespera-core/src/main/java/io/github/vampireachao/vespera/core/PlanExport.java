@@ -6,7 +6,8 @@ import java.nio.file.Path;
 /**
  * 把平面图导出成 SVG。
  *
- * <p>图与房子同源：都从 {@link CampusPlan} 出。所以"图纸和实物不一致"这件事，
+ * <p>图与房子同源：都从 {@link CampusPlan} 出。主城的图在
+ * {@code io.github.vampireachao.vespera.core.world.CityExport} 里，与游戏方块同源。所以"图纸和实物不一致"这件事，
  * 在这套结构里是做不到的——想不一致，得改两处，而没人会为了撒谎特意改两处。
  *
  * <pre>
@@ -22,10 +23,7 @@ public final class PlanExport {
         Path dir = Path.of(args.length > 0 ? args[0] : "docs/设计图");
         Files.createDirectories(dir.toAbsolutePath());
 
-        // 主城优先：它是出生点，也是玩家第一眼看到的东西
-        write(dir.resolve("流明陨城平面图"), CityPlan.svg(), "流明陨城 · 平面灰盒",
-                "出生点在南门里，往北是广场与钟楼。城墙 300×300，四面各开一门。",
-                CityPlan.summary());
+        // 主城的图由 CityExport 出（它与游戏里的几何同源）。这里只出学院的。
         write(dir.resolve("学院平面图"), CampusPlan.svg(), "钟塔学院 · 平面灰盒",
                 "主城以东约 370 格，隔一条河。十一栋楼，七段有顶回廊。",
                 CampusPlan.summary());

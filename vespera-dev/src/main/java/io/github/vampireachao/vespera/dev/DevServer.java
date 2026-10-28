@@ -316,10 +316,8 @@ public final class DevServer {
         Path file = config.server.resolve("server.properties");
         Files.writeString(config.server.resolve("eula.txt"),
                 "# 起这个服务器等于同意 Minecraft EULA：https://aka.ms/MinecraftEULA\neula=true\n");
-        // 端口变了就得重写，否则配置文件里还是那个被占用的号码，服务端起来仍会失败。
-        if (Files.isRegularFile(file) && !config.smoke && !config.flat && listenPort == config.port) {
-            return;
-        }
+        // 每次都重写：这份文件是启动器生成的，不是玩家手改的。
+        // 曾经因为"文件已存在就跳过"，改回正常地形后世界类型仍是 flat，白排查了半天。
         String layers = "{\"layers\":[{\"block\":\"minecraft:bedrock\",\"height\":1},"
                 + "{\"block\":\"minecraft:stone\",\"height\":3},"
                 + "{\"block\":\"minecraft:dirt\",\"height\":1},"
@@ -333,11 +331,11 @@ public final class DevServer {
                 "white-list=false",
                 "spawn-protection=0",
                 "max-players=20",
-                "view-distance=8",
-                "simulation-distance=6",
+                "view-distance=10",
+                "simulation-distance=8",
                 "allow-nether=true",
                 "enable-command-block=true",
-                "level-name=" + (config.flat ? "showcase" : "world"),
+                "level-name=" + (config.flat ? "showcase" : "vespera"),
                 "level-seed=" + config.seed,
                 "level-type=" + (config.flat ? "minecraft:flat" : "minecraft:normal"),
                 "generator-settings=" + (config.flat ? layers : ""),
@@ -815,11 +813,11 @@ public final class DevServer {
                     smoke,
                     // 平世界：默认就是它。地形是一块干净的白地，房子才看得清。
                     // 要看真地形，显式 -Dvespera.flat=false，并换一个没跑过的目录。
-                    Boolean.parseBoolean(System.getProperty("vespera.flat", "true")),
+                    Boolean.parseBoolean(System.getProperty("vespera.flat", "false")),
                     debug,
                     Boolean.getBoolean("vespera.debugSuspend"),
                     Integer.getInteger("vespera.debugPort", 5005),
-                    System.getProperty("vespera.seed", String.valueOf(System.nanoTime())),
+                    System.getProperty("vespera.seed", "20261028"),
                     System.getProperty("vespera.paperVersion", "26.3"),
                     Boolean.parseBoolean(System.getProperty("vespera.build", "true")));
         }

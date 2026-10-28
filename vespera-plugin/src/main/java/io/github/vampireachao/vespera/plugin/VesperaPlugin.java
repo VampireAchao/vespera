@@ -1,6 +1,7 @@
 package io.github.vampireachao.vespera.plugin;
 
 import io.github.vampireachao.vespera.core.CampusPlan;
+import io.github.vampireachao.vespera.core.world.MedievalCity;
 import java.io.File;
 import java.util.logging.Level;
 import org.bukkit.Bukkit;
@@ -38,11 +39,13 @@ public final class VesperaPlugin extends JavaPlugin {
     private DialogueService dialogues;
     private ClockService clock;
     private NpcService npcs;
-    private CityBuilder city;
+    private CityApplier city;
     private CampusBuilder campus;
+    private int cityX;
+    private int cityZ;
 
-    /** 灰盒的"已建成"版本标记。改了平面就把它加一，下次启动重建。 */
-    public static final String CITY_VERSION = "2";
+    /** 已建成的版本标记。改了平面就把它加一，下次启动重建。 */
+    public static final String CITY_VERSION = "3";
     public static final String CAMPUS_VERSION = "1";
 
     @Override
@@ -62,13 +65,13 @@ public final class VesperaPlugin extends JavaPlugin {
 
         int loaded = dialogues.load();
         npcs.spawnAll();
-        city = new CityBuilder(this);
+        city = new CityApplier(this);
         campus = new CampusBuilder(this);
         // 先城后校：城定出生点。反过来会让玩家站在学院门口，看不见主城。
-        buildIfNeeded("city", CITY_VERSION, getConfig().getBoolean("city.auto", true), CityBuilder::originFrom,
-                (world, ox, oz) -> city.build(world, ox, oz));
+        buildCity();
         buildIfNeeded("campus", CAMPUS_VERSION, getConfig().getBoolean("campus.auto", false),
                 CampusBuilder::originFrom, (world, ox, oz) -> campus.build(world, ox, oz));
+        grantAdmins();
         getServer().getPluginManager().registerEvents(new VesperaListener(this), this);
         getServer().getPluginManager().registerEvents(new PortalGate(regions), this);
 
@@ -129,14 +132,65 @@ public final class VesperaPlugin extends JavaPlugin {
         getLogger().info("  已放置 " + placed + " 个方块。");
     }
 
+    /**
+     * 建城。选址、整平、铺城三步都在 {@link CityApplier} 里，这里只负责"要不要建"。
+     *
+     * <p>自动建城的判断不看配置里的坐标，而看世界身上记着的版本——世界和城是一体的，
+     * 换一张世界就该重建一次。
+     */
+    private void buildCity() {
+        World world = RegionService.resolve(getConfig().getString("city.world", "world"));
+        if (world == null) {
+            getLogger().warning("找不到主城世界（city.world=" + getConfig().getString("city.world")
+                    + "，已加载：" + Bukkit.getWorlds().stream().map(World::getName).toList() + "），跳过建城。");
+            return;
+        }
+        int wantedX = getConfig().getInt("city.origin-x", 0);
+        int wantedZ = getConfig().getInt("city.origin-z", 0);
+        int[] site = city.site(world, wantedX, wantedZ);
+        cityX = site[0];
+        cityZ = site[1];
+
+        NamespacedKey key = new NamespacedKey(this, "city");
+        String built = world.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+        if (CITY_VERSION.equals(built) && getConfig().getBoolean("city.auto", true)) {
+            getLogger().info("城已在位：" + MedievalCity.summary() + "，中心 " + cityX + "," + cityZ);
+            return;
+        }
+        if (!getConfig().getBoolean("city.auto", true)) {
+            getLogger().info("city.auto=false，跳过建城（/vespera build city 可手动建）。");
+            return;
+        }
+        city.build(world, cityX, cityZ);
+        world.getPersistentDataContainer().set(key, PersistentDataType.STRING, CITY_VERSION);
+    }
+
+    /** 名单里的人进服即给 OP。私人服里这是最省事的一步。 */
+    private void grantAdmins() {
+        for (String name : getConfig().getStringList("admins")) {
+            org.bukkit.OfflinePlayer player = Bukkit.getOfflinePlayerIfCached(name);
+            if (player != null && player.isOnline() && !player.isOp()) {
+                player.setOp(true);
+            }
+        }
+    }
+
     /** 建造任务。两个灰盒的签名一致，用一个函数式接口把它们统一起来。 */
     @FunctionalInterface
     private interface BuildTask {
         int build(World world, int ox, int oz);
     }
 
-    public CityBuilder city() {
+    public CityApplier city() {
         return city;
+    }
+
+    public int cityX() {
+        return cityX;
+    }
+
+    public int cityZ() {
+        return cityZ;
     }
 
     public CampusBuilder campus() {

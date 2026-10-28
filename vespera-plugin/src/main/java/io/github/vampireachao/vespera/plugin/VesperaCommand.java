@@ -158,8 +158,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text("主城所在的世界不存在。"));
                 return;
             }
-            int[] origin = CityBuilder.originFrom(plugin);
-            total += plugin.city().build(world, origin[0], origin[1]);
+            total += plugin.city().build(world, plugin.cityX(), plugin.cityZ());
         }
         if (campus) {
             org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("campus.world", "world"));
@@ -188,8 +187,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text("找不到主城世界。"));
                 return;
             }
-            int[] origin = CityBuilder.originFrom(plugin);
-            failures.addAll(plugin.city().verify(world, origin[0], origin[1]));
+            failures.addAll(plugin.city().verify(world, plugin.cityX(), plugin.cityZ()));
         }
         if (!target.equals("city")) {
             org.bukkit.World world = RegionService.resolve(plugin.getConfig().getString("campus.world", "world"));

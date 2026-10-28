@@ -2,7 +2,7 @@
   <configuration default="false" name="维斯佩拉 · 本地服务器" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="io.github.vampireachao.vespera.dev.DevServer" />
     <module name="vespera-dev" />
-    <option name="VM_PARAMETERS" value="-Dvespera.flat=true -Dvespera.port=25565 -Dvespera.onlineMode=false -Dvespera.dir=$PROJECT_DIR$/server/dev" />
+    <option name="VM_PARAMETERS" value="-Dvespera.flat=false -Dvespera.port=25565 -Dvespera.onlineMode=false -Dvespera.dir=$PROJECT_DIR$/server/dev" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
