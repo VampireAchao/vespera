@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.vampireachao.vespera</groupId>
+    <artifactId>vespera</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>vespera-dev</artifactId>
+  <name>Vespera :: Dev</name>
+  <description>开发服务器：一条命令下载 Paper 26.3、装好插件与地图资源、起来、挂上调试器</description>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <mainClass>io.github.vampireachao.vespera.dev.DevServer</mainClass>
+          <classpathScope>runtime</classpathScope>
+          <systemProperties>
+            <systemProperty>
+              <key>vespera.projectDir</key>
+              <value>${project.basedir}/..</value>
+            </systemProperty>
+            <systemProperty>
+              <key>vespera.paperVersion</key>
+              <value>${plugin.api.version}</value>
+            </systemProperty>
+          </systemProperties>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.github.vampireachao.vespera</groupId>
+  <artifactId>vespera</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>Vespera</name>
+  <description>维斯佩拉 —— 半生存半 RPG 服务器（Paper 26.3）的工程骨架：剧本、插件、地图资源同仓同 Maven</description>
+  <inceptionYear>2026</inceptionYear>
+
+  <modules>
+    <module>vespera-core</module>
+    <module>vespera-world</module>
+    <module>vespera-plugin</module>
+    <module>vespera-dev</module>
+  </modules>
+
+  <properties>
+    <!-- Paper 26.x 起要求 Java 25；编译目标与运行时保持一致，避免 class file 69 之类的启动失败 -->
+    <java.version>25</java.version>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Paper 从 26.x 起把 API 版本改成 <MC版本>.build.<构建号>-<通道>，不再是 1.21.x-R0.1-SNAPSHOT。
+         版本在这里钉死：构建可复现，不会被上游的每日构建悄悄改掉。 -->
+    <paper.version>26.3.build.159-beta</paper.version>
+    <plugin.api.version>26.3</plugin.api.version>
+    <junit.version>5.11.4</junit.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>papermc</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+  </repositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.papermc.paper</groupId>
+        <artifactId>paper-api</artifactId>
+        <version>${paper.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.13.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.4.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.3.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

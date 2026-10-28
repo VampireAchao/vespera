@@ -1,0 +1,93 @@
+# 钟感测试 —— 学院篇 2.2 的四个回答，三种班。
+#
+# 这份文件同时是三样东西的样例：
+#   1. 一个选项怎么落地成状态（set / flags）
+#   2. 一个只有特定种族听得见的选项（when.race）
+#   3. 一个"可以走开"的选项（close + 旗标），跳过不惩罚
+#
+# 写法约定：台词不报数值、不提界面、不念玩家名。NPC 不知道自己在游戏里。
+
+id: bell-test
+speaker: 老修士
+entry: intro
+
+nodes:
+  intro:
+    lines:
+      - "钟楼底层，一张桌子，三口钟。他不问你叫什么、从哪来、是不是人。"
+      - "他只敲三下。第一声，正午。第二声，日落。第三声——也是日落。"
+      - "「哪一声不对？」"
+    options:
+      - label: "第三声。它比第二声早了十一分钟。"
+        tooltip: "你听出来了。这不需要理由。"
+        goto: c-class
+        set:
+          bell_test: 1
+        tell: "老修士多看了你一眼，在册子上写了一个字。"
+
+      - label: "都對。"
+        goto: b-class
+        set:
+          bell_test: 2
+        tell: "他点点头，没有再看你。"
+
+      - label: "第二声。"
+        goto: a-class
+        set:
+          bell_test: 3
+        tell: "你听错了，但错得很稳定。"
+
+      - label: "……第三声之后，还有一声。"
+        tooltip: "你不是听出来的。你是听见的。"
+        when:
+          race:
+            - vampire
+            - ghoul
+            - werewolf
+            - demon
+            - enderborn
+        goto: c-class
+        set:
+          bell_test: 1
+          heard_fourth_bell: 1
+        tell: "他停了很久才落笔。「你是听见的，不是听出来的。」"
+
+      - label: "我不答。"
+        goto: c-class
+        set:
+          bell_test: 0
+        tell: "「不配合。」他在备注栏写下这三个字。"
+        when:
+          not:
+            - avoided
+
+      - label: "（回避）"
+        tooltip: "你不必在这里被分出高下。"
+        tell: "你说你不舒服，先走了。分班表明天才贴出来，你的名字在最后一栏。"
+        close: true
+        flags:
+          - avoided
+
+  c-class:
+    lines:
+      - "C 班。一楼西，靠旧校舍。"
+      - "他把你送到门口，说：「你听得见，这在这里不算好事。」"
+    options:
+      - label: "（走开）"
+        close: true
+
+  b-class:
+    lines:
+      - "B 班。二楼中，最不容易被记住的位置。"
+      - "他说：「你会过得很好。」这句话听起来像祝福，也像结论。"
+    options:
+      - label: "（走开）"
+        close: true
+
+  a-class:
+    lines:
+      - "A 班。三楼东，靠钟楼。窗子正对着那口钟。"
+      - "他说：「你听得很稳。」稳定，是这所学校最看重的品质。"
+    options:
+      - label: "（走开）"
+        close: true

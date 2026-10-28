@@ -1,0 +1,16 @@
+﻿# 第三方插件清单
+#
+# 开发服务器按这份清单补插件。格式：名字 <TAB> 下载地址 <TAB> sha256 <TAB> 说明
+#
+# 校验和是空的，就**不会**自动下载——只打印一行提示，让你自己下、自己看一眼。
+# 这不是偷懒：从别人的 release 页面拉一个 jar 直接丢进服务器，是这个生态里最常见
+# 的中毒路径。要么给出一个你核对过的校验和，要么手动放。
+#
+# 这些 jar 一个都不进仓库：它们各自的许可证（GPL-3.0 / OSL-3.0 / 其他）允许你在
+# 自己的服务器上跑，但不允许我们把它们打包再分发一遍。
+
+# 超自然种族核心（八族机制）。必需。
+mmSupernaturals	https://github.com/VampireAchao/mmSupernaturals/releases		Paper 26.3 · 需要 Java 25
+
+# 可选：NPC 的皮肤、走动、巡逻。装了之后锚点仍在，渲染换成它。
+# Citizens	https://ci.citizensnpcs.co/job/Citizens2/		OSL-3.0

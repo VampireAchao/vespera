@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.vampireachao.vespera</groupId>
+    <artifactId>vespera</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>vespera-plugin</artifactId>
+  <name>Vespera :: Plugin</name>
+  <description>Paper 插件：校历时钟、原生对话界面、旗标状态、NPC 锚点、诊断</description>
+
+  <properties>
+    <!-- 与 mmSupernaturals 的约定一致：产物直接落在服务器的 plugins 目录，
+         这样 IDE 里点一次 Debug 就是最新的一版，不需要手工拷 jar。 -->
+    <plugin.output.dir>${project.basedir}/../server/plugins</plugin.output.dir>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.vampireachao.vespera</groupId>
+      <artifactId>vespera-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.papermc.paper</groupId>
+      <artifactId>paper-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <outputDirectory>${plugin.output.dir}</outputDirectory>
+        </configuration>
+      </plugin>
+      <!-- core 是一个插件里装不下的小库，但没有它插件就是个空壳：Bukkit 只加载 plugins/ 里
+           的 jar，不会去看 Maven 的依赖树。所以把它打进来。
+
+           不做 relocate：这些类本来就是我们自己的，没有和别人的包名撞车的可能，而 relocate
+           只会让将来的堆栈里多一层认不出来的前缀。 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <!-- 直接写到服务器目录，覆盖 jar 插件刚放下的那一份未打包版本。
+                   这个工程里"插件产物在哪"只有一个答案：server/plugins。 -->
+              <outputFile>${plugin.output.dir}/vespera-plugin.jar</outputFile>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>META-INF/versions/**</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

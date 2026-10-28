@@ -1,0 +1,22 @@
+# 运行期目录：服务端、世界、日志、下载下来的 jar。
+# 唯一要保住的是 server/plugins/ 里的插件产物——它由 Maven 每次重新生成，所以整目录都可以丢。
+server/
+logs/
+
+# 构建产物
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 本地覆盖的开关（比如把 online-mode 关掉做离线测试）
+dev.local.properties

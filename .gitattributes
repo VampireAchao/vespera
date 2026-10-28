@@ -1,0 +1,8 @@
+# 二进制资源走 Git LFS。
+#
+# 结构文件是二进制，diff 看不出来，但必须能 diff"用了哪一版"——所以命名带版本，
+# 而不是反复覆盖同一个文件名。
+*.schem   filter=lfs diff=lfs merge=lfs -text
+*.schematic filter=lfs diff=lfs merge=lfs -text
+*.nbt     filter=lfs diff=lfs merge=lfs -text
+*.mca     filter=lfs diff=lfs merge=lfs -text

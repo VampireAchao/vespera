@@ -1,0 +1,72 @@
+Vespera / 维斯佩拉
+Copyright (C) 2026 VampireAchao
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. The full text is in LICENSE.
+
+--------------------------------------------------------------------------------
+TRADEMARKS AND NON-AFFILIATION
+--------------------------------------------------------------------------------
+
+Minecraft is a trademark of Mojang Synergies AB. Mojang Studios is a subsidiary
+of Microsoft. In mainland China, Minecraft is published and operated by NetEase
+(网易) under an exclusive licence.
+
+None of those three has anything to do with this repository, and none of them
+supports it.
+
+Not an official Minecraft product.
+Not approved by or associated with Mojang, Microsoft, or NetEase.
+
+--------------------------------------------------------------------------------
+WHAT IS IN THIS REPOSITORY
+--------------------------------------------------------------------------------
+
+  - The source of the Vespera plugin (vespera-core, vespera-plugin).
+  - The development launcher (vespera-dev) that fetches a server and starts it.
+  - World *descriptions*, not world data: layout files written by hand, and
+    (once the art exists) structure files made by this project's builders.
+  - Documentation.
+
+Everything here is either written for this project or is a plain-text
+description of something a person decided.
+
+--------------------------------------------------------------------------------
+WHAT IS NOT IN THIS REPOSITORY
+--------------------------------------------------------------------------------
+
+  - No Minecraft client or server jar. No paper.jar, no vanilla jar, no patched
+    jar, and nothing of the sort anywhere in the history.
+  - No server software (Paper, Spigot, Bukkit, Purpur, Folia).
+  - No third-party plugin jars (mmSupernaturals, Citizens, WorldEdit, WorldGuard,
+    LuckPerms, ...). They are obtained locally by whoever runs this; see
+    plugins.tsv.
+  - No Mojang assets: no textures, sounds, language files, fonts, or models.
+  - No world region files. Those contain players' builds, chests and footprints,
+    and they never belong in a repository.
+
+--------------------------------------------------------------------------------
+WHAT YOU SUPPLY YOURSELF
+--------------------------------------------------------------------------------
+
+A Paper server and a copy of Minecraft you are licensed to run. The development
+launcher downloads Paper from PaperMC's own API into target/ — that directory is
+ignored by git and is never committed. Paper is GPL-3.0; downloading it and
+running it on your own machine is what its licence is for. Redistributing it is
+a different act, with different obligations, and this project does not do it.
+
+--------------------------------------------------------------------------------
+THIRD-PARTY COMPONENTS AT RUNTIME
+--------------------------------------------------------------------------------
+
+  Paper                  GPL-3.0
+  mmSupernaturals        GPL-3.0
+  Citizens               OSL-3.0     (optional)
+  WorldEdit              GPL-3.0     (optional)
+  WorldGuard             GPL-3.0     (optional)
+  LuckPerms              MIT         (optional)
+
+Each keeps its own licence and its own copyright. This project talks to them
+through their public APIs and does not modify or bundle them.

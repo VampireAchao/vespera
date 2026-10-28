@@ -1,0 +1,30 @@
+name: Vespera
+version: ${project.version}
+main: io.github.vampireachao.vespera.plugin.VesperaPlugin
+api-version: ${plugin.api.version}
+description: 维斯佩拉的剧情骨架——校历时钟、原生对话界面、旗标状态、NPC 锚点
+author: VampireAchao
+website: https://github.com/VampireAchao/vespera
+# 全是软依赖：缺谁都能启动，doctor 会把缺的那几项点名。
+softdepend:
+  - mmSupernaturals
+  - Citizens
+  - WorldEdit
+  - WorldGuard
+  - LuckPerms
+
+commands:
+  vespera:
+    description: 维斯佩拉管理命令
+    usage: /vespera <doctor|talk|dialogues|state|clock|npc|reload>
+    permission: vespera.command
+    aliases:
+      - vs
+
+permissions:
+  vespera.command:
+    description: 使用 /vespera 的基础命令
+    default: true
+  vespera.admin:
+    description: 改状态、重载、重生 NPC
+    default: op

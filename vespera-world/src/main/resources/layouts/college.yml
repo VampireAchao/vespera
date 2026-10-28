@@ -1,0 +1,101 @@
+# 钟塔学院 · 建筑布置清单
+#
+# 这份文件是"地图即数据"的落点。一栋楼是一个 .schem，摆在哪儿写在这里。
+# 好处有三个：
+#   1. 地图可以 code review。改了哪栋楼、挪了几格，diff 里看得见。
+#   2. 同一个 .schem 可以在两处复用（旧校舍和主线的修道院共用一个耳堂）。
+#   3. 玩家数据与地图数据分开存。region 文件里混着箱子、实体和玩家足迹，永远不该进 git。
+#
+# 坐标以主城出生点为原点 (0, 64, 0)。rotation 只允许 0 / 90 / 180 / 270。
+# 每一块都在自己的区块里，粘贴时不会踩到邻居。
+
+world: world
+origin: "0 64 0"
+
+areas:
+  - id: gate
+    name: 校门
+    schematic: college/gate-v1.schem
+    at: "0 0 -40"
+    rotation: 0
+    note: 石柱铁门。入学第一个节拍，也是唯一一个可以翻墙进来的地方。
+
+  - id: hall
+    name: 教学楼
+    schematic: college/hall-v1.schem
+    at: "0 0 -12"
+    rotation: 0
+    note: 三层。A 班三楼东、B 班二楼中、C 班一楼西。玄关有鞋柜。
+
+  - id: dorm
+    name: 宿舍楼
+    schematic: college/dorm-v1.schem
+    at: "24 0 -12"
+    rotation: 270
+    note: 301 / 302。窗对着钟楼，能看见谁先回来。
+
+  - id: gym
+    name: 体育馆
+    schematic: college/gym-v1.schem
+    at: "24 0 8"
+    rotation: 0
+    note: 唯一有完整屋顶、无天窗的大场馆。吸血鬼与恶魔在这里是安全的。
+
+  - id: boiler
+    name: 锅炉房
+    schematic: college/boiler-v1.schem
+    at: "24 -12 8"
+    rotation: 0
+    note: 地下二层，常开一扇小传送门。恶魔学生"归炉"的地方，有登记簿。
+
+  - id: infirmary
+    name: 校医室
+    schematic: college/infirmary-v1.schem
+    at: "0 0 12"
+    rotation: 0
+    note: 双门。一扇通走廊，一扇直接通后山——事故要能悄悄送走。
+
+  - id: oldwing
+    name: 旧校舍
+    schematic: college/oldwing-v1.schem
+    at: "-28 0 -4"
+    rotation: 90
+    note: 危楼牌。调查线在这里开，夜里真的刷怪。
+
+  - id: greenhouse
+    name: 温室
+    schematic: college/greenhouse-v1.schem
+    at: "-20 0 16"
+    rotation: 0
+    note: 玻璃顶。园艺部的十九种花。
+
+  - id: observatory
+    name: 天文台
+    schematic: college/observatory-v1.schem
+    at: "-36 0 20"
+    rotation: 0
+    note: 晚钟后开放。夜巡部。
+
+  - id: hall-stage
+    name: 礼堂
+    schematic: college/hall-stage-v1.schem
+    at: "8 0 30"
+    rotation: 0
+    note: 舞台与吊灯。结营晚会、结业式、音游场地。
+
+  - id: camp
+    name: 营地
+    schematic: college/camp-v1.schem
+    at: "60 12 60"
+    rotation: 0
+    note: 北山。木屋与泉，分房、野炊、篝火。夜里不设保护。
+
+# 玩家数据与地图分开：这些目录永远不进仓库，也不在构建产物里。
+excluded:
+  - world/region
+  - world/entities
+  - world/playerdata
+  - world/stats
+  - world/advancements
+  - world/DIM-1
+  - world/DIM1

@@ -1,0 +1,43 @@
+# 维斯佩拉 · 运行期配置
+#
+# 这份文件里没有数值平衡，只有三件东西：钟怎么响、NPC 站哪儿、玩家从哪儿开始。
+# 剧情数值（好感、风纪、暴露……）不在这里，它们在玩家身上，由剧本写入。
+
+clock:
+  # 校历时钟。关掉之后世界照常天黑，只是没人报时间了。
+  enabled: true
+
+  # 只对这个世界报时。多世界时改成对应的世界名。
+  world: world
+
+  # 晚钟的音色。原版钟，不引外部音频——音频是最容易踩版权的地方。
+  sound: minecraft:block.bell.use
+
+  # 每一段的第一刻会说一句话。缺省的那一段就不说话，安静地过。
+  messages:
+    MORNING_BELL: "第一声。天还没亮透。"
+    ASSEMBLY: "朝礼的钟。操场集合。"
+    MORNING_CLASSES: "上午两节。"
+    LUNCH: "午休。食堂最挤，宿舍最空。"
+    AFTERNOON_CLASSES: "下午两节。"
+    CLUBS: "社团时间。"
+    NIGHT: "晚钟散了。门禁在第六百刻之后——那时候还在校舍里的人，会被钟留下。"
+
+# NPC 锚点。
+#
+# 这不是 Citizens 的替代品：它只做一件事——站着一个有名字的人，右键跟他说话。
+# 需要皮肤、走动、巡逻、商人的时候再装 Citizens，锚点会退化成它的一个入口。
+# 本方案先只用原版实体，是为了让"原版客户端可加入"这条底线在任何插件缺席时都成立。
+npcs:
+  - id: bell-monk
+    name: "老修士"
+    world: world
+    # world-spawn 表示"主城出生点"，也可以写 "8.5 65 8.5" 这样的一串坐标
+    at: world-spawn
+    offset: "2 0 2"
+    dialogue: bell-test
+    enabled: true
+
+# 剧本目录。留空则用插件自带的那两份示例。
+dialogues:
+  directory: dialogues
