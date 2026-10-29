@@ -35,8 +35,14 @@ import org.bukkit.persistence.PersistentDataType;
  */
 public final class CityApplier {
 
-    /** 场地平整半径（比城墙多留一圈，放得下城外那几处）。 */
-    private static final int LEVEL_RADIUS = MedievalCity.HALF + 30;
+    /** 塑造半径：城墙外一百四十格之内都归我们塑形，再往外交给原版地形。 */
+    private static final int SCULPT_RADIUS = MedievalCity.HALF + 140;
+
+    /** 地形采样步长（粗网格 + 双线性插值，比逐列问一遍快两个数量级）。 */
+    private static final int SCULPT_STEP = 8;
+
+    /** 台地边缘到坡脚：这一段是从"城的平面"过渡到"野地的坡"。 */
+    private static final int FOOT = MedievalCity.HALF + 28;
 
     private final VesperaPlugin plugin;
     private final Map<Block, BlockData> dataCache = new HashMap<>();
@@ -50,8 +56,8 @@ public final class CityApplier {
     public int build(World world, int ox, int oz) {
         long started = System.currentTimeMillis();
         int ground = groundOf(world, ox, oz);
-        plugin.getLogger().info("城市基面 y=" + ground + "，开始整平（半径 " + LEVEL_RADIUS + "）……");
-        level(world, ox, oz, ground, LEVEL_RADIUS);
+        plugin.getLogger().info("城市基面 y=" + ground + "，开始塑形（半径 " + SCULPT_RADIUS + "）……");
+        sculpt(world, ox, oz, ground);
         levelOuterPads(world, ox, oz, ground);
         carveWater(world, ox, oz, ground);
 
@@ -70,7 +76,7 @@ public final class CityApplier {
                 + "," + spawn.getBlockZ() + "（圣座顶坛，祭坛前一步）");
         long done = System.currentTimeMillis();
         plugin.getLogger().info("流明陨城已就位：" + scene.size() + " 个方块（写入 " + placed + "），"
-                + "整平 " + (leveled - started) + "ms + 建造 " + (done - leveled) + "ms。");
+                + "塑形 " + (leveled - started) + "ms + 建造 " + (done - leveled) + "ms。");
         return placed;
     }
 
@@ -174,38 +180,154 @@ public final class CityApplier {
         return dry;
     }
 
-    /** 削高填低。整平之后每个格子顶面都等于 ground。 */
-    private void level(World world, int ox, int oz, int ground, int radius) {
+    /**
+     * 塑形：城内是平台，城外是一段真的坡。
+     *
+     * <p>原来的做法是"半径内削平、半径外不管"，于是城墙外三十格有一条笔直的断崖，
+     * 再往外一步就跳回原始地形——从空中看像一块被刀切下来的蛋糕。现在改成三段：
+     *
+     * <ol>
+     *   <li><b>台地</b>（墙外两格以内）：与城内同高，是城墙的基脚；</li>
+     *   <li><b>陡坎</b>（墙外四格）：落两格。这是挡土墙的高度，也是攻城时要爬的那一段；</li>
+     *   <li><b>坡脚到野地</b>（墙外四格到一百四十格）：按自然高度做平滑过渡，
+     *       中段叠一点低频起伏，让它像山坡而不像抹平的水泥。</li>
+     * </ol>
+     *
+     * <p>关键是"自然高度"要提前采：一边削一边读，读到的就是自己刚削出来的高度，
+     * 过渡带会越算越平。所以先按八格网格把原始地表采样存下来，再插值。
+     */
+    private void sculpt(World world, int ox, int oz, int ground) {
+        int pad = SCULPT_STEP * 2;
+        int[][] natural = sampleTerrain(world, ox, oz, SCULPT_RADIUS + pad);
         int cleared = 0;
         int filled = 0;
-        for (int x = ox - radius; x <= ox + radius; x++) {
-            for (int z = oz - radius; z <= oz + radius; z++) {
+        for (int x = ox - SCULPT_RADIUS; x <= ox + SCULPT_RADIUS; x++) {
+            for (int z = oz - SCULPT_RADIUS; z <= oz + SCULPT_RADIUS; z++) {
+                int r = Math.max(Math.abs(x - ox), Math.abs(z - oz));
+                int naturalY = naturalAt(natural, ox, oz, SCULPT_RADIUS + pad, x, z);
+                if (r > MedievalCity.HALF + 6 && r > FOOT) {
+                    // 过渡带外侧：目标高度与原地形一致时不用动土（能省掉几十万次空写）
+                    double t0 = smooth((r - FOOT) / (double) (SCULPT_RADIUS - FOOT));
+                    if (Math.abs(t0 - 1.0) < 0.02) {
+                        continue;
+                    }
+                }
+
+                // 台地与陡坎：与场景里那圈裙边逐格对齐（y = -1 - drop）
+                int drop = r <= MedievalCity.HALF + 2 ? 0 : (r <= MedievalCity.HALF + 4 ? 1 : 2);
+                int edge = ground - drop;
+                int target;
+                if (r <= FOOT) {
+                    target = edge;
+                } else {
+                    double t = smooth((r - FOOT) / (double) (SCULPT_RADIUS - FOOT));
+                    // 起伏在两端归零：靠城的一侧不能有坑，靠野地的一侧不能有坎
+                    double wobble = fbm(x, z) * 4.0 * (4 * t * (1 - t));
+                    target = (int) Math.round(edge * (1 - t) + naturalY * t + wobble);
+                }
+
+                Material inside = r <= MedievalCity.HALF + 6 ? Material.COARSE_DIRT : null;
+                int changed = carveTo(world, x, z, target, inside, naturalY);
+                if (changed > 0) {
+                    if (target < naturalY) {
+                        cleared += changed;
+                    } else {
+                        filled += changed;
+                    }
+                }
+            }
+        }
+        plugin.getLogger().info("  削掉 " + cleared + " 格，填上 " + filled + " 格；"
+                + "城墙外一百四十格内已按自然高度接上。");
+        reportProfile(world, ox, oz, ground, natural, SCULPT_RADIUS + pad);
+    }
+
+    /**
+     * 打一条剖面：城东一排采样点的"原高度 → 现高度"。
+     *
+     * <p>塑形最怕的不是不好看，是接缝。接缝在图上、在游戏里都不容易一眼看出来，
+     * 但可以在日志里排成一行数字：原高度与现高度越到外侧越接近，说明接上了；
+     * 若某处突然拉开十几格，那就是一条断崖。
+     */
+    private void reportProfile(World world, int ox, int oz, int ground, int[][] natural, int radius) {
+        StringBuilder line = new StringBuilder();
+        for (int d : new int[] {300, 306, 316, 340, 380, 420, 440, 460}) {
+            int x = ox + d;
+            int now = world.getHighestBlockYAt(x, oz, HeightMap.WORLD_SURFACE);
+            int before = naturalAt(natural, ox, oz, radius, x, oz);
+            line.append("  r=").append(d).append(' ').append(before).append("→").append(now);
+        }
+        plugin.getLogger().info("  东向剖面（原→现）：" + line);
+    }
+
+    /** 粗网格采样原始地表。{@code step} 越小越准，也越慢；八格对坡地足够。 */
+    private int[][] sampleTerrain(World world, int ox, int oz, int radius) {
+        int n = (radius * 2) / SCULPT_STEP + 1;
+        int[][] heights = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                int x = ox - radius + i * SCULPT_STEP;
+                int z = oz - radius + j * SCULPT_STEP;
                 if (!world.isChunkLoaded(x >> 4, z >> 4)) {
                     world.getChunkAt(x >> 4, z >> 4);
                 }
-                int top = world.getHighestBlockYAt(x, z, HeightMap.WORLD_SURFACE);
-                // 城外三十格缓降三格：城墙不会在草原上切出一道直角
-                int r = Math.max(Math.abs(x - ox), Math.abs(z - oz));
-                int target = r <= MedievalCity.HALF ? ground
-                        : ground - Math.min(3, (r - MedievalCity.HALF) / 10);
-                if (top > target) {
-                    for (int y = target + 1; y <= top; y++) {
-                        if (!world.getBlockAt(x, y, z).isEmpty()) {
-                            world.getBlockAt(x, y, z).setType(Material.AIR, false);
-                            cleared++;
-                        }
-                    }
-                } else if (top < target) {
-                    for (int y = top + 1; y <= target; y++) {
-                        world.getBlockAt(x, y, z)
-                                .setType(y == target ? Material.GRASS_BLOCK : Material.DIRT, false);
-                        filled++;
-                    }
-                }
-                world.getBlockAt(x, target, z).setType(Material.GRASS_BLOCK, false);
+                heights[i][j] = world.getHighestBlockYAt(x, z, HeightMap.WORLD_SURFACE);
             }
         }
-        plugin.getLogger().info("  削掉 " + cleared + " 格，填上 " + filled + " 格。");
+        return heights;
+    }
+
+    private int naturalAt(int[][] heights, int ox, int oz, int radius, int x, int z) {
+        double fi = (x - (ox - radius)) / (double) SCULPT_STEP;
+        double fj = (z - (oz - radius)) / (double) SCULPT_STEP;
+        int i = Math.max(0, Math.min(heights.length - 2, (int) fi));
+        int j = Math.max(0, Math.min(heights.length - 2, (int) fj));
+        double ti = Math.min(1, Math.max(0, fi - i));
+        double tj = Math.min(1, Math.max(0, fj - j));
+        double a = heights[i][j] * (1 - ti) + heights[i + 1][j] * ti;
+        double b = heights[i][j + 1] * (1 - ti) + heights[i + 1][j + 1] * ti;
+        return (int) Math.round(a * (1 - tj) + b * tj);
+    }
+
+    /**
+     * 把一列削到（或填到）目标高度。
+     *
+     * @param inside 城内用的表层方块；null 表示按"削了多深"自己选（浅了是土，深了是石）
+     * @return 改动的方块数
+     */
+    private int carveTo(World world, int x, int z, int target, Material inside, int naturalY) {
+        int top = world.getHighestBlockYAt(x, z, HeightMap.WORLD_SURFACE);
+        int changed = 0;
+        if (top > target) {
+            for (int y = target + 1; y <= top; y++) {
+                if (!world.getBlockAt(x, y, z).isEmpty()) {
+                    world.getBlockAt(x, y, z).setType(Material.AIR, false);
+                    changed++;
+                }
+            }
+        } else if (top < target) {
+            for (int y = top + 1; y <= target; y++) {
+                world.getBlockAt(x, y, z).setType(y == target ? Material.DIRT : Material.STONE, false);
+                changed++;
+            }
+        }
+        int cut = naturalY - target;
+        Material surface = inside != null ? inside
+                : (cut > 5 ? Material.STONE : (cut > 1 ? Material.DIRT : Material.GRASS_BLOCK));
+        world.getBlockAt(x, target, z).setType(surface, false);
+        return changed;
+    }
+
+    /** 平滑插值：两端斜率为零，接缝才不会有一道折线。 */
+    private static double smooth(double t) {
+        double c = Math.max(0, Math.min(1, t));
+        return c * c * (3 - 2 * c);
+    }
+
+    /** 低频起伏。不用 Perlin，两个错相的正弦已经够让坡面不像塑料。 */
+    private static double fbm(int x, int z) {
+        return Math.sin(x * 0.031 + Math.sin(z * 0.019) * 1.9) * 0.55
+                + Math.sin(z * 0.047 + Math.sin(x * 0.011) * 2.3) * 0.45;
     }
 
     /** 城外那几个点各整一小块，让竞技场、农田、村落有地方站。 */
@@ -253,9 +375,9 @@ public final class CityApplier {
         int z2 = oz + 406;
         for (int x = x1; x <= x2; x++) {
             for (int z = z1; z <= z2; z++) {
-                for (int y = ground - 5; y <= ground; y++) {
+                for (int y = ground - 6; y <= ground; y++) {
                     world.getBlockAt(x, y, z).setType(
-                            y <= ground - 1 ? Material.WATER : Material.AIR, false);
+                            y <= ground - 2 ? Material.WATER : Material.AIR, false);
                 }
             }
         }
@@ -363,7 +485,7 @@ public final class CityApplier {
         probe(world, failures, "客栈楼板", ox - 40, ground + 5, oz + 265, Material.DARK_OAK_PLANKS);
         probe(world, failures, "府邸水池", ox + 134, ground - 1, oz - 282, Material.WATER);
         probe(world, failures, "贫民窟巷", ox - 188, ground - 1, oz + 140, Material.COBBLESTONE);
-        probe(world, failures, "码头水面", ox - 170, ground - 1, oz + 350, Material.WATER);
+        probe(world, failures, "码头水面", ox - 170, ground - 2, oz + 350, Material.WATER);
         return failures;
     }
 

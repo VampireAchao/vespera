@@ -24,6 +24,58 @@ public final class BuildKit {
     public final Random rnd;
     public final Map<String, Integer> stats = new LinkedHashMap<>();
 
+    /**
+     * 建筑的占地记录。盖的时候顺手记一笔，事后可以问"有没有两栋压在一起"。
+     *
+     * <p>之所以要记：体素没有"结构"这个概念，重叠之后方块照写，从外面看只是两个屋顶
+     * 长在一起；等到有人走进去，才发现门被另一堵墙堵住。占地表是唯一能在收工后
+     * 复查这件事的东西。
+     */
+    public final java.util.List<Claim> claims = new java.util.ArrayList<>();
+
+    /** 一块占地：谁的、从哪到哪（含地基，不含出檐）。 */
+    public record Claim(String kind, int x1, int z1, int x2, int z2) {
+
+        public boolean hits(Claim other) {
+            return x1 <= other.x2 && x2 >= other.x1 && z1 <= other.z2 && z2 >= other.z1;
+        }
+
+        public int overlap(Claim other) {
+            int dx = Math.min(x2, other.x2) - Math.max(x1, other.x1) + 1;
+            int dz = Math.min(z2, other.z2) - Math.max(z1, other.z1) + 1;
+            return (dx <= 0 || dz <= 0) ? 0 : dx * dz;
+        }
+
+        public String where() {
+            return x1 + ".." + x2 + " × " + z1 + ".." + z2;
+        }
+    }
+
+    public void claim(String kind, int x1, int z1, int x2, int z2) {
+        claims.add(new Claim(kind, Math.min(x1, x2), Math.min(z1, z2),
+                Math.max(x1, x2), Math.max(z1, z2)));
+    }
+
+    /**
+     * 这块地是不是已经有人占了。
+     *
+     * <p>和 {@link #free} 的分工：{@code free} 问"半空中有没有东西"（铺地之后仍然可用），
+     * {@code taken} 问"有没有一栋房子已经站在这儿"。自动排屋必须两个都问——只问前者，
+     * 两排房子就会在街角交叉，屋顶叠在一起。
+     */
+    public boolean taken(int x1, int z1, int x2, int z2) {
+        int ax = Math.min(x1, x2);
+        int bx = Math.max(x1, x2);
+        int az = Math.min(z1, z2);
+        int bz = Math.max(z1, z2);
+        for (Claim c : claims) {
+            if (ax <= c.x2() && bx >= c.x1() && az <= c.z2() && bz >= c.z1()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public BuildKit(Scene scene, long seed) {
         this.scene = scene;
         this.rnd = new Random(seed);
@@ -288,6 +340,7 @@ public final class BuildKit {
 
     /** 摊位：六根柱子、一块条纹布棚、一张柜台，柜上摆货。 */
     public void stall(int x, int z, Block clothA, Block clothB) {
+        claim("摊位", x, z, x + 5, z + 3);
         for (int dx = 0; dx <= 5; dx++) {
             for (int dz = 0; dz <= 3; dz++) {
                 boolean post = (dx == 0 || dx == 5) && (dz == 0 || dz == 3);
@@ -323,7 +376,8 @@ public final class BuildKit {
         int bx = x + w - 1;
         int bz = z + d - 1;
 
-        // 地基与地板
+        // 占地只算墙体：地基外扩那一圈是石脚，与邻居共墙时本来就该连成一条
+        claim("民居", ax, az, bx, bz);
         fill(ax - 1, y0 - 3, az - 1, bx + 1, y0 - 1, bz + 1, Palette.COBBLE);
         fill(ax, y0 - 1, az, bx, y0 - 1, bz, Palette.DARK_PLANK);
 
@@ -442,7 +496,9 @@ public final class BuildKit {
 
         int wallTop = y0 + floors * FLOOR;
         boolean ridgeAlongZ = front.equals("north") || front.equals("south");
-        roof(ax - 1, az - 1, bx + 1, bz + 1, wallTop, ridgeAlongZ, roofStair, gable, 1);
+        // 屋顶不出左右檐：排屋是共墙的，出檐会插进邻居的坡面，露出半截楼梯。
+        // 只在临街那一侧留一格（overhang 沿屋脊方向，正好朝街与后院）。
+        roof(ax, az, bx, bz, wallTop, ridgeAlongZ, roofStair, gable, 1);
 
         // 烟囱
         int chx = (front.equals("east") ? ax + 1 : bx - 1);

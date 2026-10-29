@@ -708,6 +708,7 @@ final class Landmarks {
         int w = 24;
         int d = 30;
         int h = tall ? 20 : 18;
+        k.claim("府邸", x - 1, z - 1, x + w, z + d);
         k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.STONE_BRICK);
         k.walls(x, 0, z, x + w - 1, h, z + d - 1, Palette.STONE_BRICK);
         k.carve(x + 1, 0, z + 1, x + w - 2, h - 1, z + d - 2);
@@ -787,6 +788,7 @@ final class Landmarks {
     }
 
     private static void stable(BuildKit k, int x, int z, int w) {
+        k.claim("马厩", x - 1, z - 1, x + w, z + 11);
         k.fill(x - 1, -1, z - 1, x + w, 0, z + 11, Palette.COBBLE);
         k.walls(x, 1, z, x + w - 1, 7, z + 10, Palette.SPRUCE_PLANK);
         k.carve(x + 1, 1, z + 1, x + w - 2, 6, z + 9);
@@ -811,6 +813,7 @@ final class Landmarks {
     static void bankAndPawn(BuildKit k, int x, int z) {
         int w = 37;
         int d = 23;
+        k.claim("银行", x - 1, z - 1, x + w, z + d);
         k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.STONE_BRICK);
         k.walls(x, 0, z, x + w - 1, 11, z + d - 1, Palette.STONE_BRICK);
         k.carve(x + 1, 0, z + 1, x + w - 2, 10, z + d - 2);
@@ -884,6 +887,7 @@ final class Landmarks {
     static void inn(BuildKit k, int x, int z) {
         int w = 43;
         int d = 35;
+        k.claim("客栈", x - 1, z - 1, x + w, z + d);
         k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.STONE_BRICK);
         k.walls(x, 0, z, x + w - 1, 13, z + d - 1, Palette.STONE_BRICK);
         k.carve(x + 1, 0, z + 1, x + w - 2, 12, z + d - 2);

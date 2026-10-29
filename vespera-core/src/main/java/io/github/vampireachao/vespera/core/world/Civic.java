@@ -379,7 +379,8 @@ final class Civic {
         // 运河：偏在西侧，南门的大路要能直着走出去
         for (int x = -250; x <= -94; x++) {
             for (int z = 306; z <= 404; z++) {
-                k.fill(x, -5, z, x, -1, z, Palette.WATER);
+                // 水面比岸低两格：与岸齐平的水看着像泳池，不像运河
+                k.fill(x, -6, z, x, -2, z, Palette.WATER);
             }
         }
         // 石砌岸壁
@@ -920,6 +921,7 @@ final class Civic {
 
     /** 一间：六乘八，两层八格高，共墙，屋顶朝街。 */
     private static void slumHouse(BuildKit k, int x, int z) {
+        k.claim("贫民屋", x, z, x + 5, z + 7);
         k.fill(x, -3, z, x + 5, -1, z + 7, Palette.COBBLE);
         k.walls(x, 0, z, x + 5, 8, z + 7, Palette.PLASTER_GRAY);
         k.carve(x + 1, 0, z + 1, x + 4, 7, z + 6);
@@ -946,8 +948,8 @@ final class Civic {
                 k.set(x + dx, 4, z + dz, Palette.DARK_PLANK);
             }
         }
-        k.roof(x - 1, z - 1, x + 6, z + 8, 9, true, Palette.SHINGLE_STAIR,
-                Palette.PLASTER_GRAY, 1);
+        k.roof(x - 1, z, x + 6, z + 7, 9, true, Palette.SHINGLE_STAIR,
+                Palette.PLASTER_GRAY, 0);
         k.set(x + 1, 0, z + 5, Palette.CAULDRON);
         k.set(x + 4, 0, z + 5, Palette.BARREL);
         // 巷里的公用灶台与晾衣杆
@@ -965,7 +967,7 @@ final class Civic {
                 k.fill(x - 1, -3, z - 1, x + 17, -1, z + 12, Palette.COBBLE);
                 k.house(x, z, 10, 12, 2, "south", true);
                 // 院子：六格宽，一口小井或晾衣杆
-                k.pave(x + 11, z, x + 16, z + 11, Palette.GRASS, Palette.PATH);
+                k.pave(x + 11, z, x + 16, z + 11, Palette.PATH, Palette.GRAVEL);
                 if ((c + r) % 2 == 0) {
                     k.set(x + 13, 0, z + 5, Palette.WATER);
                     k.set(x + 13, 1, z + 5, Palette.SPRUCE_FENCE);
@@ -991,13 +993,10 @@ final class Civic {
         k.pave(268, 127, 278, 259, Palette.COBBLE, Palette.GRAVEL);
         k.pave(105, 263, 265, 275, Palette.COBBLE, Palette.GRAVEL);
 
-        // 东侧矮铺面：六间，两层
-        for (int i = 0; i < 6; i++) {
-            int z = 128 + i * 20;
-            if (i == 5) {
-                z = 246;
-            }
-            lowShop(k, 280, z, 13, 19);
+        // 东侧矮铺面：五间，两层。间距 21 比进深 19 多两格——原来步长 20 会让相邻
+        // 两间的地基与屋檐各叠一行，远看像连体，近看是穿插。
+        for (int i = 0; i < 5; i++) {
+            lowShop(k, 280, 128 + i * 21, 13, 19);
         }
         // 南侧矮铺面：四间，中间留给售票与闸口
         lowShop(k, 108, 277, 21, 15);
@@ -1029,14 +1028,22 @@ final class Civic {
             Block[] pair = cloth[i % cloth.length];
             k.stall(268, 130 + i * 12, pair[0], pair[1]);
         }
+        // 摊位只摆在没有售票亭与闸口的两段。原来是一路排过去，两座亭子被摊子
+        // 直接插进墙里——这就是"摊贩和房子穿在一起"的来源之一。
         for (int i = 0; i < 12; i++) {
+            int x = 112 + i * 12;
+            boolean reserved = x + 5 >= 154 && x <= 216;
+            if (reserved) {
+                continue;
+            }
             Block[] pair = cloth[i % cloth.length];
-            k.stall(112 + i * 12, 263, pair[0], pair[1]);
+            k.stall(x, 263, pair[0], pair[1]);
         }
         k.bump("摊贩街");
     }
 
     private static void lowShop(BuildKit k, int x, int z, int w, int d) {
+        k.claim("矮铺面", x - 1, z - 1, x + w, z + d);
         k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.COBBLE);
         k.walls(x, 0, z, x + w - 1, 8, z + d - 1, Palette.PLASTER_CREAM);
         k.carve(x + 1, 0, z + 1, x + w - 2, 7, z + d - 2);
@@ -1052,14 +1059,16 @@ final class Civic {
         k.set(x + 3, 2, z + d - 2, Palette.BARREL);
         k.set(x + w - 4, 2, z + d - 2, Palette.CRATE);
         k.set(x + w / 2, 3, z + d - 1, Palette.SIGN);
-        k.roof(x - 1, z - 1, x + w, z + d, 9, true, Palette.SHINGLE_STAIR,
-                Palette.PLASTER_CREAM, 1);
+        // 出檐 0：这一排是肩并肩的，屋脊方向留檐会插进隔壁的坡面
+        k.roof(x - 1, z, x + w, z + d - 1, 9, true, Palette.SHINGLE_STAIR,
+                Palette.PLASTER_CREAM, 0);
         k.bump("矮铺面");
     }
 
     private static void ticket(BuildKit k, int x, int z) {
         int w = 16;
         int d = 9;
+        k.claim("售票亭", x - 1, z - 1, x + w, z + d);
         k.fill(x, -1, z, x + w - 1, 0, z + d - 1, Palette.STONE_BRICK);
         k.walls(x, 1, z, x + w - 1, 4, z + d - 1, Palette.SPRUCE_PLANK);
         k.carve(x + 1, 1, z + 1, x + w - 2, 3, z + d - 2);

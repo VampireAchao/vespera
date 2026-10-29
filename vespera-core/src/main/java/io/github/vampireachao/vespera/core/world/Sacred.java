@@ -674,6 +674,7 @@ final class Sacred {
     private static void court(BuildKit k, int x1, int z1, String type) {
         int x2 = x1 + 27;
         int z2 = z1 + 27;
+        k.claim("神职院", x1, z1, x2, z2);
         int sx = x1 < 0 ? -1 : 1;
         int sz = z1 < 0 ? -1 : 1;
 

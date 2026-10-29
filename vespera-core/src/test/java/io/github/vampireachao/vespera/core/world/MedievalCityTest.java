@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.vampireachao.vespera.core.voxel.Block;
 import io.github.vampireachao.vespera.core.voxel.Scene;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -77,6 +79,50 @@ class MedievalCityTest {
         assertTrue(MedievalCity.STREETS.size() >= 12);
         assertTrue(MedievalCity.STREETS.stream().anyMatch(street -> street.width() == 16),
                 "没有一条十六格宽的主街");
+    }
+
+    @Test
+    @DisplayName("建筑占地互不重叠：摊贩不会插进售票亭，排屋不会在街角穿成一团")
+    void claimsNeverOverlap() {
+        BuildKit kit = MedievalCity.kit(20261028L);
+        List<String> hits = new ArrayList<>();
+        List<BuildKit.Claim> claims = kit.claims;
+        for (int i = 0; i < claims.size(); i++) {
+            for (int j = i + 1; j < claims.size(); j++) {
+                BuildKit.Claim a = claims.get(i);
+                BuildKit.Claim b = claims.get(j);
+                if (a.overlap(b) > 0) {
+                    hits.add(a.kind() + " " + a.where() + " × " + b.kind() + " " + b.where()
+                            + " 重叠 " + a.overlap(b) + " 格");
+                }
+            }
+        }
+        assertTrue(hits.isEmpty(), "建筑互相压住了：\n  " + String.join("\n  ", hits));
+    }
+
+    @Test
+    @DisplayName("城里以夯土碎石为主，草只留在院子与墓地")
+    void cityGroundIsEarth() {
+        int grass = 0;
+        int earth = 0;
+        for (int x = -MedievalCity.HALF; x <= MedievalCity.HALF; x += 7) {
+            for (int z = -MedievalCity.HALF; z <= MedievalCity.HALF; z += 7) {
+                Block block = scene().get(x, -1, z);
+                if (block == null) {
+                    continue;
+                }
+                String id = block.id();
+                if (id.contains("grass_block")) {
+                    grass++;
+                } else if (id.contains("coarse_dirt") || id.contains("dirt_path")
+                        || id.contains("gravel") || id.contains("dirt")) {
+                    earth++;
+                }
+            }
+        }
+        assertTrue(earth > 1000, "土质地面太少，这条测试没意义：" + earth);
+        assertTrue(earth > grass * 5,
+                "城里还是草地：土 " + earth + " 格，草 " + grass + " 格（草应只出现在院子与墓地）");
     }
 
     @Test

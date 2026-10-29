@@ -148,6 +148,7 @@ public final class MedievalCity {
             new int[] {166, -234, 206, -166},       // 府邸 G4
             new int[] {98, -155, 154, -138},        // 马厩 S1
             new int[] {166, -155, 206, -138},       // 马厩 S2
+            new int[] {-238, 120, -193, 153},       // 西门酒馆（工人与走私客）
             new int[] {-192, 122, -165, 155},       // 贫民窟 S1a
             new int[] {-192, 165, -165, 233},       // 贫民窟 S1b
             new int[] {-155, 122, -122, 155},       // 贫民窟 S2
@@ -168,6 +169,11 @@ public final class MedievalCity {
     }
 
     public static Scene build(long seed) {
+        return kit(seed).scene;
+    }
+
+    /** 与 {@link #build(long)} 同一次建造，但把瓦刀也交出来——占地表在里面。 */
+    public static BuildKit kit(long seed) {
         Scene scene = new Scene();
         BuildKit k = new BuildKit(scene, seed);
 
@@ -203,7 +209,7 @@ public final class MedievalCity {
         Landmarks.inn(k, -72, 246);
 
         life(k);
-        Civic.tavern(k, -150, 150);
+        Civic.tavern(k, -238, 122);
         Civic.smithy(k, 130, 40);
         Civic.bathhouse(k, -276, 200);
         Civic.library(k, -136, -206);
@@ -228,7 +234,7 @@ public final class MedievalCity {
         outskirts(k);
         lights(k);
 
-        return scene;
+        return k;
     }
 
     // -- 地 -----------------------------------------------------------------
@@ -242,20 +248,33 @@ public final class MedievalCity {
     private static void ground(BuildKit k) {
         for (int x = -HALF; x <= HALF; x++) {
             for (int z = -HALF; z <= HALF; z++) {
+                // 城里不该是草地：一座住满人的中世纪城，空地被踩成夯土、碾成碎石、铺上石头。
+                // 草只留在院子里（courtyard 自己会铺），不留给"没人来过"的空地。
                 int roll = k.rnd.nextInt(100);
-                Block top = roll < 6 ? Palette.PATH : (roll < 12 ? Palette.COARSE : Palette.GRASS);
+                Block top;
+                if (roll < 34) {
+                    top = Palette.COARSE;
+                } else if (roll < 64) {
+                    top = Palette.PATH;
+                } else if (roll < 88) {
+                    top = Palette.GRAVEL;
+                } else {
+                    top = Palette.COBBLE;
+                }
                 k.set(x, -1, z, top);
             }
         }
-        // 城外一圈裙边：三级缓降，城墙不会直接切在空气上
-        for (int r = HALF + 1; r <= HALF + 10; r++) {
-            int y = -1 - (r - HALF) / 4;
+        // 城外一圈裙边：与落地器的台地陡坎对齐（四格落两格），城墙不会切在空气上。
+        // 再往外是落地器按自然高度塑的坡，不在场景里重复画。
+        for (int r = HALF + 1; r <= HALF + 6; r++) {
+            int y = -1 - Math.min(2, (r - HALF) / 2);
             for (int x = -r; x <= r; x++) {
                 for (int z = -r; z <= r; z++) {
                     if (Math.max(Math.abs(x), Math.abs(z)) != r) {
                         continue;
                     }
-                    k.set(x, y, z, (r % 3 == 0) ? Palette.COARSE : Palette.GRASS);
+                    // 墙外这一圈是踩出来的，草只零星冒几撮
+                    k.set(x, y, z, (r % 5 == 0) ? Palette.GRASS : Palette.COARSE);
                 }
             }
         }
@@ -341,13 +360,13 @@ public final class MedievalCity {
                 x += 4;
                 continue;
             }
-            if (!k.free(x, z, x + w - 1, z + 11)) {
+            if (!k.free(x, z, x + w - 1, z + 11) || k.taken(x, z, x + w - 1, z + 11)) {
                 x += 2;
                 continue;
             }
             k.house(x, z, w, 12, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), front,
                     k.rnd.nextInt(100) < 22);
-            x += w + 1;
+            x += w;
         }
     }
 
@@ -360,13 +379,13 @@ public final class MedievalCity {
                 z += 4;
                 continue;
             }
-            if (!k.free(x, z, x + 11, z + d - 1)) {
+            if (!k.free(x, z, x + 11, z + d - 1) || k.taken(x, z, x + 11, z + d - 1)) {
                 z += 2;
                 continue;
             }
             k.house(x, z, 12, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), front,
                     k.rnd.nextInt(100) < 22);
-            z += d + 1;
+            z += d;
         }
     }
 
@@ -615,6 +634,15 @@ public final class MedievalCity {
                 }
             }
         }
+        // 运河两端也要岸：只做南北岸，水面在东西两头会露出一条"悬空的蓝"
+        for (int z = zWater - 1; z <= zEnd + 1; z++) {
+            for (int i = 0; i < 3; i++) {
+                k.set(-252 + i, -1 - i / 2, z, Palette.STONE_BRICK);
+                k.set(-93 - i, -1 - i / 2, z, Palette.STONE_BRICK);
+            }
+            k.set(-252, 0, z, Palette.STONE_BRICK);
+            k.set(-93, 0, z, Palette.STONE_BRICK);
+        }
         for (int i = 0; i < 120; i++) {
             int x = -250 + k.rnd.nextInt(156);
             int z = k.rnd.nextBoolean() ? zWater - 1 : zEnd + 1;
@@ -750,7 +778,7 @@ public final class MedievalCity {
                 if (intersectsReserved(x - 7, z - 6, x + 7, z + 6)) {
                     continue;
                 }
-                if (k.rnd.nextInt(100) < 55) {
+                if (k.rnd.nextInt(100) < 55 && !k.taken(x - 7, z - 6, x + 7, z + 5)) {
                     k.house(x - 7, z - 6, 15, 12, 2, horizontal ? "south" : "east", false);
                 }
             }
@@ -792,12 +820,13 @@ public final class MedievalCity {
             }
             int d = 10 + k.rnd.nextInt(4);
             if (k.free(x, z, x + w - 1, z + d - 1)
+                    && !k.taken(x, z, x + w - 1, z + d - 1)
                     && !intersectsReserved(x, z, x + w - 1, z + d - 1)
                     && !onStreet(x, z, x + w - 1, z + d - 1)) {
                 k.house(x, z, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
                         k.rnd.nextInt(100) < 15);
             }
-            x += w + 1;
+            x += w;
         }
     }
 
@@ -813,12 +842,13 @@ public final class MedievalCity {
             }
             int d = 10 + k.rnd.nextInt(4);
             if (k.free(x, z - d + 1, x + w - 1, z)
+                    && !k.taken(x, z - d + 1, x + w - 1, z)
                     && !intersectsReserved(x, z - d + 1, x + w - 1, z)
                     && !onStreet(x, z - d + 1, x + w - 1, z)) {
                 k.house(x, z - d + 1, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
                         k.rnd.nextInt(100) < 15);
             }
-            x += w + 1;
+            x += w;
         }
     }
 
@@ -834,11 +864,12 @@ public final class MedievalCity {
             }
             int w = 10 + k.rnd.nextInt(4);
             if (k.free(x, z, x + w - 1, z + d - 1)
+                    && !k.taken(x, z, x + w - 1, z + d - 1)
                     && !intersectsReserved(x, z, x + w - 1, z + d - 1)
                     && !onStreet(x, z, x + w - 1, z + d - 1)) {
                 k.house(x, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
             }
-            z += d + 1;
+            z += d;
         }
     }
 
@@ -854,11 +885,12 @@ public final class MedievalCity {
             }
             int w = 10 + k.rnd.nextInt(4);
             if (k.free(x - w + 1, z, x, z + d - 1)
+                    && !k.taken(x - w + 1, z, x, z + d - 1)
                     && !intersectsReserved(x - w + 1, z, x, z + d - 1)
                     && !onStreet(x - w + 1, z, x, z + d - 1)) {
                 k.house(x - w + 1, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
             }
-            z += d + 1;
+            z += d;
         }
     }
 
@@ -866,7 +898,11 @@ public final class MedievalCity {
         if (x2 - x1 < 8 || z2 - z1 < 8) {
             return;
         }
-        k.pave(x1, z1, x2, z2, Palette.GRASS, Palette.PATH);
+        // 内院不是草坪：多半是踩实的土、堆货的碎石，只在井边留一小块菜地
+        k.pave(x1, z1, x2, z2, Palette.PATH, Palette.GRAVEL);
+        int gx = (x1 + x2) / 2;
+        int gz = (z1 + z2) / 2;
+        k.fill(gx - 3, -1, gz + 3, gx + 3, -1, gz + 7, Palette.GRASS);
         if (x2 - x1 > 14 && z2 - z1 > 14 && k.rnd.nextBoolean()) {
             Civic.well(k, x1 + (x2 - x1) / 2, z1 + (z2 - z1) / 2);
         }

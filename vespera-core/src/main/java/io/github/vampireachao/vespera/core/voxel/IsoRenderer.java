@@ -102,8 +102,9 @@ public final class IsoRenderer {
         Projector p = new Projector(cx, cz, cy, scale, w / 2.0, h / 2.0);
 
         // 地：一块比城稍大的平面，让城有落脚的地方。
-        ground(g, p, x0 - 90, z0 - 90, x1 + 90, z1 + 90, baseY - 0.08, shade(0x4c7038, 0.80));
-        ground(g, p, x0 - 80, z0 - 80, x1 + 80, z1 + 80, baseY, shade(0x6f9a4c, 0.92));
+        // 底板铺得比画幅大得多：它的边缘落在画面之外，就不会看到一条"世界到此为止"的直边
+        ground(g, p, x0 - 1400, z0 - 1400, x1 + 1400, z1 + 1400, baseY - 0.10, shade(0x6b5b41, 0.82));
+        ground(g, p, x0 - 1300, z0 - 1300, x1 + 1300, z1 + 1300, baseY, shade(0x8a7654, 0.96));
 
         for (Scene.Entry entry : visible) {
             drawBlock(g, p, entry.x(), entry.y(), entry.z(), entry.block());
