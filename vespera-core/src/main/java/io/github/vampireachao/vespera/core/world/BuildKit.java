@@ -401,10 +401,12 @@ public final class BuildKit {
         String roofStair = switch (style) {
             case 1 -> Palette.SHINGLE_STAIR;
             case 3 -> Palette.SLATE_STAIR;
+            // 民居的瓦偏冷：一大片青灰压下去，圣座那点白金才浮得出来。
+            // 原来七成是红瓦，整座城偏暖，宫殿和民居混在一起，远看没有主次
             default -> switch (rnd.nextInt(10)) {
-                case 0, 1, 2 -> Palette.SLATE_STAIR;
-                case 3, 4 -> Palette.SHINGLE_STAIR;
-                default -> Palette.TILE_STAIR;
+                case 0, 1, 2, 3, 4, 5, 6 -> Palette.SLATE_STAIR;
+                case 7, 8 -> Palette.TILE_STAIR;
+                default -> Palette.SHINGLE_STAIR;
             };
         };
         // 墙面颜色：同一条街用同一种料，只有深浅的微差

@@ -88,13 +88,20 @@ final class Sacred {
             }
         }
 
-        // 2) 壁柱：每四格一根，柱头换凿制石。节奏比花纹更能让人读出"这是一栋建筑"
-        for (int side = 0; side < 4; side++) {
-            for (int along = -(r - 2); along <= r - 2; along += 4) {
-                int px = side < 2 ? along : (side == 2 ? -r : r);
-                int pz = side < 2 ? (side == 0 ? -r : r) : along;
-                for (int y = y0 + 1; y < y0 + TIER_H; y++) {
-                    k.set(px, y, pz, y == y0 + TIER_H - 1 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+        // 2) 外皮：最下两层做盲拱，上面做壁柱。
+        // 一座宫殿的基座之所以像"城"，是因为挡土墙上有一整圈拱龛——远看是明暗相间的
+        // 带子，把一面大白墙分成几百个小格子。三格宽的壁柱只是竖线，拱龛才有"洞"。
+        if (index <= 1) {
+            blindArcade(k, r, y0);
+        } else {
+            for (int side = 0; side < 4; side++) {
+                for (int along = -(r - 2); along <= r - 2; along += 4) {
+                    int px = side < 2 ? along : (side == 2 ? -r : r);
+                    int pz = side < 2 ? (side == 0 ? -r : r) : along;
+                    for (int y = y0 + 1; y < y0 + TIER_H; y++) {
+                        k.set(px, y, pz,
+                                y == y0 + TIER_H - 1 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+                    }
                 }
             }
         }
@@ -233,12 +240,100 @@ final class Sacred {
 
     /** 塔顶祭坛：四面火盆，中间金座，顶上开天窗。 */
     /**
-     * 塔顶祭坛：一座四面敞开的亭子，四角墩柱、过梁、铜顶、金顶针。
+     * 台身外皮的盲拱：三格宽、四格高、凿进一格，顶上压一块楼梯当拱腹。
      *
-     * <p>原来是四根独柱撑一块整板再加一摞金块——从远处看就是"一个盒子戴了顶帽子"。
-     * 现在改成"墙变成柱、屋顶收成锥"：人站在亭子里能看见四面天，铜顶在一片砂岩色里
-     * 是唯一一处冷色，正好把轮廓收住。
+     * <p>只在最下两层做。越往上拱越小越少，是真实的做法——为了省钱，
+     * 也因为远看时上面本来就看不见几个洞。
      */
+    private static void blindArcade(BuildKit k, int r, int y0) {
+        String[] face = {"south", "north", "east", "west"};
+        for (int side = 0; side < 4; side++) {
+            for (int along = -(r - 4); along <= r - 4; along += 6) {
+                // 正中间让开：那里是大台阶与壁柱
+                if (Math.abs(along) < 10) {
+                    continue;
+                }
+                for (int w = -1; w <= 1; w++) {
+                    int px = side < 2 ? along + w : (side == 2 ? -r : r);
+                    int pz = side < 2 ? (side == 0 ? -r : r) : along + w;
+                    for (int h = 1; h <= 4; h++) {
+                        k.set(px, y0 + h, pz, null);
+                    }
+                    k.set(px, y0 + 5, pz,
+                            Block.stairs("minecraft:stone_brick_stairs", face[side]));
+                }
+            }
+        }
+    }
+
+    /**
+     * 塔顶祭坛：一座四面敞开的圆亭，十二根柱子，一顶金穹隆。
+     *
+     * <p>原来是"四根方柱 + 五层收分的方锥铜顶"。方的东西在轮廓上立不住——从远处看，
+     * 一座城的顶点必须是一个<b>曲面</b>，眼睛才认得出"这是顶"。所以换成圆亭加真穹隆，
+     * 顶上再插一根金针：全城唯一的暖金就在这儿，和下面七层砂岩台地拉开。
+     */
+    /**
+     * 顶冠：圆亭 + 金穹顶 + 金针，外加台角一座鼓形副塔。
+     *
+     * <p>这三件是照着"一个宽台基、中段碎、顶上一点金"那个轮廓配的：
+     * 圆亭给曲面，穹顶给高光，金针把视线往上带，副塔让顶点旁边还有一个次高，
+     * 不至于孤零零一根。少了副塔，顶上那点金会被七层台地的宽度压住。
+     */
+    private static void crown(BuildKit k, int y) {
+        int ring = 12;
+        // 台座：两级圆阶，把亭子垫起来
+        k.disc(0, 0, ring + 2, y + 1, Palette.STONE_CHISELED);
+        k.disc(0, 0, ring + 1, y + 2, Palette.SANDSTONE);
+        // 十二根柱子，柱头贴金
+        for (int i = 0; i < 12; i++) {
+            double a = i / 12.0 * Math.PI * 2;
+            int px = (int) Math.round(Math.cos(a) * ring);
+            int pz = (int) Math.round(Math.sin(a) * ring);
+            k.fill(px, y + 3, pz, px, y + 10, pz, Palette.STONE_CHISELED);
+            k.set(px, y + 11, pz, Palette.GOLD);
+        }
+        // 环梁：柱头之上一圈砂岩，亭子才有"檐"
+        for (int i = 0; i < 96; i++) {
+            double a = i / 96.0 * Math.PI * 2;
+            int px = (int) Math.round(Math.cos(a) * ring);
+            int pz = (int) Math.round(Math.sin(a) * ring);
+            k.set(px, y + 11, pz, Palette.SANDSTONE);
+            k.set(px, y + 12, pz, Palette.SANDSTONE);
+        }
+        // 穹顶：十一层半球，整体贴金，只有最下两圈是铜绿——
+        // 雨水从顶上流下来，先锈的是檐口那一圈，不是顶心。而且从空中看，
+        // 看见的是顶心：顶心要是绿的，这顶冠就白做了
+        for (int i = 0; i <= 10; i++) {
+            double t = i / 10.0;
+            int rr = (int) Math.round((ring + 2) * Math.sqrt(Math.max(0, 1 - t * t)));
+            k.disc(0, 0, rr, y + 13 + i, i <= 1 ? Palette.COPPER_OXIDIZED : Palette.GOLD);
+        }
+        // 金针
+        k.fill(0, y + 25, 0, 0, y + 27, 0, Palette.GOLD);
+        k.set(0, y + 28, 0, Palette.GOLD);
+
+        // 副塔：台角一座鼓形塔，铜绿小穹顶
+        int tx = 15;
+        int tz = 15;
+        for (int yy = y + 1; yy <= y + 14; yy++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    double d = Math.sqrt(dx * dx + dz * dz);
+                    if (d <= 3.4 && d > 2.2) {
+                        k.set(tx + dx, yy, tz + dz,
+                                yy % 6 == 0 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+                    }
+                }
+            }
+        }
+        k.disc(tx, tz, 3, y + 15, Palette.SANDSTONE);
+        for (int i = 0; i <= 4; i++) {
+            k.disc(tx, tz, Math.max(0, 4 - i), y + 16 + i, Palette.COPPER_OXIDIZED);
+        }
+        k.set(tx, y + 21, tz, Palette.GOLD);
+    }
+
     private static void altar(BuildKit k) {
         int y = TIERS * TIER_H;
         int r = 18;
@@ -265,29 +360,8 @@ final class Sacred {
         k.fill(-2, y + 3, -2, 2, y + 3, 2, Palette.GOLD);
         k.set(0, y + 4, 0, Palette.GOLD);
 
-        // 亭子：四角三乘三的墩柱，柱头贴金；四面过梁
-        int pr = 7;
-        for (int[] c : new int[][] {{-pr, -pr}, {pr, -pr}, {-pr, pr}, {pr, pr}}) {
-            k.fill(c[0] - 1, y + 1, c[1] - 1, c[0] + 1, y + 8, c[1] + 1, Palette.STONE_CHISELED);
-            k.set(c[0], y + 9, c[1], Palette.GOLD);
-        }
-        for (int i = -pr - 1; i <= pr + 1; i++) {
-            for (int j : new int[] {-pr - 1, pr + 1}) {
-                k.set(i, y + 9, j, Palette.STONE_CHISELED);
-                k.set(j, y + 9, i, Palette.STONE_CHISELED);
-                k.set(i, y + 10, j, Palette.SANDSTONE);
-                k.set(j, y + 10, i, Palette.SANDSTONE);
-            }
-        }
-
-        // 铜顶：五层收分的方锥，顶上金针。这是全城唯一一处冷色
-        for (int layer = 0; layer < 5; layer++) {
-            int rr = 9 - layer * 2;
-            // 最下一圈还是新铜，往上已经生锈：真实铜顶从来不是一次变绿的
-            Block copper = layer == 0 ? Palette.COPPER : Palette.COPPER_OXIDIZED;
-            k.fill(-rr, y + 11 + layer, -rr, rr, y + 11 + layer, rr, copper);
-        }
-        k.fill(0, y + 16, 0, 0, y + 17, 0, Palette.GOLD);
+        // 顶冠：圆亭 + 金穹顶 + 金针
+        crown(k, y);
 
         // 四角火盆
         for (int[] c : new int[][] {{-14, -14}, {14, -14}, {-14, 14}, {14, 14}}) {
@@ -295,14 +369,15 @@ final class Sacred {
             k.set(c[0], y + 3, c[1], Palette.CAMPFIRE);
         }
 
-        // 两侧的水池：水到了顶上，总得有个地方落
+        // 两侧的水池：挪到柱廊外面，不然十二根柱子会泡在水里
         for (int side = -1; side <= 1; side += 2) {
-            for (int x = -12; x <= -8; x++) {
+            for (int x = 13; x <= 16; x++) {
                 for (int z = -2; z <= 2; z++) {
                     k.set(x * side, y, z, Palette.WATER);
                 }
             }
             k.set(side * 12, y + 1, 0, Palette.STONE_CHISELED);
+            k.set(side * 17, y, 0, Palette.STONE_CHISELED);
         }
 
         // 钟：挂在北侧
