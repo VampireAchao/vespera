@@ -63,9 +63,11 @@ public final class CityApplier {
 
         populate(world, ox, oz, ground);
 
-        int[] spawn = MedievalCity.spawn();
-        // 出生点在圣座顶坛，不是地面：ground 之上六十七格才是祭坛的台面
-        world.setSpawnLocation(ox + spawn[0], ground + MedievalCity.spawnHeight(), oz + spawn[1]);
+        // 出生点在圣座顶坛。但"顶坛"是个坐标，不是保证——所以要扫一遍确认脚下有地、身上有空
+        org.bukkit.Location spawn = safeSpawn(world, ox, oz, ground);
+        world.setSpawnLocation(spawn);
+        plugin.getLogger().info("  出生点 " + spawn.getBlockX() + "," + spawn.getBlockY()
+                + "," + spawn.getBlockZ() + "（圣座顶坛，祭坛前一步）");
         long done = System.currentTimeMillis();
         plugin.getLogger().info("流明陨城已就位：" + scene.size() + " 个方块（写入 " + placed + "），"
                 + "整平 " + (leveled - started) + "ms + 建造 " + (done - leveled) + "ms。");
@@ -408,11 +410,95 @@ public final class CityApplier {
         int ground = groundOf(world, ox, oz);
         populate(world, ox, oz, ground);
 
-        int[] spawn = MedievalCity.spawn();
-        player.teleport(new org.bukkit.Location(world, ox + spawn[0] + 0.5,
-                ground + MedievalCity.spawnHeight() + 0.2, oz + spawn[1] + 0.5));
+        player.teleport(safeSpawn(world, ox, oz, ground));
         player.sendMessage(net.kyori.adventure.text.Component
                 .text("你上一次登录在城外很远的地方。城已经建好了，从这里开始。"));
+    }
+
+    /**
+     * 出生点：从顶坛的预期高度往下扫，找第一个"脚下实心、身上两格空气"的位置。
+     *
+     * <p>写死高度是不行的——世界可能比城先存在，也可能建过一半就停了。坐标只是意图，
+     * 方块才是事实。扫不到就退到城中心的地面，总比让人卡在石头里强。
+     */
+    public static org.bukkit.Location safeSpawn(World world, int ox, int oz, int ground) {
+        int[] spawn = MedievalCity.spawn();
+        int x = ox + spawn[0];
+        int z = oz + spawn[1];
+        // 只从"预期高度往下"扫。往上扫会先撞到祭坛的华盖顶——那不是祭坛，是它的屋顶
+        int from = ground + MedievalCity.spawnHeight();
+        int to = Math.max(world.getMinHeight() + 2, ground + MedievalCity.spawnHeight() - 12);
+        for (int y = from; y >= to; y--) {
+            if (!world.getBlockAt(x, y - 1, z).getType().isSolid()) {
+                continue;
+            }
+            if (world.getBlockAt(x, y, z).isEmpty() && world.getBlockAt(x, y + 1, z).isEmpty()) {
+                return new org.bukkit.Location(world, x + 0.5, y, z + 0.5);
+            }
+        }
+        int y = world.getHighestBlockYAt(x, z) + 1;
+        return new org.bukkit.Location(world, x + 0.5, y, z + 0.5);
+    }
+
+    /**
+     * 把世界出生点校正一遍。城已经建过、只是出生点歪了的时候用这个，不必重建。
+     *
+     * @return 校正后的出生点；世界不对时返回 null
+     */
+    public org.bukkit.Location ensureSpawn(World world, int ox, int oz) {
+        if (world == null) {
+            return null;
+        }
+        org.bukkit.Location now = world.getSpawnLocation();
+        boolean bad = now.getBlock().getType().isSolid()
+                || now.clone().add(0, 1, 0).getBlock().getType().isSolid()
+                || !now.clone().subtract(0, 1, 0).getBlock().getType().isSolid();
+        if (!bad) {
+            return now;
+        }
+        org.bukkit.Location fixed = safeSpawn(world, ox, oz, groundOf(world, ox, oz));
+        world.setSpawnLocation(fixed);
+        plugin.getLogger().info("  出生点原来卡在方块里（" + now.getBlockX() + "," + now.getBlockY()
+                + "," + now.getBlockZ() + "），已改到 " + fixed.getBlockX() + ","
+                + fixed.getBlockY() + "," + fixed.getBlockZ() + "。");
+        return fixed;
+    }
+
+    /**
+     * 把卡在方块里的人弄出来：向上找第一个能站的地方，找不到就送到出生点。
+     *
+     * <p>这不是给"玩家挖矿掉进岩浆"用的，是给出生成点落在石头里这种事兜底的。
+     */
+    public boolean unstick(org.bukkit.entity.Player player) {
+        org.bukkit.Location loc = player.getLocation();
+        org.bukkit.block.Block feet = loc.getBlock();
+        boolean stuck = feet.getType().isSolid()
+                || feet.getRelative(org.bukkit.block.BlockFace.UP).getType().isSolid();
+        if (!stuck) {
+            return false;
+        }
+        for (int y = loc.getBlockY(); y <= Math.min(player.getWorld().getMaxHeight() - 2,
+                loc.getBlockY() + 96); y++) {
+            if (!player.getWorld().getBlockAt(loc.getBlockX(), y - 1, loc.getBlockZ()).getType().isSolid()) {
+                continue;
+            }
+            if (player.getWorld().getBlockAt(loc.getBlockX(), y, loc.getBlockZ()).isEmpty()
+                    && player.getWorld().getBlockAt(loc.getBlockX(), y + 1, loc.getBlockZ()).isEmpty()) {
+                // Location#setY 是 void，不能链式写
+                org.bukkit.Location target = loc.clone();
+                target.setY(y);
+                player.teleport(target);
+                player.sendMessage(net.kyori.adventure.text.Component
+                        .text("你刚才卡在方块里，已经把你挪到上面了。")
+                        .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
+                return true;
+            }
+        }
+        if (loc.getWorld() != null) {
+            player.teleport(loc.getWorld().getSpawnLocation());
+            return true;
+        }
+        return false;
     }
 
     /** 给 doctor 用：城是否已经盖过。 */

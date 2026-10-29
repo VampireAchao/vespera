@@ -155,10 +155,14 @@ public final class VesperaPlugin extends JavaPlugin {
         String built = world.getPersistentDataContainer().get(key, PersistentDataType.STRING);
         if (CITY_VERSION.equals(built) && getConfig().getBoolean("city.auto", true)) {
             getLogger().info("城已在位：" + MedievalCity.summary() + "，中心 " + cityX + "," + cityZ);
+            // 城在，不代表出生点对：世界可能被整平过、也可能上一版把点写歪了
+            city.ensureSpawn(world, cityX, cityZ);
             return;
         }
         if (!getConfig().getBoolean("city.auto", true)) {
             getLogger().info("city.auto=false，跳过建城（/vespera build city 可手动建）。");
+            // 没建城时世界出生点更要校正——不然人会掉进还没整平的地形里
+            city.ensureSpawn(world, cityX, cityZ);
             return;
         }
         city.build(world, cityX, cityZ);

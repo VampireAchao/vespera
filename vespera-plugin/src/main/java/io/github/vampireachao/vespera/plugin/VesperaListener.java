@@ -57,6 +57,8 @@ public final class VesperaListener implements Listener {
                     .text("已把你加为管理员（OP）。")
                     .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
         }
+        // 出生点落在方块里时把人挪出来。这种事只该发生一次，但不该让人自己去挖。
+        plugin.city().unstick(player);
         if (!plugin.getConfig().getBoolean("city.pull-strays", true)) {
             return;
         }
