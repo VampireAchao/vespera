@@ -178,6 +178,16 @@ class MedievalCityTest {
     }
 
     @Test
+    @DisplayName("出生点站在祭坛上：脚下一格实心，身上两格是空气")
+    void spawnStandsOnAltar() {
+        int[] spawn = MedievalCity.spawn();
+        int y = MedievalCity.spawnHeight();
+        assertNotNull(scene().get(spawn[0], y - 1, spawn[1]), "出生点脚下没有台面");
+        assertTrue(scene().get(spawn[0], y, spawn[1]) == null, "出生点那一格被方块占了");
+        assertTrue(scene().get(spawn[0], y + 1, spawn[1]) == null, "出生点头顶被占了");
+    }
+
+    @Test
     @DisplayName("兽笼真的在地下，且顶上留着那一格天窗")
     void undercroftIsUnderground() {
         assertTrue(scene().get(190, -2, 215) == null, "兽笼没有被挖开");

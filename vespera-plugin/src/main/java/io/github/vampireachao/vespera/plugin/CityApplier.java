@@ -64,7 +64,8 @@ public final class CityApplier {
         populate(world, ox, oz, ground);
 
         int[] spawn = MedievalCity.spawn();
-        world.setSpawnLocation(ox + spawn[0], ground + 1, oz + spawn[1]);
+        // 出生点在圣座顶坛，不是地面：ground 之上六十七格才是祭坛的台面
+        world.setSpawnLocation(ox + spawn[0], ground + MedievalCity.spawnHeight(), oz + spawn[1]);
         long done = System.currentTimeMillis();
         plugin.getLogger().info("流明陨城已就位：" + scene.size() + " 个方块（写入 " + placed + "），"
                 + "整平 " + (leveled - started) + "ms + 建造 " + (done - leveled) + "ms。");
@@ -345,6 +346,7 @@ public final class CityApplier {
                 Material.SANDSTONE, Material.STONE_BRICKS, Material.CHISELED_STONE_BRICKS);
         probe(world, failures, "金字塔祭坛", ox, ground + 64, oz,
                 Material.CHISELED_STONE_BRICKS, Material.GOLD_BLOCK);
+        probe(world, failures, "出生点台面", ox, ground + 66, oz + 1, Material.GOLD_BLOCK);
         probe(world, failures, "演讲台", ox, ground + 3, oz - 86,
                 Material.CHISELED_STONE_BRICKS, Material.STONE_BRICKS);
         probe(world, failures, "王座大厅", ox - 46, ground + 20, oz - 260, Material.STONE_BRICKS);
@@ -407,8 +409,8 @@ public final class CityApplier {
         populate(world, ox, oz, ground);
 
         int[] spawn = MedievalCity.spawn();
-        player.teleport(new org.bukkit.Location(world, ox + spawn[0] + 0.5, ground + 1.2,
-                oz + spawn[1] + 0.5));
+        player.teleport(new org.bukkit.Location(world, ox + spawn[0] + 0.5,
+                ground + MedievalCity.spawnHeight() + 0.2, oz + spawn[1] + 0.5));
         player.sendMessage(net.kyori.adventure.text.Component
                 .text("你上一次登录在城外很远的地方。城已经建好了，从这里开始。"));
     }

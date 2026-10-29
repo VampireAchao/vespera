@@ -1032,9 +1032,23 @@ public final class MedievalCity {
                 HALF * 2, HALF * 2, DISTRICTS.size());
     }
 
-    /** 出生点：南门内四十格，正对环市集与金字塔。 */
+    /**
+     * 出生点：圣座顶坛，祭坛正中往南一格。
+     *
+     * <p>为什么偏一格外：祭坛正中那一格是金柱的底座，站上去会卡在方块里。
+     * 往南一步仍然在 5×5 的金盘上，脚下是台面，头顶三格净空，退一步落到顶层平台也才两格高。
+     */
     public static int[] spawn() {
-        return new int[] {0, HALF - 40};
+        return new int[] {0, 1};
+    }
+
+    /**
+     * 出生点的高度（场景坐标）。落地时是 {@code ground + 这个值}。
+     *
+     * <p>顶坛的金盘在 y=66，所以脚底站在 67。
+     */
+    public static int spawnHeight() {
+        return 67;
     }
 
     public static int groundRadius() {
