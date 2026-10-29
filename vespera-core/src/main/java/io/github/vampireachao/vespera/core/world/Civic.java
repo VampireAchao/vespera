@@ -390,8 +390,9 @@ final class Civic {
             }
         }
         k.pave(-252, 296, -92, 308, Palette.COBBLE, Palette.GRAVEL);
-        // 从南门沿墙根过来的一条码头路
-        k.pave(-96, 286, 0, 294, Palette.PATH, Palette.GRAVEL);
+        // 从南门沿墙根过来的一条码头路。止于主街西沿——原来一直铺到 x=0，
+        // 把南门主街的西半边换成了土路，进城那一段就成了"半截石半截土"
+        k.pave(-96, 286, -10, 294, Palette.PATH, Palette.GRAVEL);
 
         // 仓库：三座，门朝码头
         for (int i = 0; i < 3; i++) {

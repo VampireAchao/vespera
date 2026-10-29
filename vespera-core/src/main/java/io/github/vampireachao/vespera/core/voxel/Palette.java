@@ -96,6 +96,7 @@ public final class Palette {
     public static final Block IRON_BARS = Block.of("minecraft:iron_bars");
     public static final Block GOLD = Block.of("minecraft:gold_block");
     public static final Block COPPER = Block.of("minecraft:copper_block");
+    public static final Block COPPER_OXIDIZED = Block.of("minecraft:oxidized_copper");
     public static final Block CHAIN = Block.of("minecraft:chain", "axis=y");
     public static final Block WOOL_RED = Block.of("minecraft:red_wool");
     public static final Block WOOL_BLUE = Block.of("minecraft:blue_wool");
@@ -213,6 +214,7 @@ public final class Palette {
         color("iron_bars", 0x8d8d90);
         color("gold_block", 0xefcf4a);
         color("copper_block", 0xb06b4a);
+        color("oxidized_copper", 0x4f9e8a);
         color("red_wool", 0xa33131);
         color("blue_wool", 0x334f86);
         color("yellow_wool", 0xd0b646);

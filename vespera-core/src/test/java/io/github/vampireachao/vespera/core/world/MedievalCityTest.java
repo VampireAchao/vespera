@@ -59,7 +59,7 @@ class MedievalCityTest {
     @DisplayName("四座地标各就各位：喷泉、圣座塔、城堡主楼、市政厅钟塔")
     void landmarksExist() {
         assertNotNull(scene().get(66, 5, 0), "金字塔塔身没有立起来");
-        assertNotNull(scene().get(0, 64, 0), "金字塔顶的祭坛没有立起来");
+        assertNotNull(scene().get(0, 57, 0), "金字塔顶的祭坛没有立起来");
         assertNotNull(scene().get(-46, 20, -260), "王座大厅没有立起来");
         assertNotNull(scene().get(-268, 30, -268), "城堡主楼没有立起来");
         assertNotNull(scene().get(-154, 30, -74), "市政厅钟塔没有立起来");

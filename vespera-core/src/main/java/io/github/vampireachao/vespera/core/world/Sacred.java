@@ -19,7 +19,7 @@ final class Sacred {
 
     private static final int BASE = 66;
     private static final int TIERS = 7;
-    private static final int TIER_H = 9;
+    private static final int TIER_H = 8;
     private static final int INSET = 8;
     private static final int SHELL = 3;
 
@@ -31,12 +31,12 @@ final class Sacred {
      * 建筑把等级写进了台阶数。
      */
     static void pyramid(BuildKit k) {
-        // 基座：比塔基再宽四格，四周留出巡礼道
-        k.pave(-BASE - 4, -BASE - 4, BASE + 4, BASE + 4, Palette.SANDSTONE, Palette.STONE_BRICK);
-        for (int x = -BASE - 4; x <= BASE + 4; x++) {
-            for (int z = -BASE - 4; z <= BASE + 4; z++) {
+        // 基座与巡礼道
+        k.pave(-BASE - 6, -BASE - 6, BASE + 6, BASE + 6, Palette.SANDSTONE, Palette.STONE_BRICK);
+        for (int x = -BASE - 5; x <= BASE + 5; x++) {
+            for (int z = -BASE - 5; z <= BASE + 5; z++) {
                 int d = Math.max(Math.abs(x), Math.abs(z));
-                if (d > BASE && d <= BASE + 4) {
+                if (d > BASE && d <= BASE + 5) {
                     k.set(x, -1, z, Palette.STONE_BRICK);
                     k.set(x, 0, z, Palette.STONE_CHISELED);
                 }
@@ -44,104 +44,173 @@ final class Sacred {
         }
 
         for (int t = 0; t < TIERS; t++) {
-            int radius = BASE - t * INSET;
+            int r = BASE - t * INSET;
             int y0 = t * TIER_H;
-            int next = t + 1 < TIERS ? radius - INSET : 0;
+            int next = t + 1 < TIERS ? r - INSET : 0;
+            tier(k, r, y0, next, t);
+        }
 
-            // 外壳：三层厚，越往上越收
-            for (int x = -radius; x <= radius; x++) {
-                for (int z = -radius; z <= radius; z++) {
-                    int d = Math.max(Math.abs(x), Math.abs(z));
-                    if (d > radius || d <= radius - SHELL) {
-                        continue;
-                    }
-                    for (int y = y0; y < y0 + TIER_H; y++) {
-                        Block block = y == y0 ? Palette.STONE_CHISELED
-                                : (d == radius ? Palette.SANDSTONE : Palette.STONE_BRICK);
-                        // 竖缝：每四格一道凹槽，远看有阴影
-                        if ((x + z) % 8 == 0 && y > y0 + 1) {
-                            block = Palette.STONE_BRICK;
-                        }
-                        k.set(x, y, z, block);
-                    }
-                }
-            }
-
-            // 露台与本层女儿墙
-            for (int x = -radius; x <= radius; x++) {
-                for (int z = -radius; z <= radius; z++) {
-                    int d = Math.max(Math.abs(x), Math.abs(z));
-                    if (d <= next || d > radius) {
-                        continue;
-                    }
-                    k.set(x, y0 + TIER_H, z, Palette.SANDSTONE);
-                    if (d == radius || d == next + 1) {
-                        k.set(x, y0 + TIER_H + 1, z, Palette.STONE_BRICK);
-                    }
-                }
-            }
-
-            // 内圈回廊：离外壳三格，宽六格，绕塔一周
-            for (int x = -radius + SHELL; x <= radius - SHELL; x++) {
-                for (int z = -radius + SHELL; z <= radius - SHELL; z++) {
-                    int d = Math.max(Math.abs(x), Math.abs(z));
-                    if (d > radius - SHELL || d <= radius - SHELL - 6) {
-                        continue;
-                    }
-                    k.set(x, y0, z, Palette.SANDSTONE);
-                    k.set(x, y0 + 7, z, Palette.STONE_CHISELED);
-                }
-            }
-
-            // 南面的中央大台阶：从本层露台走到上一层，九步
-            for (int i = 0; i < TIER_H; i++) {
-                int walkY = y0 + i;
-                int walkZ = radius - i;
-                for (int x = -7; x <= 7; x++) {
-                    k.set(x, walkY, walkZ, Block.stairs("minecraft:sandstone_stairs", "north"));
-                    for (int up = 1; up <= 3; up++) {
-                        k.set(x, walkY + up, walkZ, null);
-                    }
-                }
-                for (int x : new int[] {-8, 8}) {
-                    k.set(x, walkY, walkZ, Palette.STONE_CHISELED);
-                    k.set(x, walkY + 1, walkZ, Palette.STONE_CHISELED);
-                }
-            }
-            // 壁柱：每八格一道，把大面切成竖条
-            for (int side = 0; side < 4; side++) {
-                for (int along = -(radius - 6); along <= radius - 6; along += 8) {
-                    for (int y = y0 + 1; y < y0 + TIER_H - 1; y++) {
-                        int px = side < 2 ? along : (side == 2 ? -radius : radius);
-                        int pz = side < 2 ? (side == 0 ? -radius : radius) : along;
-                        k.set(px, y, pz, Palette.STONE_CHISELED);
-                    }
-                }
-            }
-
-            // 每层一道上行的梯：沿南侧内壁，九步一层
-            int runZ = radius - SHELL - 7;
-            for (int i = 0; i < TIER_H; i++) {
-                for (int w = -2; w <= 2; w++) {
-                    int x = w;
-                    int z = runZ - i;
-                    k.set(x, y0 + i, z, Block.stairs("minecraft:sandstone_stairs", "north"));
-                    k.set(x, y0 + i + 1, z, null);
-                    k.set(x, y0 + i + 2, z, null);
-                    k.set(x, y0 + i + 3, z, null);
-                }
-            }
-
-            // 底层：教会人员的居所——沿内壁一圈小室
-            if (t == 0) {
-                clergyRooms(k, radius);
+        // 基座前的水池：台阶两侧的水一路落下来，总得有个地方接住
+        for (int x = -9; x <= 9; x++) {
+            for (int z = BASE + 6; z <= BASE + 10; z++) {
+                boolean rim = Math.abs(x) == 9 || z == BASE + 10;
+                k.set(x, -1, z, rim ? Palette.STONE_CHISELED : Palette.WATER);
             }
         }
 
-        // 塔顶：祭坛
+        clergyRooms(k, BASE);
         altar(k);
         k.bump("圣座金字塔");
         k.bump("地标");
+    }
+
+    /**
+     * 一层塔身：壳体、壁柱、露台、大台阶。
+     *
+     * <p>这一版是按"空中花园"那类作品的路子重排的：每层都有看得见的基脚与压顶、
+     * 壁柱按四格一根的节奏、露台外沿用半砖压顶（能看出去、也能看出层次）、
+     * 种植从栏板溢出到下层、水落到该落的地方。
+     *
+     * <p>台阶原来只有八格深却要爬九格高，多出来的一格只能凿穿露台——于是每爬一层
+     * 都会掉进一个三格深的坑，顶端还顶在上一层墙上。现在层高改成八，正好一格一阶。
+     */
+    private static void tier(BuildKit k, int r, int y0, int next, int index) {
+        // 1) 壳体：三层厚。基脚一圈凿制石，檐口一圈砂岩
+        for (int x = -r; x <= r; x++) {
+            for (int z = -r; z <= r; z++) {
+                int d = Math.max(Math.abs(x), Math.abs(z));
+                if (d <= r - SHELL) {
+                    continue;
+                }
+                for (int y = y0; y < y0 + TIER_H; y++) {
+                    k.set(x, y, z, y == y0 ? Palette.STONE_CHISELED : Palette.SANDSTONE);
+                }
+            }
+        }
+
+        // 2) 壁柱：每四格一根，柱头换凿制石。节奏比花纹更能让人读出"这是一栋建筑"
+        for (int side = 0; side < 4; side++) {
+            for (int along = -(r - 2); along <= r - 2; along += 4) {
+                int px = side < 2 ? along : (side == 2 ? -r : r);
+                int pz = side < 2 ? (side == 0 ? -r : r) : along;
+                for (int y = y0 + 1; y < y0 + TIER_H; y++) {
+                    k.set(px, y, pz, y == y0 + TIER_H - 1 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+                }
+            }
+        }
+
+        int topY = y0 + TIER_H;
+        if (next <= 0) {
+            return;
+        }
+
+        // 3) 露台：外沿半砖压顶 → 两格种植 → 走道 → 内圈种植
+        for (int x = -r; x <= r; x++) {
+            for (int z = -r; z <= r; z++) {
+                int d = Math.max(Math.abs(x), Math.abs(z));
+                if (d <= next || d > r) {
+                    continue;
+                }
+                if (d == r) {
+                    k.set(x, topY, z, Block.slab("minecraft:smooth_sandstone_slab", "bottom"));
+                } else if (d >= r - 2 || d <= next + 2) {
+                    k.set(x, topY, z, Palette.GRASS);
+                    if (Math.floorMod(x * 7 + z * 11, 9) == 0) {
+                        k.set(x, topY + 1, z, Math.floorMod(x + z, 3) == 0
+                                ? Palette.FLOWER_RED : Palette.FLOWER_YELLOW);
+                    } else if (Math.floorMod(x * 3 + z * 5, 7) == 0) {
+                        k.set(x, topY + 1, z, Palette.GRASS_TUFT);
+                    }
+                } else {
+                    k.set(x, topY, z, Palette.SANDSTONE);
+                }
+                // 种植溢出到下层：每六格一挂藤，从压顶垂下去
+                if (d == r && Math.floorMod(x * 5 + z * 3, 6) == 0) {
+                    k.set(x, topY - 1, z + 1, Palette.VINE);
+                    k.set(x, topY - 2, z + 1, Palette.VINE);
+                }
+            }
+        }
+
+        // 3.5) 台地家具：外沿每十二格一个花坛，走道边摆长凳
+        for (int along = -r + 6; along <= r - 6; along += 12) {
+            for (int[] p : new int[][] {{along, r - 1}, {along, -r + 1}, {r - 1, along}, {-r + 1, along}}) {
+                if (Math.abs(p[0]) <= next + 3 || Math.abs(p[1]) <= next + 3) {
+                    continue;
+                }
+                k.set(p[0], topY, p[1], Palette.STONE_BRICK);
+                k.set(p[0], topY + 1, p[1], Palette.GRASS);
+                k.set(p[0], topY + 2, p[1], Math.floorMod(along, 24) == 0
+                        ? Palette.FLOWER_RED : Palette.OAK_LEAVES);
+            }
+        }
+        for (int along = -r + 10; along <= r - 10; along += 16) {
+            for (int[] p : new int[][] {{along, r - 4}, {r - 4, along}}) {
+                k.set(p[0], topY + 1, p[1], Palette.OAK_PLANK);
+                if (Math.abs(p[0]) > next + 2 && Math.abs(p[1]) > next + 2) {
+                    k.set(p[0], topY + 1, p[1], Palette.OAK_PLANK);
+                }
+            }
+        }
+
+        // 4) 走道上的灯：每八格一盏，夜里能看出"这里有一圈路"
+        for (int along = -r + 4; along <= r - 4; along += 8) {
+            int d = r - 4;
+            for (int[] p : new int[][] {{along, -d}, {along, d}, {-d, along}, {d, along}}) {
+                if (Math.abs(p[0]) <= next + 2 || Math.abs(p[1]) <= next + 2) {
+                    continue;
+                }
+                k.set(p[0], topY + 1, p[1], Palette.LANTERN);
+            }
+        }
+
+        // 5) 南面大台阶：九格宽，一阶一上，正好走完这八格。
+        //    第一级再多铺一级落地台阶——广场比台阶低一格，不铺就得"跳"上去。
+        if (index == 0) {
+            for (int x = -4; x <= 4; x++) {
+                k.set(x, 0, r + TIER_H + 1, Block.stairs("minecraft:sandstone_stairs", "north"));
+            }
+            for (int x : new int[] {-5, 5}) {
+                k.set(x, 0, r + TIER_H + 1, Palette.SANDSTONE);
+                k.set(x, 1, r + TIER_H + 1, Palette.STONE_CHISELED);
+            }
+        }
+        for (int step = 0; step < TIER_H; step++) {
+            int y = y0 + 1 + step;
+            int z = r + TIER_H - step;
+            for (int x = -4; x <= 4; x++) {
+                k.set(x, y, z, Block.stairs("minecraft:sandstone_stairs", "north"));
+                for (int up = 1; up <= 3; up++) {
+                    k.set(x, y + up, z, null);
+                }
+            }
+            // 两侧栏墙：一层石、一层凿制，顶端留出净空
+            for (int x : new int[] {-5, 5}) {
+                k.set(x, y, z, Palette.SANDSTONE);
+                k.set(x, y + 1, z, Palette.STONE_CHISELED);
+                for (int up = 2; up <= 3; up++) {
+                    k.set(x, y + up, z, null);
+                }
+            }
+            // 每两级在栏墙上摆一只火盆
+            if (step % 2 == 0) {
+                for (int x : new int[] {-5, 5}) {
+                    k.set(x, y + 2, z, Palette.CAMPFIRE);
+                    k.set(x, y + 3, z, null);
+                }
+            }
+        }
+        // 台阶两侧的水槽：从上一层的落水口一直流到底座的水池
+        for (int step = 0; step < TIER_H; step++) {
+            int y = y0 + step;
+            int z = r + TIER_H - step;
+            for (int x : new int[] {-6, 6}) {
+                k.set(x, y, z, Palette.STONE_CHISELED);
+                if (step < TIER_H - 1) {
+                    k.set(x, y + 1, z, Palette.WATER);
+                }
+            }
+        }
     }
 
     /** 底层的一排小室：修士的居所、缮写室、库房。门朝内开。 */
@@ -163,55 +232,84 @@ final class Sacred {
     }
 
     /** 塔顶祭坛：四面火盆，中间金座，顶上开天窗。 */
+    /**
+     * 塔顶祭坛：一座四面敞开的亭子，四角墩柱、过梁、铜顶、金顶针。
+     *
+     * <p>原来是四根独柱撑一块整板再加一摞金块——从远处看就是"一个盒子戴了顶帽子"。
+     * 现在改成"墙变成柱、屋顶收成锥"：人站在亭子里能看见四面天，铜顶在一片砂岩色里
+     * 是唯一一处冷色，正好把轮廓收住。
+     */
     private static void altar(BuildKit k) {
         int y = TIERS * TIER_H;
         int r = 18;
+
+        // 顶面：同心方环铺装，外沿半砖压顶（能看出去，也看得出层次）
         for (int x = -r; x <= r; x++) {
             for (int z = -r; z <= r; z++) {
                 int d = Math.max(Math.abs(x), Math.abs(z));
-                if (d <= r) {
-                    k.set(x, y, z, (d <= 6) ? Palette.STONE_CHISELED : Palette.SANDSTONE);
-                }
+                Block block;
                 if (d == r) {
-                    k.set(x, y + 1, z, Palette.STONE_BRICK);
-                    if ((x + z) % 4 == 0) {
-                        k.set(x, y + 2, z, Palette.GOLD);
-                    }
+                    block = Block.slab("minecraft:smooth_sandstone_slab", "bottom");
+                } else if ((d / 3) % 2 == 0) {
+                    block = Palette.SANDSTONE;
+                } else {
+                    block = Palette.STONE_CHISELED;
                 }
+                k.set(x, y, z, block);
             }
         }
-        // 祭坛台：三级，金顶
+
+        // 祭坛台：三级，金盘
         k.fill(-6, y + 1, -6, 6, y + 1, 6, Palette.STONE_CHISELED);
         k.fill(-4, y + 2, -4, 4, y + 2, 4, Palette.SANDSTONE);
         k.fill(-2, y + 3, -2, 2, y + 3, 2, Palette.GOLD);
         k.set(0, y + 4, 0, Palette.GOLD);
-        // 四根柱与华盖
-        for (int[] c : new int[][] {{-7, -7}, {7, -7}, {-7, 7}, {7, 7}}) {
-            k.fill(c[0], y + 1, c[1], c[0], y + 6, c[1], Palette.STONE_CHISELED);
+
+        // 亭子：四角三乘三的墩柱，柱头贴金；四面过梁
+        int pr = 7;
+        for (int[] c : new int[][] {{-pr, -pr}, {pr, -pr}, {-pr, pr}, {pr, pr}}) {
+            k.fill(c[0] - 1, y + 1, c[1] - 1, c[0] + 1, y + 8, c[1] + 1, Palette.STONE_CHISELED);
+            k.set(c[0], y + 9, c[1], Palette.GOLD);
         }
-        k.fill(-8, y + 7, -8, 8, y + 7, 8, Palette.PLASTER_CREAM);
-        k.fill(-6, y + 8, -6, 6, y + 8, 6, Palette.SANDSTONE);
-        k.fill(-4, y + 9, -4, 4, y + 9, 4, Palette.GOLD);
-        k.fill(0, y + 10, 0, 0, y + 14, 0, Palette.GOLD);
-        k.set(0, y + 15, 0, Palette.GOLD);
-        // 火盆
+        for (int i = -pr - 1; i <= pr + 1; i++) {
+            for (int j : new int[] {-pr - 1, pr + 1}) {
+                k.set(i, y + 9, j, Palette.STONE_CHISELED);
+                k.set(j, y + 9, i, Palette.STONE_CHISELED);
+                k.set(i, y + 10, j, Palette.SANDSTONE);
+                k.set(j, y + 10, i, Palette.SANDSTONE);
+            }
+        }
+
+        // 铜顶：五层收分的方锥，顶上金针。这是全城唯一一处冷色
+        for (int layer = 0; layer < 5; layer++) {
+            int rr = 9 - layer * 2;
+            // 最下一圈还是新铜，往上已经生锈：真实铜顶从来不是一次变绿的
+            Block copper = layer == 0 ? Palette.COPPER : Palette.COPPER_OXIDIZED;
+            k.fill(-rr, y + 11 + layer, -rr, rr, y + 11 + layer, rr, copper);
+        }
+        k.fill(0, y + 16, 0, 0, y + 17, 0, Palette.GOLD);
+
+        // 四角火盆
         for (int[] c : new int[][] {{-14, -14}, {14, -14}, {-14, 14}, {14, 14}}) {
             k.fill(c[0], y + 1, c[1], c[0], y + 2, c[1], Palette.STONE_BRICK);
             k.set(c[0], y + 3, c[1], Palette.CAMPFIRE);
         }
+
+        // 两侧的水池：水到了顶上，总得有个地方落
+        for (int side = -1; side <= 1; side += 2) {
+            for (int x = -12; x <= -8; x++) {
+                for (int z = -2; z <= 2; z++) {
+                    k.set(x * side, y, z, Palette.WATER);
+                }
+            }
+            k.set(side * 12, y + 1, 0, Palette.STONE_CHISELED);
+        }
+
         // 钟：挂在北侧
-        k.fill(-2, y + 5, -14, 2, y + 5, -14, Palette.DARK_LOG);
-        k.set(0, y + 4, -14, Palette.BELL);
+        k.fill(-2, y + 6, -14, 2, y + 6, -14, Palette.DARK_LOG);
+        k.set(0, y + 5, -14, Palette.BELL);
     }
 
-    // -- 王座大厅：正北，梯形向上 -------------------------------------------
-
-    /**
-     * 三级台地，一级比一级窄、一级比一级高，尽头是王座。
-     *
-     * <p>"梯形向上"不是造型，是仪式：来朝见的人必须一级一级走上去，
-     * 每上一级，回头看一眼城就更小一点。等他站到王座前，已经没法平视了。
-     */
     static void throneHall(BuildKit k) {
         int[] zSteps = {-150, -192, -238, -298};
         int[] widths = {78, 64, 50};
@@ -230,6 +328,17 @@ final class Sacred {
                     }
                 }
             }
+            // 台面铺装：中央一条深色轴线，每十二格一道横带。整片灰石台面近看就是水泥地
+            for (int x = x1; x <= x2; x++) {
+                for (int z = z1; z <= z2; z++) {
+                    if (Math.abs(x) <= 3) {
+                        k.set(x, y, z, Palette.STONE_CHISELED);
+                    } else if (Math.floorMod(z, 12) == 0) {
+                        k.set(x, y, z, Palette.ANDESITE);
+                    }
+                }
+            }
+
             // 挡土墙：每级一道，压顶带线脚
             for (int x = x1; x <= x2; x++) {
                 for (int yy = y - 4; yy <= y; yy++) {
@@ -282,12 +391,31 @@ final class Sacred {
         k.crenellate(x1, z1, x2, z2, top + 2, Palette.STONE_BRICK);
         k.crenellate(x1, z1, x2, z2, top + 3, Palette.STONE_BRICK);
 
+        // 屋顶采光带：一道低矮的高侧窗，平屋顶才有起伏，里面也有光落下来
+        for (int z = z1 + 12; z <= z2 - 12; z++) {
+            for (int x = -8; x <= 8; x++) {
+                boolean wall = Math.abs(x) == 8;
+                for (int dy = 2; dy <= 4; dy++) {
+                    k.set(x, top + dy, z, wall ? Palette.STONE_BRICK : null);
+                }
+            }
+            if (Math.floorMod(z, 6) == 0) {
+                k.set(-8, top + 3, z, Palette.GLASS_GRAY);
+                k.set(8, top + 3, z, Palette.GLASS_GRAY);
+            }
+        }
+        k.fill(-9, top + 5, z1 + 12, 9, top + 5, z2 - 12, Palette.SLATE);
+
         // 后部塔楼：王座的"钉子"
         int tx = 0;
         int tz = -272;
         k.fill(-9, base + 1, tz - 9, 9, top + 18, tz + 9, Palette.STONE_BRICK);
         k.carve(-8, base + 1, tz - 8, 8, top + 17, tz + 8);
         k.crenellate(-9, tz - 9, 9, tz + 9, top + 19, Palette.STONE_BRICK);
+        // 角墩：光秃秃的方塔立不起来，四角加一道从底到顶的竖线
+        for (int[] b : new int[][] {{-9, tz - 9}, {9, tz - 9}, {-9, tz + 9}, {9, tz + 9}}) {
+            k.fill(b[0], base + 1, b[1], b[0], top + 18, b[1], Palette.STONE_CHISELED);
+        }
         k.cone(tx, tz, 10, top + 20, 16, Palette.SLATE);
         k.set(tx, top + 37, tz, Palette.GOLD);
 
@@ -312,6 +440,69 @@ final class Sacred {
             int x = -28 + i * 28;
             k.fill(x, base + 1, -252, x + 8, base + 1, -246, Palette.DARK_PLANK);
             k.set(x + 4, base + 2, -249, Palette.LANTERN);
+        }
+
+        // 地面：一条红毯直通王座，两侧铺凿制石
+        for (int x = x1 + 1; x <= x2 - 1; x++) {
+            for (int z = z1 + 1; z <= z2 - 1; z++) {
+                k.set(x, base, z, Math.abs(x) <= 3 ? Palette.CARPET_RED : Palette.STONE_CHISELED);
+            }
+        }
+
+        // 内柱廊：两列，每八格一根，柱础放大、柱头贴金
+        for (int x : new int[] {-26, 26}) {
+            for (int z = z1 + 10; z <= z2 - 8; z += 8) {
+                k.fill(x - 1, base + 1, z - 1, x + 1, base + 1, z + 1, Palette.STONE_CHISELED);
+                k.fill(x, base + 2, z, x, top - 2, z, Palette.STONE_BRICK);
+                k.set(x, top - 1, z, Palette.GOLD);
+            }
+        }
+
+        // 天花：方格梁 + 中央一列吊灯。没有天花的大厅从里面看是"露天盒子"
+        for (int x = x1 + 1; x <= x2 - 1; x++) {
+            for (int z = z1 + 1; z <= z2 - 1; z++) {
+                boolean beam = Math.floorMod(x, 8) == 0 || Math.floorMod(z, 8) == 0;
+                k.set(x, top, z, beam ? Palette.DARK_PLANK : Palette.STONE_CHISELED);
+            }
+        }
+        for (int z = z1 + 6; z <= z2 - 6; z += 8) {
+            k.set(0, top - 1, z, Palette.LANTERN_HANGING);
+        }
+
+        // 壁面：每六格一道壁柱，柱间挂旗；东西两侧开高窗透光
+        for (int z = z1 + 4; z <= z2 - 4; z += 6) {
+            for (int x : new int[] {x1 + 1, x2 - 1}) {
+                k.fill(x, base + 1, z, x, top - 2, z, Palette.STONE_CHISELED);
+            }
+            if (Math.floorMod(z - z1, 12) == 0) {
+                k.fill(x1 + 1, base + 5, z, x1 + 1, base + 10, z, Palette.WOOL_RED);
+                k.fill(x2 - 1, base + 5, z, x2 - 1, base + 10, z, Palette.WOOL_RED);
+            }
+        }
+        for (int z = z1 + 9; z <= z2 - 9; z += 8) {
+            for (int x : new int[] {x1, x2}) {
+                k.fill(x, top - 5, z, x, top - 3, z, Palette.GLASS_GRAY);
+            }
+        }
+
+        // 王座前的红毯与两侧火盆
+        for (int z = seatZ + 13; z <= z2 - 6; z++) {
+            k.set(0, base, z, Palette.CARPET_RED);
+        }
+        for (int x : new int[] {-6, 6}) {
+            k.fill(x, base + 6, seatZ + 7, x, base + 7, seatZ + 7, Palette.STONE_BRICK);
+            k.set(x, base + 8, seatZ + 7, Palette.CAMPFIRE);
+        }
+
+        // 外墙：每六格一道外凸壁柱、檐口一圈挑出，正面就不是一块平板了
+        for (int z = z1; z <= z2; z += 6) {
+            for (int x : new int[] {x1 - 1, x2 + 1}) {
+                k.fill(x, base + 1, z, x, top - 1, z, Palette.STONE_CHISELED);
+            }
+        }
+        for (int x = x1 - 1; x <= x2 + 1; x++) {
+            k.set(x, top - 1, z1, Palette.STONE_CHISELED);
+            k.set(x, top - 1, z2, Palette.STONE_CHISELED);
         }
 
         // 通往大厅的仪式道：两列雕像与灯

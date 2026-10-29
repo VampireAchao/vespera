@@ -468,9 +468,9 @@ public final class CityApplier {
                 Material.STONE_BRICKS, Material.ANDESITE, Material.CRACKED_STONE_BRICKS);
         probe(world, failures, "金字塔塔身", ox + 66, ground + 5, oz,
                 Material.SANDSTONE, Material.STONE_BRICKS, Material.CHISELED_STONE_BRICKS);
-        probe(world, failures, "金字塔祭坛", ox, ground + 64, oz,
+        probe(world, failures, "金字塔祭坛", ox, ground + 57, oz,
                 Material.CHISELED_STONE_BRICKS, Material.GOLD_BLOCK);
-        probe(world, failures, "出生点台面", ox, ground + 66, oz + 1, Material.GOLD_BLOCK);
+        probe(world, failures, "出生点台面", ox, ground + 59, oz + 1, Material.GOLD_BLOCK);
         probe(world, failures, "演讲台", ox, ground + 3, oz - 86,
                 Material.CHISELED_STONE_BRICKS, Material.STONE_BRICKS);
         probe(world, failures, "王座大厅", ox - 46, ground + 20, oz - 260, Material.STONE_BRICKS);

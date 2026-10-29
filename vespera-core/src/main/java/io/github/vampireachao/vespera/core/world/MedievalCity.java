@@ -578,12 +578,40 @@ public final class MedievalCity {
                 }
             }
         }
-        for (int i = 0; i <= 5; i++) {
-            int x = alongZ ? cx - 5 + i : cx;
-            int z = alongZ ? cz : cz - 5 + i;
-            for (int y = 10 + (5 - Math.abs(i - 5)); y <= 13; y++) {
-                k.set(x, y, z, Palette.STONE_CHISELED);
+        // 券洞：半圆券，左右对称。原来是 i 从 0 到 5、高度用 |i-5| 算，
+        // 只画了左半边——门上的石券一边高一边低，看着就是"门歪了"。
+        if (open) {
+            int springY = 10;
+            int radius = 5;
+            for (int dy = 0; dy <= radius; dy++) {
+                int halfWidth = (int) Math.round(Math.sqrt((double) radius * radius - dy * dy));
+                for (int dx = -halfWidth; dx <= halfWidth; dx++) {
+                    for (int dz = -WALL_THICK; dz <= WALL_THICK; dz++) {
+                        int x = alongZ ? cx + dx : cx + dz;
+                        int z = alongZ ? cz + dz : cz + dx;
+                        k.set(x, springY + dy, z, null);
+                    }
+                }
             }
+            // 券石：在洞口两面的边缘环一圈凿制石，券顶放一块拱心石
+            for (int dy = 0; dy <= radius; dy++) {
+                int inner = (int) Math.floor(Math.sqrt((double) radius * radius - dy * dy));
+                int outer = (int) Math.ceil(Math.sqrt((double) (radius + 1) * (radius + 1) - dy * dy));
+                for (int dx : new int[] {-outer, -inner, inner, outer}) {
+                    for (int dz : new int[] {-WALL_THICK, WALL_THICK}) {
+                        if (Math.abs(dx) > radius + 1) {
+                            continue;
+                        }
+                        int x = alongZ ? cx + dx : cx + dz;
+                        int z = alongZ ? cz + dz : cz + dx;
+                        k.set(x, springY + dy, z, Palette.STONE_CHISELED);
+                    }
+                }
+            }
+            int kx = alongZ ? cx : cx - WALL_THICK;
+            int kz = alongZ ? cz - WALL_THICK : cz;
+            k.set(alongZ ? cx : kx, springY + radius + 1, alongZ ? cz - WALL_THICK : kz,
+                    Palette.STONE_CHISELED);
         }
         for (int dx = -4; dx <= 4; dx++) {
             if ((dx & 1) != 0) {
@@ -663,15 +691,22 @@ public final class MedievalCity {
             int z = k.rnd.nextBoolean() ? zWater - 1 : zEnd + 1;
             k.set(x, 0, z, Palette.GRASS_TUFT);
         }
-        // 一座石桥跨过运河，接上南门大路
-        int bx = -8;
-        for (int z = 296; z <= 414; z++) {
-            for (int x = bx - 5; x <= bx + 5; x++) {
-                k.set(x, 1, z, Palette.STONE_BRICK);
-                k.set(x, 0, z, Palette.STONE_BRICK);
+        // 石桥要跨在运河上。运河从南门正前方挪到西边之后，桥没跟着走，
+        // 于是它横在南门的大路中间——这就是"城门这条路错位"的真身。
+        int bz = 352;
+        for (int x = -256; x <= -90; x++) {
+            for (int dz = -2; dz <= 1; dz++) {
+                k.set(x, 0, bz + dz, Math.abs(dz) == 2 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
             }
-            for (int x : new int[] {bx - 6, bx + 6}) {
-                k.set(x, 2, z, Palette.STONE_BRICK);
+            k.set(x, 1, bz - 2, Palette.STONE_BRICK);
+            k.set(x, 1, bz + 1, Palette.STONE_BRICK);
+        }
+        // 桥墩：每二十四格一座，落到水底
+        for (int x = -250; x <= -96; x += 24) {
+            for (int dz = -2; dz <= 1; dz++) {
+                for (int y = -6; y <= -1; y++) {
+                    k.set(x, y, bz + dz, Palette.STONE_BRICK);
+                }
             }
         }
         k.bump("河岸");
@@ -1179,10 +1214,10 @@ public final class MedievalCity {
     /**
      * 出生点的高度（场景坐标）。落地时是 {@code ground + 这个值}。
      *
-     * <p>顶坛的金盘在 y=66，所以脚底站在 67。
+     * <p>顶坛的金盘在 y=59，所以脚底站在 60。
      */
     public static int spawnHeight() {
-        return 67;
+        return 60;
     }
 
     public static int groundRadius() {
