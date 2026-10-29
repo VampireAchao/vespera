@@ -96,6 +96,62 @@ class CirculationTest {
         assertTrue(w.reached(CX + 5, cageY, CZ + 25), "兽笼下不去");
     }
 
+
+    @Test
+    @DisplayName("民居里能上楼：楼板、梯井与二楼都是通的")
+    void housesHaveUsableUpstairs() {
+        BuildKit k = MedievalCity.kit(20261028L);
+        Scene s = k.scene;
+        int tested = 0;
+        for (BuildKit.Claim c : k.claims) {
+            if (!c.kind().equals("民居")) {
+                continue;
+            }
+            if (c.x2() - c.x1() < 9 || c.z2() - c.z1() < 9) {
+                continue;
+            }
+            // 单层房没有楼板，不该要求"上得去"
+            boolean hasSlab = false;
+            for (int x = c.x1() + 1; x < c.x2() && !hasSlab; x++) {
+                for (int z = c.z1() + 1; z < c.z2() && !hasSlab; z++) {
+                    Block b = s.get(x, 3, z);
+                    hasSlab = b != null && b.shortName().equals("dark_oak_planks");
+                }
+            }
+            if (!hasSlab) {
+                continue;
+            }
+            WalkAudit au = new WalkAudit(s, c.x1() - 1, -1, c.z1() - 1, c.x2() + 1, 10, c.z2() + 1);
+            int sx = 0;
+            int sz = 0;
+            boolean found = false;
+            for (int x = c.x1() + 1; x < c.x2() && !found; x++) {
+                for (int z = c.z1() + 1; z < c.z2() && !found; z++) {
+                    if (au.canStand(x, 0, z)) {
+                        sx = x;
+                        sz = z;
+                        found = true;
+                    }
+                }
+            }
+            if (!found) {
+                continue;
+            }
+            au.walk(sx, 0, sz);
+            boolean up = false;
+            for (int x = c.x1(); x <= c.x2() && !up; x++) {
+                for (int z = c.z1(); z <= c.z2() && !up; z++) {
+                    up = au.reached(x, 4, z);
+                }
+            }
+            assertTrue(up, "这栋房子的二楼上去不了：" + c.where());
+            if (++tested >= 6) {
+                break;
+            }
+        }
+        assertTrue(tested >= 4, "能测的民居太少：" + tested);
+    }
+
     @Test
     @DisplayName("街道连成一片：每一条街都能从中央广场走到")
     void streetsAreConnected() {

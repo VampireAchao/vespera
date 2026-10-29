@@ -326,7 +326,7 @@ final class Landmarks {
             k.fill(kx2, y, kz1 + 10, kx2, y + 2, kz1 + 11, Palette.GLASS_GRAY);
         }
         for (int[] t : new int[][] {{kx1, kz1}, {kx2, kz1}, {kx1, kz2}, {kx2, kz2}}) {
-            k.roundTower(t[0], t[1], 2, platform + 1, 50, Palette.STONE_BRICK,
+            k.roundTower(t[0], t[1], 2, platform + 1, 42, Palette.STONE_BRICK,
                     Palette.STONE_CHISELED, Palette.SLATE_STAIR, 1);
         }
         k.roundTower((kx1 + kx2) / 2, (kz1 + kz2) / 2, 3, keepTop, 8, Palette.STONE_BRICK,
@@ -487,10 +487,12 @@ final class Landmarks {
         k.roof(x1 + 18, z1 + 18, x2 - 18, z2 - 18, 29, false, Palette.SLATE_STAIR, Palette.SLATE, 1);
 
         // 钟塔
-        tower(k, x2 - 12, z1 + 2, 16, 16, 54, 14, Palette.STONE_BRICK);
+        // 钟塔从 69 压到 44：原来是全城第三高，和金字塔、王座厅挤在一个高度上，
+        // 天际线就成了一排平顶。市政厅本来就该低于王座、高于街屋。
+        tower(k, x2 - 12, z1 + 2, 16, 16, 36, 8, Palette.STONE_BRICK);
         // 钟面，朝广场
         int cx = x2 - 4;
-        int cy = 42;
+        int cy = 24;
         for (int dy = -4; dy <= 4; dy++) {
             for (int dz = -4; dz <= 4; dz++) {
                 double d = Math.sqrt(dy * dy + dz * dz);

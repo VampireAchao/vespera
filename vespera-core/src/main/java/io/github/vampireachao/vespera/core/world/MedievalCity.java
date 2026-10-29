@@ -233,6 +233,8 @@ public final class MedievalCity {
         Landmarks.nobleQuarter(k);
 
         streetProps(k);
+        // 大件要盖在房子之后：过街楼要落在两边的墙上，转角塔要长在人家的墙角上
+        StreetLife.furnish(k);
         fillGaps(k);
         outskirts(k);
         lights(k);
@@ -330,6 +332,31 @@ public final class MedievalCity {
                 k.set(x, -1, z, block);
             }
         }
+    }
+
+    /**
+     * 这一格属于哪种"料"。
+     *
+     * <p>四种：0 民居（深木＋灰泥）、1 工匠（陶土＋木瓦）、2 市集（浅石＋彩棚）、
+     * 3 贵族与圣职（白石＋板岩）。同一条街上的房子本来就用同一种料——
+     * 中世纪的材料来自附近的窑和采石场，不是建材超市。
+     *
+     * <p>这件事的意义不在好看，在于<b>认路</b>：走到一片白石墙，不用看地图也知道
+     * 进了贵族区；墙一变红、烟囱变多，就是工匠街。
+     */
+    static int styleAt(int x, int z) {
+        for (District d : DISTRICTS) {
+            if (x >= d.x1() && x <= d.x2() && z >= d.z1() && z <= d.z2()) {
+                return switch (d.id()) {
+                    case "crafts", "middle-class", "barracks", "hamlet" -> 1;
+                    case "south-market", "bank", "plaza", "vendors", "docks" -> 2;
+                    case "noble", "palace-wing", "clergy-nw", "clergy-ne", "clergy-se",
+                            "clergy-sw", "throne", "castle", "townhall", "guild", "sacred" -> 3;
+                    default -> 0;
+                };
+            }
+        }
+        return 0;
     }
 
     private static boolean blocked(int x, int z) {
@@ -441,7 +468,7 @@ public final class MedievalCity {
                 floors = 2;
             }
             k.house(x1, z1, x2 - x1 + 1, z2 - z1 + 1, floors, facing,
-                    k.rnd.nextInt(100) < 18);
+                    k.rnd.nextInt(100) < 18, styleAt(x1, z1));
             if (setback > 0) {
                 frontStrip(k, alongX, cursor, cursor + w - 1, edge, face);
             }
@@ -1048,7 +1075,7 @@ public final class MedievalCity {
                     int w = 12 + k.rnd.nextInt(6);
                     int d = 10 + k.rnd.nextInt(6);
                     k.house(x - w / 2, z - 6, w, d, storeys(k.rnd),
-                            horizontal ? "south" : "east", false);
+                            horizontal ? "south" : "east", false, styleAt(x, z));
                 }
             }
         }

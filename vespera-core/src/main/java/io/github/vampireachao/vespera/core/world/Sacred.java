@@ -409,15 +409,17 @@ final class Sacred {
         // 后部塔楼：王座的"钉子"
         int tx = 0;
         int tz = -272;
-        k.fill(-9, base + 1, tz - 9, 9, top + 18, tz + 9, Palette.STONE_BRICK);
-        k.carve(-8, base + 1, tz - 8, 8, top + 17, tz + 8);
-        k.crenellate(-9, tz - 9, 9, tz + 9, top + 19, Palette.STONE_BRICK);
+        // 塔身到 top+8 为止。原来是 top+18：连塔带尖合计 72 格，与金字塔的 73 只差一格，
+        // 从空中看是两座一样高的山，谁也不是主峰。
+        k.fill(-9, base + 1, tz - 9, 9, top + 8, tz + 9, Palette.STONE_BRICK);
+        k.carve(-8, base + 1, tz - 8, 8, top + 7, tz + 8);
+        k.crenellate(-9, tz - 9, 9, tz + 9, top + 9, Palette.STONE_BRICK);
         // 角墩：光秃秃的方塔立不起来，四角加一道从底到顶的竖线
         for (int[] b : new int[][] {{-9, tz - 9}, {9, tz - 9}, {-9, tz + 9}, {9, tz + 9}}) {
-            k.fill(b[0], base + 1, b[1], b[0], top + 18, b[1], Palette.STONE_CHISELED);
+            k.fill(b[0], base + 1, b[1], b[0], top + 8, b[1], Palette.STONE_CHISELED);
         }
-        k.cone(tx, tz, 10, top + 20, 16, Palette.SLATE);
-        k.set(tx, top + 37, tz, Palette.GOLD);
+        k.cone(tx, tz, 10, top + 10, 10, Palette.SLATE);
+        k.set(tx, top + 20, tz, Palette.GOLD);
 
         // 王座：五级台阶、金座、背屏
         int seatZ = z1 + 10;

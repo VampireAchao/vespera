@@ -376,6 +376,17 @@ public final class BuildKit {
 
     /** 一栋半木结构民居。 */
     public void house(int x, int z, int w, int d, int floors, String front, boolean shop) {
+        house(x, z, w, d, floors, front, shop, 0);
+    }
+
+    /**
+     * 同上，但按"料"来：0 民居、1 工匠、2 市集、3 贵族。
+     *
+     * <p>料不是装饰。一片城要能用眼睛分区，靠的就是墙色与瓦色——
+     * 走进去先看见白墙板岩，那就是贵族区；看见陶土与烟囱，就是工匠街。
+     */
+    public void house(int x, int z, int w, int d, int floors, String front, boolean shop,
+            int style) {
         int y0 = 0;
         int ax = x;
         int az = z;
@@ -387,17 +398,26 @@ public final class BuildKit {
         fill(ax - 1, y0 - 3, az - 1, bx + 1, y0 - 1, bz + 1, Palette.COBBLE);
         fill(ax, y0 - 1, az, bx, y0 - 1, bz, Palette.DARK_PLANK);
 
-        String roofStair = switch (rnd.nextInt(10)) {
-            case 0, 1, 2 -> Palette.SLATE_STAIR;
-            case 3, 4 -> Palette.SHINGLE_STAIR;
-            default -> Palette.TILE_STAIR;
+        String roofStair = switch (style) {
+            case 1 -> Palette.SHINGLE_STAIR;
+            case 3 -> Palette.SLATE_STAIR;
+            default -> switch (rnd.nextInt(10)) {
+                case 0, 1, 2 -> Palette.SLATE_STAIR;
+                case 3, 4 -> Palette.SHINGLE_STAIR;
+                default -> Palette.TILE_STAIR;
+            };
         };
-        // 墙面颜色：四种灰泥轮着来，一条街才不会像刷了同一桶漆
-        Block plaster = switch (rnd.nextInt(4)) {
-            case 0 -> Palette.PLASTER_CREAM;
-            case 1 -> Palette.PLASTER_GRAY;
-            case 2 -> Palette.PLASTER_OCHRE;
-            default -> Palette.PLASTER;
+        // 墙面颜色：同一条街用同一种料，只有深浅的微差
+        Block plaster = switch (style) {
+            case 1 -> rnd.nextInt(3) == 0 ? Palette.TILE : Palette.PLASTER_OCHRE;
+            case 2 -> rnd.nextBoolean() ? Palette.PLASTER_CREAM : Palette.SANDSTONE;
+            case 3 -> rnd.nextBoolean() ? Palette.PLASTER : Palette.PLASTER_CREAM;
+            default -> switch (rnd.nextInt(4)) {
+                case 0 -> Palette.PLASTER_CREAM;
+                case 1 -> Palette.PLASTER_GRAY;
+                case 2 -> Palette.PLASTER_OCHRE;
+                default -> Palette.PLASTER;
+            };
         };
         Block gable = plaster;
 
@@ -544,6 +564,9 @@ public final class BuildKit {
 
         int wallTop = y0 + floors * FLOOR;
         boolean ridgeAlongZ = front.equals("north") || front.equals("south");
+        // 内装：楼板、楼梯、家什。原来楼上是一整个空腔，进门抬头能看见椽子，
+        // 二楼却既没有地板也没有上去的路——走过十栋，十栋都一样空。
+        interior(ax, az, bx, bz, floors, front, shop);
         // 屋顶不出左右檐：排屋是共墙的，出檐会插进邻居的坡面，露出半截楼梯。
         // 只在临街那一侧留一格（overhang 沿屋脊方向，正好朝街与后院）。
         roof(ax, az, bx, bz, wallTop, ridgeAlongZ, roofStair, gable, 1);
@@ -557,5 +580,90 @@ public final class BuildKit {
         }
         set(chx, roofTop + 1, chz, Palette.CAMPFIRE);
         bump("民居");
+    }
+
+    /**
+     * 一栋房子里面该有的东西。
+     *
+     * <p>体素房子的门本来就是通的，"能进去"早成立；问题是进去以后什么都没有：
+     * 四面墙、一层地板、头顶一个通到屋架的空腔，二楼既没楼板也没上去的路。
+     * 走十栋十栋一个样——这是"闲逛没意思"最直接的那个原因。
+     *
+     * <p>所以补三样：层间楼板、一道真能走上去的楼梯、一层二层的家什。
+     * 楼梯一律贴着与门相对的那面墙，四步上一级，楼板在梯井处开两个格。
+     * 家具一律用半砖（可跨过去），不挡路——房子里也不该有要跳过去的桌子。
+     */
+    private void interior(int ax, int az, int bx, int bz, int floors, String front, boolean shop) {
+        int ix1 = ax + 1;
+        int ix2 = bx - 1;
+        int iz1 = az + 1;
+        int iz2 = bz - 1;
+        if (ix2 - ix1 < 3 || iz2 - iz1 < 3) {
+            return;
+        }
+        // 楼板：每层一道；最上一层留着当阁楼，头顶就是屋架
+        for (int f = 1; f < floors; f++) {
+            int y = f * FLOOR - 1;
+            fill(ix1, y, iz1, ix2, y, iz2, Palette.DARK_PLANK);
+        }
+        // 楼梯：贴背墙，四步上一级。单层房子没有"上一级"，就别在屋里摆一截孤零零的梯子
+        if (floors >= 2) {
+            int sz = front.equals("south") ? iz1 : iz2;
+            int dir = front.equals("south") || front.equals("west") ? 1 : -1;
+            int bx0 = dir > 0 ? ix1 + 1 : ix2 - 1;
+            String face = dir > 0 ? "east" : "west";
+            for (int i = 0; i < 4; i++) {
+                int x = bx0 + dir * i;
+                // 梯井：整个梯段上方的楼板都要掏空。只掏一两格的话，人爬到一半
+                // 头顶就顶着上一层的楼板——看着有楼梯，实际上一级也上不去
+                if (i <= 2) {
+                    set(x, FLOOR - 1, sz, null);
+                }
+                for (int yy = 0; yy < i; yy++) {
+                    set(x, yy, sz, Palette.DARK_PLANK);
+                }
+                set(x, i, sz, Block.stairs("minecraft:dark_oak_stairs", face));
+            }
+        }
+
+        // 一层：靠墙一张矮桌、两只凳、箱与桶、一盏吊灯
+        int mx = (ix1 + ix2) / 2;
+        int mz = (iz1 + iz2) / 2;
+        Block slab = Block.slab("minecraft:oak_slab", "bottom");
+        set(mx, 0, mz, slab);
+        if (mx + 1 <= ix2) {
+            set(mx + 1, 0, mz, slab);
+        }
+        set(mx - 1, 0, mz, Palette.OAK_FENCE);
+        set(mx + 2, 0, mz, Palette.OAK_FENCE);
+        set(ix1, 0, iz2, rnd.nextBoolean() ? Palette.CHEST : Palette.BARREL);
+        set(ix2, 0, iz1, rnd.nextBoolean() ? Palette.BARREL : Palette.CAULDRON);
+        set(mx, floors >= 2 ? 2 : 1, mz, floors >= 2
+                ? Palette.LANTERN_HANGING : Palette.LANTERN);
+        if (shop) {
+            // 铺面：一条柜台，柜上摆货，后墙一排架子
+            int w = ix2 - ix1;
+            for (int i = 1; i < w; i++) {
+                set(ix1 + i, 0, mz + 1, slab);
+            }
+            set(ix1 + 1, 0, mz + 1, Palette.BARREL);
+            set(ix1 + 3, 0, mz + 1, Palette.CRATE);
+            set(ix2, 0, mz, Palette.BOOKSHELF);
+            set(ix2, 1, mz, Palette.BOOKSHELF);
+        }
+
+        // 二层：床、箱、窗边小桌
+        if (floors >= 2) {
+            int uy = FLOOR - 1;
+            set(ix1, uy + 1, iz1, Palette.WOOL_RED);
+            set(ix1 + 1, uy + 1, iz1, Palette.WOOL_RED);
+            set(ix1, uy + 1, iz1 + 1, Palette.DARK_PLANK);
+            set(ix1, uy + 2, iz1 + 1, Palette.LANTERN);
+            set(ix2, uy + 1, iz2, rnd.nextBoolean() ? Palette.CHEST : Palette.BARREL);
+            if (ix2 - ix1 > 5) {
+                set(ix2 - 1, uy + 1, iz2, slab);
+                set(ix2 - 2, uy + 1, iz2, Palette.OAK_FENCE);
+            }
+        }
     }
 }
