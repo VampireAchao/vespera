@@ -21,8 +21,9 @@ regions:
   - id: lumenfall
     name: 流明陨城
     world: world
-    from: [-200, 40, -200]
-    to: [200, 160, 200]
+    # 城与墙外的田、港、村一起算：-524 到 540 的西东跨度都在这块区域里
+    from: [-560, 20, -480]
+    to: [560, 200, 460]
     biome: minecraft:plains
     kind: city
     tags: [safe, trade, spawn]

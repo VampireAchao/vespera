@@ -27,12 +27,16 @@ public final class CityExport {
     private static final List<Shot> SHOTS = List.of(
             new Shot("01-全城鸟瞰", "流明陨城 · 全景", -330, -330, 330, 330, 2200, 1450, 3.0),
             new Shot("02-南门与主街", "南门 · 铁闸与主街", -70, 210, 70, 335, 1700, 1150, 7.0),
-            new Shot("03-圣座金字塔", "圣座 · 七层金字塔与顶坛", -95, -95, 95, 95, 1700, 1250, 8.0),
-            new Shot("04-王座大厅", "王座大厅 · 三级台地", -100, -310, 100, -140, 1700, 1250, 6.0),
-            new Shot("05-角斗场", "角斗场 · 看台与沙地", 90, 90, 290, 290, 1700, 1250, 6.0),
+            new Shot("03-圣座金字塔", "圣座 · 七层金字塔与顶坛", -105, -105, 105, 105, 1700, 1250, 7.0),
+            new Shot("04-王座大厅", "王座大厅 · 三级台地与两翼", -155, -305, 100, -145, 1700, 1250, 6.0),
+            new Shot("05-角斗场", "角斗场 · 看台、包厢与四门", 95, 100, 290, 295, 1700, 1250, 6.0),
             new Shot("06-灰烬堡", "灰烬堡 · 主楼与幕墙", -300, -300, -140, -140, 1700, 1300, 7.0),
-            new Shot("07-南市", "南市 · 面包房与酒坊", -60, 120, 60, 300, 1700, 1250, 7.0),
-            new Shot("08-南港", "南港 · 仓库与驳船", -270, 230, -70, 420, 1700, 1150, 6.0));
+            new Shot("07-断弦与靶场", "断弦 · 公会酒馆与靶场", 120, -155, 200, -5, 1700, 1250, 8.0),
+            new Shot("08-南港", "南港 · 仓库与驳船", -270, 230, -70, 420, 1700, 1150, 6.0),
+            new Shot("09-天平与钥匙", "天平与钥匙 · 银行与典当行", 5, 110, 110, 215, 1600, 1150, 9.0),
+            new Shot("10-钟下的床", "钟下的床 · 客栈与马厩", -105, 230, 25, 300, 1600, 1150, 9.0),
+            new Shot("11-贵族府邸", "贵族府邸 · 六座院子", 90, -300, 215, -130, 1700, 1250, 8.0),
+            new Shot("12-贫民窟", "贫民窟 · 六乘八的联排", -200, 110, -105, 245, 1600, 1150, 9.0));
 
     public static void main(String[] args) throws Exception {
         Path out = Path.of(args.length > 0 ? args[0] : "docs/设计图");
@@ -72,7 +76,8 @@ public final class CityExport {
         svg.append("<rect width=\"1240\" height=\"1200\" fill=\"#f6efdd\"/>\n");
         svg.append("<text x=\"46\" y=\"46\" font-size=\"22\" fill=\"#2a231b\">流明陨城 · 规划图</text>\n");
         svg.append("<text x=\"46\" y=\"68\" font-size=\"12\" fill=\"#8a7a63\" letter-spacing=\"2\">")
-                .append("LUMENFALL · 600×600 城墙 · 15 个分区</text>\n");
+                .append("LUMENFALL · 600×600 城墙 · ").append(MedievalCity.DISTRICTS.size())
+                .append(" 个分区</text>\n");
 
         // 城外地形与道路
         svg.append("<rect x=\"").append(px(-560)).append("\" y=\"").append(px(-560))
@@ -116,9 +121,16 @@ public final class CityExport {
         // 地标
         marker(svg, 0, 0, "圣座金字塔");
         marker(svg, 0, -230, "王座大厅");
-        marker(svg, 185, 185, "角斗场");
+        marker(svg, 185, 193, "角斗场");
         marker(svg, -220, -220, "灰烬堡");
-        marker(svg, -166, -40, "市政厅");
+        marker(svg, -166, -42, "市政厅");
+        marker(svg, 0, -86, "演讲台");
+        marker(svg, 85, -85, "神职院");
+        marker(svg, 150, -220, "贵族府邸");
+        marker(svg, -160, 180, "贫民窟");
+        marker(svg, 42, 135, "天平与钥匙");
+        marker(svg, -51, 263, "钟下的床");
+        marker(svg, 160, -30, "断弦");
         marker(svg, 160, -34, "行会");
         marker(svg, -170, 350, "南港");
         marker(svg, -420, 100, "风车");
@@ -172,7 +184,7 @@ public final class CityExport {
                 + "<h2>规模</h2>\n<table>\n"
                 + "<tr><td>城墙</td><td>600 × 600，四门、十二座墙塔</td></tr>\n"
                 + "<tr><td>方块</td><td>" + String.format(Locale.ROOT, "%,d", scene.size()) + "（含墙外）</td></tr>\n"
-                + "<tr><td>最高点</td><td>王座塔 74 格 / 圣座顶坛 63 格</td></tr>\n"
+                + "<tr><td>最高点</td><td>圣座顶坛 78 格 / 王座塔 72 格</td></tr>\n"
                 + "<tr><td>街区</td><td>8 × 8 网格，含 6 处小广场</td></tr>\n"
                 + "</table>\n"
                 + "<p class=\"note\">这张图与服务器里的方块同源：都从 <code>MedievalCity</code> 生成。"

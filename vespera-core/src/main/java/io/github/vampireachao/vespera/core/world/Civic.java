@@ -633,4 +633,445 @@ final class Civic {
         k.fill(x - 2, 5, z - 2, x + 2, 5, z + 2, Palette.SPRUCE_PLANK);
         k.set(x, 3, z, Palette.BARREL);
     }
+
+    // -- 断弦：猎巫人公会的一层酒馆 -------------------------------------------
+
+    /**
+     * 公会的门面是酒馆。
+     *
+     * <p>一层横着一条穿堂巷（x 156..164），巷子中间一道铁门——门里是内厅，门外是酒馆。
+     * 这条巷本来就是城里的街，只是正好从会所底下穿过去；把它留着，比封死更像真的。
+     */
+    static void guildTavern(BuildKit k) {
+        int x1 = 130;
+        int z1 = -74;
+        int x2 = 192;
+        int z2 = -14;
+
+        // 二层楼板：不然楼上是个空壳
+        for (int x = x1 + 1; x < x2; x++) {
+            for (int z = z1 + 1; z < z2; z++) {
+                k.set(x, 12, z, Palette.DARK_PLANK);
+            }
+        }
+
+        // 内厅（巷西）：二十三格见方，净空二十×十二，一扇能关的门
+        k.walls(x1 + 2, 0, z1 + 2, x1 + 24, 8, z1 + 30, Palette.PLASTER);
+        k.carve(x1 + 3, 0, z1 + 3, x1 + 23, 7, z1 + 29);
+        for (int y = 0; y <= 4; y++) {
+            k.set(x1 + 24, y, z1 + 14, null);
+            k.set(x1 + 24, y, z1 + 15, null);
+        }
+        for (int y = 0; y <= 4; y++) {
+            k.set(x1 + 24, y, z1 + 16, Palette.DARK_PLANK);
+        }
+        // 内厅的陈设：一张长桌、两张弓架、一面名单墙
+        k.fill(x1 + 6, 0, z1 + 12, x1 + 18, 0, z1 + 13, Palette.DARK_PLANK);
+        for (int i = 0; i < 5; i++) {
+            k.set(x1 + 7 + i * 2, 0, z1 + 10, Palette.OAK_FENCE);
+            k.set(x1 + 7 + i * 2, 0, z1 + 15, Palette.OAK_FENCE);
+        }
+        for (int i = 0; i < 3; i++) {
+            k.set(x1 + 5, 2, z1 + 6 + i * 8, Palette.SIGN);
+            k.set(x1 + 5, 3, z1 + 6 + i * 8, Palette.SIGN);
+        }
+        k.set(x1 + 10, 0, z1 + 20, Palette.CHEST);
+
+        // 铁门：巷中 z=-30，三格宽，门旁就是挂牌的墙
+        for (int x = 158; x <= 162; x++) {
+            for (int y = 0; y <= 4; y++) {
+                k.set(x, y, -30, Palette.IRON_BARS);
+            }
+        }
+        k.fill(157, 0, -30, 157, 5, -30, Palette.STONE_CHISELED);
+        k.fill(163, 0, -30, 163, 5, -30, Palette.STONE_CHISELED);
+        k.fill(157, 6, -30, 163, 6, -30, Palette.STONE_CHISELED);
+        // 挂牌位：门两格内，三块
+        k.set(155, 2, -30, Palette.SIGN);
+        k.set(155, 3, -30, Palette.SIGN);
+        k.set(155, 2, -28, Palette.SIGN);
+
+        // 酒馆（巷东）：吧台靠北墙、三排长桌、壁炉、酒桶
+        for (int x = 166; x <= 190; x++) {
+            for (int z = z1 + 2; z <= z2 - 4; z++) {
+                k.set(x, 0, z, Palette.DARK_PLANK);
+            }
+        }
+        k.fill(166, 0, z1 + 2, 190, 1, z1 + 3, Palette.SPRUCE_PLANK);
+        k.fill(166, 2, z1 + 3, 190, 2, z1 + 3, Palette.OAK_PLANK);
+        for (int i = 0; i < 8; i++) {
+            k.set(168 + i * 3, 0, z1 + 4, i % 2 == 0 ? Palette.BARREL : Palette.CAULDRON);
+        }
+        for (int i = 0; i < 3; i++) {
+            k.fill(168, 0, z1 + 12 + i * 8, 186, 0, z1 + 13 + i * 8, Palette.OAK_PLANK);
+            for (int dz = 0; dz <= 1; dz++) {
+                k.set(169, 0, z1 + 10 + i * 8 + dz, Palette.OAK_FENCE);
+                k.set(185, 0, z1 + 10 + i * 8 + dz, Palette.OAK_FENCE);
+            }
+        }
+        // 壁炉
+        k.fill(176, 0, z2 - 3, 180, 0, z2 - 2, Palette.COBBLE);
+        k.set(178, 0, z2 - 2, Palette.CAMPFIRE);
+        k.fill(178, 1, z2 - 2, 178, 6, z2 - 2, Palette.COBBLE);
+        // 悬赏板：东墙
+        for (int y = 2; y <= 4; y++) {
+            for (int z = -44; z <= -34; z++) {
+                k.set(190, y, z, Palette.SPRUCE_PLANK);
+            }
+        }
+        k.set(190, 3, -42, Palette.SIGN);
+        k.set(190, 3, -39, Palette.SIGN);
+        k.set(190, 3, -36, Palette.SIGN);
+        // 后门通靶场
+        for (int y = 0; y <= 3; y++) {
+            k.set(176, y, z1, null);
+            k.set(177, y, z1, null);
+        }
+        // 二层的名单墙与通铺
+        for (int y = 13; y <= 16; y++) {
+            for (int x = 168; x <= 176; x++) {
+                k.set(x, y, z1 + 4, Palette.SPRUCE_PLANK);
+            }
+        }
+        for (int i = 0; i < 6; i++) {
+            k.set(168 + i * 4, 13, z1 + 16, Palette.HAY);
+            k.set(168 + i * 4, 13, z1 + 46, Palette.HAY);
+        }
+        k.bump("公会酒馆");
+    }
+
+    /** 靶场：箭靶、草人、兵器架。公会真正练手的地方。 */
+    static void guildYard(BuildKit k) {
+        int x1 = 166;
+        int z1 = -142;
+        int x2 = 192;
+        int z2 = -100;
+        k.pave(x1, z1, x2, z2, Palette.COARSE, Palette.PATH);
+        for (int x = x1; x <= x2; x++) {
+            for (int y = 0; y <= 4; y++) {
+                k.set(x, y, z1, Palette.COBBLE);
+                k.set(x, y, z2, Palette.COBBLE);
+            }
+        }
+        for (int z = z1; z <= z2; z++) {
+            for (int y = 0; y <= 4; y++) {
+                k.set(x1, y, z, Palette.COBBLE);
+                k.set(x2, y, z, Palette.COBBLE);
+            }
+        }
+        // 门在南墙
+        for (int y = 0; y <= 3; y++) {
+            k.set(x1 + 12, y, z2, null);
+            k.set(x1 + 13, y, z2, null);
+        }
+        // 靶：草垛 + 靶心
+        for (int i = 0; i < 4; i++) {
+            int tx = x1 + 4 + i * 6;
+            k.fill(tx, 0, z1 + 6, tx + 1, 2, z1 + 7, Palette.HAY);
+            k.set(tx, 3, z1 + 6, Palette.WOOL_RED);
+            k.set(tx + 1, 3, z1 + 6, Palette.WOOL_CREAM);
+        }
+        // 训练桩
+        for (int i = 0; i < 5; i++) {
+            int px = x1 + 3 + i * 5;
+            k.fill(px, 0, z1 + 20, px, 3, z1 + 20, Palette.SPRUCE_LOG);
+            k.set(px, 4, z1 + 20, Palette.HAY);
+        }
+        // 兵器架
+        for (int i = 0; i < 3; i++) {
+            k.fill(x1 + 2, 0, z1 + 30 + i * 2, x1 + 2, 3, z1 + 30 + i * 2, Palette.SPRUCE_FENCE);
+            k.set(x1 + 2, 3, z1 + 30 + i * 2, Palette.IRON);
+        }
+        k.bump("靶场");
+    }
+
+    // -- 市政书记处、行会宿舍 ------------------------------------------------
+
+    /** 市政厅的书记处与档案库：账簿在地下一层，墙上一排抽屉。 */
+    static void townHallOffices(BuildKit k) {
+        int x = -188;
+        int z = 0;
+        int w = 31;
+        int d = 25;
+        k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.STONE_BRICK);
+        k.walls(x, 0, z, x + w - 1, 12, z + d - 1, Palette.STONE_BRICK);
+        k.carve(x + 1, 0, z + 1, x + w - 2, 11, z + d - 2);
+        for (int dx = 4; dx < w - 4; dx += 5) {
+            k.fill(x + dx, 3, z, x + dx + 1, 6, z, Palette.GLASS);
+        }
+        for (int y = 0; y <= 4; y++) {
+            k.set(x + w / 2 - 1, y, z + d - 1, null);
+            k.set(x + w / 2, y, z + d - 1, null);
+        }
+        // 抽屉墙
+        for (int dz = 3; dz < d - 3; dz += 3) {
+            for (int y = 1; y <= 4; y++) {
+                k.set(x + 2, y, z + dz, Palette.CHEST);
+                k.set(x + w - 3, y, z + dz, Palette.CHEST);
+            }
+        }
+        k.fill(x + 8, 0, z + 10, x + 22, 0, z + 11, Palette.DARK_PLANK);
+        k.set(x + 14, 1, z + 10, Palette.LECTERN);
+        k.set(x + 16, 1, z + 10, Palette.BOOKSHELF);
+        // 地下档案库
+        for (int dx = 6; dx <= 24; dx++) {
+            for (int dz = 6; dz <= 18; dz++) {
+                for (int y = -3; y <= -2; y++) {
+                    k.set(x + dx, y, z + dz, null);
+                }
+                k.set(x + dx, -4, z + dz, Palette.STONE_BRICK);
+                boolean edge = dx == 6 || dx == 24 || dz == 6 || dz == 18;
+                if (edge) {
+                    k.set(x + dx, -3, z + dz, Palette.STONE_BRICK);
+                    k.set(x + dx, -2, z + dz, Palette.STONE_BRICK);
+                }
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            k.set(x + 8 + i, -1 - i, z + 4 - i, Palette.STONE_BRICK);
+        }
+        for (int i = 0; i < 6; i++) {
+            k.set(x + 8 + i * 3, -2, z + 16, Palette.BOOKSHELF);
+        }
+        k.roof(x - 2, z - 2, x + w + 1, z + d + 1, 13, true, Palette.SLATE_STAIR,
+                Palette.STONE_BRICK, 1);
+        k.bump("书记处");
+    }
+
+    /** 行会学徒宿舍：两栋，中间一道跨巷连桥。 */
+    static void guildDorms(BuildKit k) {
+        dorm(k, 130, -116);
+        dorm(k, 168, -116);
+        // 连桥：跨 x 156..164 那条巷
+        for (int x = 153; x <= 167; x++) {
+            for (int z = -104; z <= -96; z++) {
+                k.set(x, 7, z, Palette.SPRUCE_PLANK);
+                for (int y = 8; y <= 9; y++) {
+                    k.set(x, y, z, null);
+                }
+                k.set(x, 10, z, Palette.SPRUCE_PLANK);
+            }
+        }
+        k.bump("学徒宿舍");
+    }
+
+    private static void dorm(BuildKit k, int x, int z) {
+        int w = 23;
+        int d = 35;
+        k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.COBBLE);
+        k.walls(x, 0, z, x + w - 1, 14, z + d - 1, Palette.SPRUCE_PLANK);
+        k.carve(x + 1, 0, z + 1, x + w - 2, 13, z + d - 2);
+        for (int fy : new int[] {5, 10}) {
+            for (int dx = 1; dx < w - 1; dx++) {
+                for (int dz = 1; dz < d - 1; dz++) {
+                    k.set(x + dx, fy, z + dz, Palette.DARK_PLANK);
+                }
+            }
+        }
+        // 通铺：上下两层
+        for (int i = 0; i < 5; i++) {
+            int bz = z + 4 + i * 6;
+            k.fill(x + 2, 1, bz, x + 7, 1, bz + 1, Palette.HAY);
+            k.fill(x + 15, 1, bz, x + 20, 1, bz + 1, Palette.HAY);
+            k.fill(x + 2, 6, bz, x + 7, 6, bz + 1, Palette.HAY);
+            k.fill(x + 15, 6, bz, x + 20, 6, bz + 1, Palette.HAY);
+        }
+        for (int y = 0; y <= 3; y++) {
+            k.set(x + w / 2 - 1, y, z + d - 1, null);
+            k.set(x + w / 2, y, z + d - 1, null);
+        }
+        k.roof(x - 2, z - 2, x + w + 1, z + d + 1, 15, true, Palette.SHINGLE_STAIR,
+                Palette.SPRUCE_PLANK, 1);
+        k.bump("宿舍");
+    }
+
+    // -- 贫民窟：城里最密的一块 -----------------------------------------------
+
+    /**
+     * 贫民窟：六格乘八格的联排，巷宽三格，没有院子。
+     *
+     * <p>密度在这里是阶级，不是风格。同一块地上，贵族住二十四乘三十带水池，
+     * 这里住六乘八、共墙、阁楼、公用灶台。
+     */
+    static void slum(BuildKit k) {
+        slumBlock(k, -190, 124, 3, 3);
+        slumBlock(k, -190, 166, 3, 6);
+        slumBlock(k, -154, 124, 3, 2);
+        slumBlock(k, -154, 182, 3, 4);
+        k.bump("贫民窟");
+    }
+
+    private static void slumBlock(BuildKit k, int x0, int z0, int cols, int rows) {
+        // 巷子先铺：它们不在 STREETS 里，不铺就是三格宽的草地
+        for (int c = 0; c <= cols; c++) {
+            int ax = x0 + c * 9 - 1;
+            k.pave(ax, z0 - 2, ax + 2, z0 + rows * 11, Palette.COBBLE, Palette.GRAVEL);
+        }
+        for (int r = 0; r <= rows; r++) {
+            int az = z0 + r * 11 - 1;
+            k.pave(x0 - 2, az, x0 + cols * 9, az + 2, Palette.COBBLE, Palette.GRAVEL);
+        }
+        for (int c = 0; c < cols; c++) {
+            for (int r = 0; r < rows; r++) {
+                slumHouse(k, x0 + c * 9, z0 + r * 11);
+            }
+        }
+    }
+
+    /** 一间：六乘八，两层八格高，共墙，屋顶朝街。 */
+    private static void slumHouse(BuildKit k, int x, int z) {
+        k.fill(x, -3, z, x + 5, -1, z + 7, Palette.COBBLE);
+        k.walls(x, 0, z, x + 5, 8, z + 7, Palette.PLASTER_GRAY);
+        k.carve(x + 1, 0, z + 1, x + 4, 7, z + 6);
+        // 木梁：半木，但省到只剩四角与一道腰线
+        for (int y : new int[] {0, 4, 8}) {
+            for (int dx = 0; dx <= 5; dx++) {
+                k.set(x + dx, y, z, Palette.DARK_LOG);
+                k.set(x + dx, y, z + 7, Palette.DARK_LOG);
+            }
+            for (int dz = 0; dz <= 7; dz++) {
+                k.set(x, y, z + dz, Palette.DARK_LOG);
+                k.set(x + 5, y, z + dz, Palette.DARK_LOG);
+            }
+        }
+        k.fill(x + 2, 0, z + 7, x + 3, 2, z + 7, null);
+        k.set(x + 2, 2, z + 7, Palette.GLASS_GRAY);
+        for (int y = 5; y <= 6; y++) {
+            k.set(x + 1, y, z + 7, Palette.GLASS_GRAY);
+            k.set(x + 4, y, z + 7, Palette.GLASS_GRAY);
+        }
+        // 楼板与阁楼
+        for (int dx = 1; dx <= 4; dx++) {
+            for (int dz = 1; dz <= 6; dz++) {
+                k.set(x + dx, 4, z + dz, Palette.DARK_PLANK);
+            }
+        }
+        k.roof(x - 1, z - 1, x + 6, z + 8, 9, true, Palette.SHINGLE_STAIR,
+                Palette.PLASTER_GRAY, 1);
+        k.set(x + 1, 0, z + 5, Palette.CAULDRON);
+        k.set(x + 4, 0, z + 5, Palette.BARREL);
+        // 巷里的公用灶台与晾衣杆
+        k.set(x + 6, 0, z + 1, Palette.CAMPFIRE);
+        k.fill(x + 6, 0, z + 5, x + 6, 3, z + 5, Palette.SPRUCE_FENCE);
+        k.set(x + 6, 3, z + 5, Palette.WOOL_CREAM);
+    }
+
+    /** 中产区：十乘十二带六格院，巷宽四格。 */
+    static void middleClass(BuildKit k) {
+        for (int c = 0; c < 3; c++) {
+            for (int r = 0; r < 5; r++) {
+                int x = 170 + c * 20;
+                int z = 26 + r * 16;
+                k.fill(x - 1, -3, z - 1, x + 17, -1, z + 12, Palette.COBBLE);
+                k.house(x, z, 10, 12, 2, "south", true);
+                // 院子：六格宽，一口小井或晾衣杆
+                k.pave(x + 11, z, x + 16, z + 11, Palette.GRASS, Palette.PATH);
+                if ((c + r) % 2 == 0) {
+                    k.set(x + 13, 0, z + 5, Palette.WATER);
+                    k.set(x + 13, 1, z + 5, Palette.SPRUCE_FENCE);
+                } else {
+                    k.fill(x + 13, 0, z + 3, x + 13, 3, z + 3, Palette.SPRUCE_FENCE);
+                    k.set(x + 13, 3, z + 3, Palette.WOOL_BLUE);
+                }
+            }
+        }
+        k.bump("中产区");
+    }
+
+    // -- 角斗场周边：摊贩街 ---------------------------------------------------
+
+    /**
+     * 场子外面比场子里面热闹。
+     *
+     * <p>卖的是当天：烤肉、赌签、护身符、名字被人写过的木牌。建筑一律压到两层，
+     * 因为谁也不想在看台上被一栋楼挡住。
+     */
+    static void arenaVendors(BuildKit k) {
+        // 东街与南街
+        k.pave(268, 127, 278, 259, Palette.COBBLE, Palette.GRAVEL);
+        k.pave(105, 263, 265, 275, Palette.COBBLE, Palette.GRAVEL);
+
+        // 东侧矮铺面：六间，两层
+        for (int i = 0; i < 6; i++) {
+            int z = 128 + i * 20;
+            if (i == 5) {
+                z = 246;
+            }
+            lowShop(k, 280, z, 13, 19);
+        }
+        // 南侧矮铺面：四间，中间留给售票与闸口
+        lowShop(k, 108, 277, 21, 15);
+        lowShop(k, 132, 277, 21, 15);
+        lowShop(k, 218, 277, 21, 15);
+        lowShop(k, 242, 277, 21, 15);
+
+        // 售票亭：两座，中间三个闸口
+        ticket(k, 158, 265);
+        ticket(k, 197, 265);
+        for (int i = 0; i < 3; i++) {
+            int gx = 178 + i * 5;
+            for (int dx = 0; dx <= 1; dx++) {
+                k.fill(gx + dx, 0, 265, gx + dx, 0, 273, Palette.IRON_BARS);
+                k.set(gx + dx, 1, 266, Palette.IRON_BARS);
+                k.set(gx + dx, 1, 272, Palette.IRON_BARS);
+            }
+        }
+        // 排队区
+        k.pave(150, 275, 220, 291, Palette.COBBLE, Palette.STONE);
+
+        // 固定摊位：东十、南十二
+        Block[][] cloth = {
+                {Palette.WOOL_RED, Palette.WOOL_CREAM},
+                {Palette.WOOL_YELLOW, Palette.WOOL_RED},
+                {Palette.WOOL_GREEN, Palette.WOOL_CREAM},
+                {Palette.WOOL_BLUE, Palette.WOOL_YELLOW}};
+        for (int i = 0; i < 10; i++) {
+            Block[] pair = cloth[i % cloth.length];
+            k.stall(268, 130 + i * 12, pair[0], pair[1]);
+        }
+        for (int i = 0; i < 12; i++) {
+            Block[] pair = cloth[i % cloth.length];
+            k.stall(112 + i * 12, 263, pair[0], pair[1]);
+        }
+        k.bump("摊贩街");
+    }
+
+    private static void lowShop(BuildKit k, int x, int z, int w, int d) {
+        k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.COBBLE);
+        k.walls(x, 0, z, x + w - 1, 8, z + d - 1, Palette.PLASTER_CREAM);
+        k.carve(x + 1, 0, z + 1, x + w - 2, 7, z + d - 2);
+        for (int y : new int[] {0, 4, 8}) {
+            for (int dx = 0; dx < w; dx++) {
+                k.set(x + dx, y, z, Palette.DARK_LOG);
+                k.set(x + dx, y, z + d - 1, Palette.DARK_LOG);
+            }
+        }
+        // 临街的门面：敞开，一张柜台
+        k.fill(x + 2, 0, z + d - 1, x + w - 3, 2, z + d - 1, null);
+        k.fill(x + 2, 0, z + d - 2, x + w - 3, 1, z + d - 2, Palette.OAK_PLANK);
+        k.set(x + 3, 2, z + d - 2, Palette.BARREL);
+        k.set(x + w - 4, 2, z + d - 2, Palette.CRATE);
+        k.set(x + w / 2, 3, z + d - 1, Palette.SIGN);
+        k.roof(x - 1, z - 1, x + w, z + d, 9, true, Palette.SHINGLE_STAIR,
+                Palette.PLASTER_CREAM, 1);
+        k.bump("矮铺面");
+    }
+
+    private static void ticket(BuildKit k, int x, int z) {
+        int w = 16;
+        int d = 9;
+        k.fill(x, -1, z, x + w - 1, 0, z + d - 1, Palette.STONE_BRICK);
+        k.walls(x, 1, z, x + w - 1, 4, z + d - 1, Palette.SPRUCE_PLANK);
+        k.carve(x + 1, 1, z + 1, x + w - 2, 3, z + d - 2);
+        // 两个窗口朝北（对着排队的人）
+        for (int i = 0; i < 2; i++) {
+            int wx = x + 3 + i * 7;
+            k.fill(wx, 1, z, wx + 2, 2, z, null);
+            k.fill(wx, 1, z, wx + 2, 1, z, Palette.OAK_PLANK);
+        }
+        k.roof(x - 1, z - 1, x + w, z + d, 5, true, Palette.SHINGLE_STAIR,
+                Palette.SPRUCE_PLANK, 1);
+        k.set(x + w / 2, 3, z + d - 1, Palette.LANTERN);
+        k.bump("售票亭");
+    }
 }

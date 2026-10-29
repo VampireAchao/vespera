@@ -60,7 +60,7 @@ class MedievalCityTest {
         assertNotNull(scene().get(0, 64, 0), "金字塔顶的祭坛没有立起来");
         assertNotNull(scene().get(-46, 20, -260), "王座大厅没有立起来");
         assertNotNull(scene().get(-268, 30, -268), "城堡主楼没有立起来");
-        assertNotNull(scene().get(-154, 30, -72), "市政厅钟塔没有立起来");
+        assertNotNull(scene().get(-154, 30, -74), "市政厅钟塔没有立起来");
     }
 
     @Test
@@ -84,6 +84,104 @@ class MedievalCityTest {
     void districtsAreUnique() {
         long unique = MedievalCity.DISTRICTS.stream().map(MedievalCity.District::id).distinct().count();
         assertEquals(MedievalCity.DISTRICTS.size(), unique, "分区 id 有重复");
-        assertTrue(MedievalCity.DISTRICTS.size() >= 14);
+        assertTrue(MedievalCity.DISTRICTS.size() >= 26, "分区表还没扩到 26 条");
+    }
+
+    @Test
+    @DisplayName("预留表不跨街：跨一条街，整条路就会被 blocked() 吞掉")
+    void reservedNeverCrossesStreet() {
+        for (int[] area : MedievalCity.reservedAreas()) {
+            for (MedievalCity.Street street : MedievalCity.STREETS) {
+                int ax = Math.min(street.x1(), street.x2());
+                int bx = Math.max(street.x1(), street.x2());
+                int az = Math.min(street.z1(), street.z2());
+                int bz = Math.max(street.z1(), street.z2());
+                boolean overlaps = area[0] <= bx && area[2] >= ax && area[1] <= bz && area[3] >= az;
+                assertTrue(!overlaps, "预留矩形 " + area[0] + "," + area[1] + " → " + area[2] + ","
+                        + area[3] + " 压住了街 " + ax + "," + az + " → " + bx + "," + bz);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("环路与东大道全程有铺装：这两处曾经整段断掉")
+    void ringAndAvenueArePaved() {
+        int ring = MedievalCity.RING;
+        for (int i = -4; i <= 4; i++) {
+            assertPaved(ring - 4, (i * ring) / 4);
+            assertPaved(-ring + 4, (i * ring) / 4);
+            assertPaved((i * ring) / 4, ring - 4);
+            assertPaved((i * ring) / 4, -ring + 4);
+        }
+        for (int x = 124; x <= 292; x += 21) {
+            assertPaved(x, 0);
+        }
+    }
+
+    private void assertPaved(int x, int z) {
+        Block block = scene().get(x, -1, z);
+        assertNotNull(block, "路上没有方块：" + x + "," + z);
+        String id = block.id();
+        assertTrue(id.contains("stone") || id.contains("cobble") || id.contains("andesite")
+                || id.contains("path"), "路口没铺装：" + x + "," + z + " 是 " + id);
+    }
+
+    @Test
+    @DisplayName("角斗场外墙闭合：沿一圈采样三百六十点，没有一处是空")
+    void colosseumWallIsClosed() {
+        int cx = 185;
+        int cz = 193;
+        int holes = 0;
+        for (int deg = 0; deg < 360; deg++) {
+            double t = Math.toRadians(deg);
+            int x = cx + (int) Math.round(82.0 * Math.cos(t));
+            int z = cz + (int) Math.round(70.0 * Math.sin(t));
+            // 四个门洞是开着的，跳过它们
+            if (Math.abs(x - cx) <= 3 || Math.abs(z - cz) <= 3) {
+                continue;
+            }
+            Block block = scene().get(x, 20, z);
+            if (block == null) {
+                holes++;
+            }
+        }
+        assertEquals(0, holes, "外墙上还有 " + holes + " 处空洞");
+    }
+
+    @Test
+    @DisplayName("看台不外溢：最外一圈之外不应再有实心看台块")
+    void seatingStaysInsideWall() {
+        int cx = 185;
+        int cz = 193;
+        for (int deg = 0; deg < 360; deg += 15) {
+            double t = Math.toRadians(deg);
+            int x = cx + (int) Math.round(82.0 * 1.12 * Math.cos(t));
+            int z = cz + (int) Math.round(70.0 * 1.12 * Math.sin(t));
+            Block block = scene().get(x, 10, z);
+            // 场子外面还有民居与摊子，只判"看台材质"有没有越界
+            boolean seating = block != null && (block.id().contains("stone_bricks")
+                    || block.id().contains("andesite_polished"));
+            assertTrue(!seating, "看台鼓出外墙了：" + x + "," + z + " 是 " + block);
+        }
+    }
+
+    @Test
+    @DisplayName("七处新地方都在：演讲台、国库、客栈、银行、神职院、府邸水池、公会铁门")
+    void newPlacesExist() {
+        assertNotNull(scene().get(0, 3, -86), "演讲台没有台面");
+        assertEquals("minecraft:iron_block", scene().get(-72, 1, -290).id(), "国库铁门不是铁");
+        assertNotNull(scene().get(-40, 5, 265), "客栈二层没有楼板");
+        assertNotNull(scene().get(40, 2, 130), "银行没有柜台");
+        assertNotNull(scene().get(85, 2, 99), "圣器库院墙没有立起来");
+        assertEquals("minecraft:water", scene().get(134, -1, -282).id(), "府邸水池没有水");
+        assertEquals("minecraft:iron_bars", scene().get(160, 2, -30).id(), "公会铁门不在巷中");
+    }
+
+    @Test
+    @DisplayName("兽笼真的在地下，且顶上留着那一格天窗")
+    void undercroftIsUnderground() {
+        assertTrue(scene().get(190, -2, 215) == null, "兽笼没有被挖开");
+        assertNotNull(scene().get(190, -4, 215), "兽笼没有地板");
+        assertEquals("minecraft:iron_bars", scene().get(205, -1, 220).id(), "天窗那格不是铁栅");
     }
 }

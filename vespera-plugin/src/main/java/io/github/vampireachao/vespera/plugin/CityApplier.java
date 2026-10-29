@@ -345,10 +345,20 @@ public final class CityApplier {
                 Material.SANDSTONE, Material.STONE_BRICKS, Material.CHISELED_STONE_BRICKS);
         probe(world, failures, "金字塔祭坛", ox, ground + 64, oz,
                 Material.CHISELED_STONE_BRICKS, Material.GOLD_BLOCK);
+        probe(world, failures, "演讲台", ox, ground + 3, oz - 86,
+                Material.CHISELED_STONE_BRICKS, Material.STONE_BRICKS);
         probe(world, failures, "王座大厅", ox - 46, ground + 20, oz - 260, Material.STONE_BRICKS);
-        probe(world, failures, "角斗场沙地", ox + 185, ground - 1, oz + 185,
+        probe(world, failures, "国库铁门", ox - 72, ground + 1, oz - 290, Material.IRON_BLOCK);
+        probe(world, failures, "角斗场沙地", ox + 200, ground - 1, oz + 200,
                 Material.SAND, Material.COARSE_DIRT);
+        probe(world, failures, "角斗场包厢", ox + 245, ground + 12, oz + 160,
+                Material.DARK_OAK_PLANKS);
         probe(world, failures, "城堡主楼", ox - 268, ground + 30, oz - 268, Material.STONE_BRICKS);
+        probe(world, failures, "公会铁门", ox + 160, ground + 2, oz - 30, Material.IRON_BARS);
+        probe(world, failures, "银行库房", ox + 42, ground - 2, oz + 144, Material.IRON_BARS);
+        probe(world, failures, "客栈楼板", ox - 40, ground + 5, oz + 265, Material.DARK_OAK_PLANKS);
+        probe(world, failures, "府邸水池", ox + 134, ground - 1, oz - 282, Material.WATER);
+        probe(world, failures, "贫民窟巷", ox - 188, ground - 1, oz + 140, Material.COBBLESTONE);
         probe(world, failures, "码头水面", ox - 170, ground - 1, oz + 350, Material.WATER);
         return failures;
     }

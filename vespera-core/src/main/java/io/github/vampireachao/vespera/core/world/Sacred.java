@@ -344,97 +344,501 @@ final class Sacred {
         int rows = 18;
         int wallH = 24;
 
-        // 外墙：三层盲拱
-        for (int dx = -80; dx <= 80; dx++) {
-            for (int dz = -68; dz <= 68; dz++) {
-                double e = (dx / rx) * (dx / rx) + (dz / rz) * (dz / rz);
-                if (e <= 1.0 || e > 1.09) {
-                    continue;
-                }
-                int y = 0;
-                boolean gate = Math.abs(dx) < 6 || Math.abs(dz) < 6;
-                if (gate) {
-                    continue;
-                }
-                for (y = 0; y < wallH; y++) {
+        // 外墙：按角度参数化。
+        // 用 dx/dz 包围盒去判椭圆，一定会漏掉四个极点——要求 |dx|>82，
+        // 而循环只走到 80。东西两极整段消失，南北各缺 39 格。
+        for (double deg = 0; deg < 360; deg += 0.5) {
+            double t = Math.toRadians(deg);
+            for (double s = 1.0; s <= 1.076; s += 0.025) {
+                int x = cx + (int) Math.round(rx * Math.sqrt(s) * Math.cos(t));
+                int z = cz + (int) Math.round(rz * Math.sqrt(s) * Math.sin(t));
+                boolean gate = Math.abs(x - cx) <= 3 || Math.abs(z - cz) <= 3;
+                for (int y = 0; y < wallH; y++) {
+                    if (gate && y <= 4) {
+                        continue;
+                    }
                     boolean cornice = y == 7 || y == 15 || y == wallH - 1;
                     Block block = cornice ? Palette.STONE_CHISELED
-                            : (((dx + dz) & 7) == 0 ? Palette.STONE_BRICK : Palette.SANDSTONE);
-                    k.set(cx + dx, y, cz + dz, block);
+                            : (((x + z) & 7) == 0 ? Palette.STONE_BRICK : Palette.SANDSTONE);
+                    k.set(x, y, z, block);
                 }
-                // 拱窗：每三层开一个
-                if ((dx + dz) % 5 == 0) {
-                    k.set(cx + dx, 4, cz + dz, Palette.DARK_PLANK);
-                    k.set(cx + dx, 12, cz + dz, Palette.DARK_PLANK);
-                    k.set(cx + dx, 20, cz + dz, Palette.DARK_PLANK);
+                if (gate) {
+                    // 门洞上方的拱
+                    k.set(x, 5, z, Palette.STONE_CHISELED);
+                } else if ((x + z) % 5 == 0) {
+                    k.set(x, 4, z, Palette.DARK_PLANK);
+                    k.set(x, 12, z, Palette.DARK_PLANK);
+                    k.set(x, 20, z, Palette.DARK_PLANK);
                 }
             }
         }
 
-        // 看台：一圈圈升起
-        for (int row = 0; row < rows; row++) {
-            double outer = 0.58 + row * 0.029;
-            double inner = outer - 0.030;
-            int y = 1 + row;
-            for (int dx = -80; dx <= 80; dx++) {
-                for (int dz = -68; dz <= 68; dz++) {
-                    double e = (dx / rx) * (dx / rx) + (dz / rz) * (dz / rz);
-                    if (e < inner * inner || e > outer * outer) {
-                        continue;
+        // 看台：实心台地。
+        // 行距 0.55 + (row+1)*0.025，最外行恰好落在 e=1.000，贴住墙内沿；
+        // 旧写法 0.58 + row*0.029 会让第 17 排长到 e=1.15，从墙外鼓出三圈石头。
+        for (int dx = -85; dx <= 85; dx++) {
+            for (int dz = -73; dz <= 73; dz++) {
+                double u = (double) dx / rx;
+                double v = (double) dz / rz;
+                double e = u * u + v * v;
+                if (e > 1.0) {
+                    continue;
+                }
+                int x = cx + dx;
+                int z = cz + dz;
+                boolean gate = Math.abs(dx) <= 3 || Math.abs(dz) <= 3;
+
+                if (e <= 0.288) {
+                    k.set(x, -1, z, ((dx + dz) & 1) == 0 ? Palette.SAND : Palette.COARSE);
+                    continue;
+                }
+                if (e <= 0.3025) {
+                    // 护墙：把沙地和第一排隔开。没有它，观众一步就跨进场里
+                    if (!gate) {
+                        for (int y = 0; y <= 2; y++) {
+                            k.set(x, y, z, y == 2 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+                        }
                     }
-                    boolean gate = Math.abs(dx) < 4 || Math.abs(dz) < 4;
-                    if (gate) {
-                        continue;
-                    }
-                    k.set(cx + dx, y, cz + dz, row % 2 == 0 ? Palette.STONE_BRICK
-                            : Palette.ANDESITE_POLISHED);
-                    k.set(cx + dx, y - 1, cz + dz, Palette.STONE_BRICK);
+                    continue;
+                }
+                double lin = Math.sqrt(e);
+                int row = (int) Math.floor((lin - 0.55) / 0.025);
+                row = Math.max(0, Math.min(rows, row));
+                int top = 1 + row;
+                // 门洞位置留成隧道：下五格空，上面回填，从外面看仍是完整的看台
+                int from = gate ? 5 : 0;
+                for (int y = from; y <= top; y++) {
+                    Block block = (y == top)
+                            ? (row % 2 == 0 ? Palette.STONE_BRICK : Palette.ANDESITE_POLISHED)
+                            : Palette.STONE_BRICK;
+                    k.set(x, y, z, block);
                 }
             }
         }
 
-        // 竞技场：沙地
-        for (int dx = -46; dx <= 46; dx++) {
-            for (int dz = -38; dz <= 38; dz++) {
-                double e = (dx / 44.0) * (dx / 44.0) + (dz / 36.0) * (dz / 36.0);
-                if (e <= 1.0) {
-                    k.set(cx + dx, -1, cz + dz, ((dx + dz) & 1) == 0 ? Palette.SAND : Palette.COARSE);
-                }
-            }
-        }
-        // 地下关押区：地上留几道铁栅，说明沙地下还有一层
-        for (int i = 0; i < 4; i++) {
-            int x = cx - 24 + i * 16;
-            k.set(x, -1, cz, Palette.IRON_BARS);
-            k.set(x + 1, -1, cz, Palette.IRON_BARS);
-        }
-
-        // 四座门：拱廊
+        // 四门：外门洞底与场外同高，隧道直通沙地
         for (int[] dir : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
-            int gx = cx + dir[0] * 62;
-            int gz = cz + dir[1] * 52;
-            for (int i = -5; i <= 5; i++) {
-                for (int y = 0; y <= 8; y++) {
-                    int x = dir[0] != 0 ? gx : cx + i;
-                    int z = dir[0] != 0 ? cz + i : gz;
-                    k.set(x, y, z, y == 8 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+            for (int d = -3; d <= 3; d++) {
+                for (int step = 0; step <= 84; step++) {
+                    int x = dir[0] != 0 ? cx + dir[0] * step : cx + d;
+                    int z = dir[0] != 0 ? cz + d : cz + dir[1] * step;
+                    double u = (double) (x - cx) / rx;
+                    double v = (double) (z - cz) / rz;
+                    if (u * u + v * v > 1.0) {
+                        break;
+                    }
+                    if (u * u + v * v > 0.288) {
+                        for (int y = 0; y <= 4; y++) {
+                            k.set(x, y, z, null);
+                        }
+                    }
+                    k.set(x, -1, z, Palette.COBBLE);
                 }
             }
         }
 
-        // 檐口的桅杆：原先用来撑遮阳篷
+        // 四段登看台的台阶：从沙地直上顶层，宽三格
+        for (int[] dir : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+            for (int i = 0; i < rows; i++) {
+                int along = 46 + i;
+                for (int w = -1; w <= 1; w++) {
+                    int x = dir[0] != 0 ? cx + dir[0] * along : cx + w;
+                    int z = dir[0] != 0 ? cz + w : cz + dir[1] * along;
+                    k.set(x, 1 + i, z, Block.stairs("minecraft:stone_brick_stairs",
+                            dir[0] > 0 ? "east" : dir[0] < 0 ? "west" : dir[1] > 0 ? "south" : "north"));
+                    k.set(x, i, z, Palette.STONE_BRICK);
+                }
+            }
+        }
+
+        // 檐口的桅杆：用来撑遮阳篷
         for (int i = 0; i < 12; i++) {
             double angle = i / 12.0 * Math.PI * 2;
             int x = cx + (int) Math.round(Math.cos(angle) * (rx + 2));
             int z = cz + (int) Math.round(Math.sin(angle) * (rz + 2));
             k.fill(x, wallH, z, x, wallH + 5, z, Palette.SPRUCE_FENCE);
         }
-        // 场边的雕像与火盆
-        for (int[] p : new int[][] {{-40, -30}, {40, -30}, {-40, 30}, {40, 30}}) {
-            k.fill(cx + p[0], 0, cz + p[1], cx + p[0], 3, cz + p[1], Palette.STONE_CHISELED);
-            k.set(cx + p[0], 4, cz + p[1], Palette.GOLD);
-        }
         k.bump("角斗场");
         k.bump("地标");
+    }
+
+    /**
+     * 角斗场的内部：包厢、场务用房、地下兽笼、放逐点。
+     *
+     * <p>单独一遍，是因为它要在外墙与看台都定下来之后才能挖——先挖再砌，
+     * 挖出来的洞会被后面的回填盖掉。
+     */
+    static void colosseumInterior(BuildKit k, int cx, int cz) {
+        // 达官包厢：东侧，观演面朝西，独立石梯从场外直接上来
+        carveBox(k, cx, cz);
+        // 场务办公室与值更室：东侧看台体内
+        rooms(k, cx, cz);
+        // 地下：兽笼与牢房，顶上留一格铁栅透月光
+        undercroft(k, cx, cz);
+
+        // 放逐点：沙地正中偏南，3×3 石台
+        int ex = cx;
+        int ez = cz + 7;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                k.set(ex + dx, -1, ez + dz, Palette.STONE_CHISELED);
+                k.set(ex + dx, 0, ez + dz, Palette.STONE_CHISELED);
+            }
+        }
+        for (int[] c : new int[][] {{-2, -2}, {2, -2}, {-2, 2}, {2, 2}}) {
+            k.fill(ex + c[0], 1, ez + c[1], ex + c[0], 3, ez + c[1], Palette.IRON_BARS);
+        }
+        k.fill(ex, 1, ez, ex, 5, ez, Palette.DARK_LOG);
+        k.set(ex, 6, ez, Palette.GOLD);
+        // 净空圈：把周围十九格换成粗砂，一眼能看出这块地是"让出来的"
+        for (int dx = -9; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 9; dz++) {
+                if (k.scene.get(ex + dx, -1, ez + dz) != null) {
+                    k.set(ex + dx, -1, ez + dz, Palette.COARSE);
+                }
+            }
+        }
+        k.bump("放逐点");
+    }
+
+    /** 包厢：六间，前沿一道铁栏，遮阳篷挂在檐口桅杆上。 */
+    private static void carveBox(BuildKit k, int cx, int cz) {
+        int x1 = cx + 51;
+        int x2 = cx + 73;
+        int z1 = cz - 45;
+        int z2 = cz - 17;
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                k.set(x, 12, z, Palette.DARK_PLANK);
+                for (int y = 13; y <= 17; y++) {
+                    k.set(x, y, z, null);
+                }
+                k.set(x, 18, z, Palette.SPRUCE_PLANK);
+            }
+        }
+        // 看台一侧的窗：铁栏，坐着能看见沙地，站着够不着
+        for (int z = z1; z <= z2; z++) {
+            for (int y = 13; y <= 15; y++) {
+                k.set(x1, y, z, Palette.IRON_BARS);
+            }
+            for (int y = 16; y <= 18; y++) {
+                k.set(x1, y, z, Palette.STONE_BRICK);
+            }
+        }
+        // 隔间：每五格一道
+        for (int z = z1 + 5; z < z2; z += 5) {
+            for (int x = x1 + 1; x <= x2; x++) {
+                for (int y = 13; y <= 17; y++) {
+                    k.set(x, y, z, Palette.DARK_PLANK);
+                }
+            }
+        }
+        // 每间一桌一椅
+        for (int z = z1 + 2; z < z2; z += 5) {
+            k.set(x2 - 2, 13, z, Palette.OAK_PLANK);
+            k.set(x2 - 3, 13, z, Palette.BARREL);
+        }
+        // 独立入口：外墙开口 + 场外石梯
+        for (int x = x2 + 1; x <= cx + 82; x++) {
+            for (int z = cz - 15; z <= cz - 11; z++) {
+                for (int y = 12; y <= 15; y++) {
+                    k.set(x, y, z, null);
+                }
+            }
+        }
+        for (int i = 0; i <= 12; i++) {
+            for (int w = 0; w <= 4; w++) {
+                k.set(cx + 83 + w, i, cz - 15 + (i / 2), Palette.STONE_BRICK);
+                k.set(cx + 83 + w, i + 1, cz - 15 + (i / 2), null);
+            }
+        }
+        k.set(x2 - 4, 13, z1 + 2, Palette.LANTERN);
+        k.bump("包厢");
+    }
+
+    /** 场务办公室与值更室。夜里该有人坐在这儿——支线会用到。 */
+    private static void rooms(BuildKit k, int cx, int cz) {
+        int x1 = cx + 57;
+        int x2 = cx + 73;
+        int z1 = cz - 11;
+        int z2 = cz + 7;
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                k.set(x, 0, z, Palette.DARK_PLANK);
+                for (int y = 1; y <= 4; y++) {
+                    k.set(x, y, z, null);
+                }
+                k.set(x, 5, z, Palette.STONE_BRICK);
+            }
+        }
+        for (int x = x1; x <= x2; x++) {
+            for (int y = 1; y <= 4; y++) {
+                k.set(x, y, z1, Palette.STONE_BRICK);
+                k.set(x, y, z2, Palette.STONE_BRICK);
+            }
+        }
+        // 门：朝西门洞
+        for (int y = 1; y <= 3; y++) {
+            k.set(x1, y, z1 + 3, null);
+            k.set(x1, y, z1 + 4, null);
+        }
+        // 值更的那八格：床、桌、灯、牌
+        k.set(x2 - 2, 1, z2 - 2, Palette.WOOL_RED);
+        k.set(x2 - 3, 1, z2 - 2, Palette.WOOL_RED);
+        k.set(x2 - 2, 1, z1 + 2, Palette.OAK_PLANK);
+        k.set(x2 - 2, 2, z1 + 2, Palette.LANTERN);
+        k.set(x1 + 1, 1, z1 + 6, Palette.CHEST);
+        k.set(x1 + 1, 2, z1 + 6, Palette.SIGN);
+        k.bump("场务室");
+    }
+
+    /**
+     * 地下兽笼：在沙地下面，只有一层可用（y −3..−2）。
+     *
+     * <p>顶上那一格铁栅是有意的：月光从这里照进最东一间。白天关得住，
+     * 夜里关不住——这是支线的物证，不是装饰。
+     */
+    private static void undercroft(BuildKit k, int cx, int cz) {
+        int x1 = cx + 1;
+        int x2 = cx + 21;
+        int z1 = cz + 13;
+        int z2 = cz + 33;
+        // 挖空
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                for (int y = -3; y <= -2; y++) {
+                    k.set(x, y, z, null);
+                }
+            }
+        }
+        // 地板与隔墙：三间笼子
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                k.set(x, -4, z, Palette.STONE_BRICK);
+            }
+        }
+        for (int x = x1; x <= x2; x++) {
+            for (int y = -3; y <= -2; y++) {
+                k.set(x, y, z1, Palette.STONE_BRICK);
+                k.set(x, y, z2, Palette.STONE_BRICK);
+            }
+        }
+        int[] bars = {x1 + 6, x1 + 14};
+        for (int bx : bars) {
+            for (int z = z1 + 1; z <= z2 - 1; z++) {
+                for (int y = -3; y <= -2; y++) {
+                    k.set(bx, y, z, Palette.IRON_BARS);
+                }
+            }
+        }
+        for (int x = x1; x <= x2; x++) {
+            for (int y = -3; y <= -2; y++) {
+                k.set(x, y, z1, Palette.STONE_BRICK);
+            }
+        }
+        // 草垫与桶：笼子里该有的
+        for (int x = x1 + 2; x <= x1 + 4; x++) {
+            k.set(x, -3, z2 - 2, Palette.HAY);
+        }
+        k.set(x1 + 10, -3, z2 - 2, Palette.BARREL);
+        k.set(x1 + 18, -3, z2 - 2, Palette.CAULDRON);
+        // 那一格天窗：沙地边缘一格铁栅，月光直下
+        int sky = x2 - 1;
+        k.set(sky, -1, z2 - 6, Palette.IRON_BARS);
+        for (int y = -2; y <= -2; y++) {
+            k.set(sky, y, z2 - 6, null);
+        }
+        // 入口：南侧一道下行梯，从沙地边缘下去
+        for (int i = 0; i <= 3; i++) {
+            for (int w = -1; w <= 1; w++) {
+                k.set(cx + w, -1 - i, cz + 35 - i, null);
+                k.set(cx + w, -2 - i, cz + 35 - i, Palette.STONE_BRICK);
+            }
+        }
+        k.bump("兽笼");
+    }
+
+    /**
+     * 神职院落：金字塔四周的四座院子。
+     *
+     * <p>外角一律切 45°，不是为了好看——公共水井在 (±96,±96)，正好落在院子的
+     * 外角上。切掉那个角，井就留在院外，谁都能打水。
+     */
+    static void clergyCourts(BuildKit k) {
+        court(k, -99, -99, "cloister");
+        court(k, 72, -99, "scriptorium");
+        court(k, 72, 72, "treasury");
+        court(k, -99, 72, "hospice");
+    }
+
+    private static void court(BuildKit k, int x1, int z1, String type) {
+        int x2 = x1 + 27;
+        int z2 = z1 + 27;
+        int sx = x1 < 0 ? -1 : 1;
+        int sz = z1 < 0 ? -1 : 1;
+
+        // 院子地面：十字小径 + 草地
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                if (sx * x + sz * z > 184) {
+                    continue;
+                }
+                int cx = (x1 + x2) / 2;
+                int cz = (z1 + z2) / 2;
+                boolean path = Math.abs(x - cx) <= 1 || Math.abs(z - cz) <= 1;
+                k.set(x, -1, z, path ? Palette.PATH : Palette.GRASS);
+            }
+        }
+
+        // 院墙：五格高，切角处断开，另留一道门
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                boolean edge = x == x1 || x == x2 || z == z1 || z == z2;
+                if (!edge || sx * x + sz * z > 184) {
+                    continue;
+                }
+                // 朝金字塔那一面开门，门宽三格
+                boolean gate = (x == x2 && Math.abs(z - (z1 + z2) / 2) <= 1)
+                        || (x == x1 && Math.abs(z - (z1 + z2) / 2) <= 1)
+                        || (z == z2 && Math.abs(x - (x1 + x2) / 2) <= 1)
+                        || (z == z1 && Math.abs(x - (x1 + x2) / 2) <= 1);
+                boolean inward = Math.abs(x) < Math.abs(z) ? x == (x1 < 0 ? x2 : x1) : z == (z1 < 0 ? z2 : z1);
+                if (gate && inward) {
+                    continue;
+                }
+                for (int y = 0; y <= 5; y++) {
+                    k.set(x, y, z, y == 5 ? Palette.STONE_CHISELED : Palette.COBBLE);
+                }
+            }
+        }
+
+        // 院里的楼：四座院子四种用途，体量都压得住院墙
+        int bx = x1 + 6;
+        int bz = z1 + 6;
+        switch (type) {
+            case "cloister" -> {
+                hall(k, bx, bz, 15, 10, 10, false, Palette.PLASTER);
+                // 钟楼：四院里唯一的竖向
+                tower(k, x2 - 10, z2 - 12, 5, 22);
+            }
+            case "scriptorium" -> {
+                hall(k, bx, bz, 16, 11, 9, false, Palette.PLASTER);
+                for (int x = bx + 2; x <= bx + 14; x += 4) {
+                    k.fill(x, 2, bz, x + 1, 5, bz, Palette.GLASS);
+                }
+                k.fill(bx + 2, 0, bz + 4, bx + 13, 0, bz + 5, Palette.OAK_PLANK);
+                k.set(bx + 4, 1, bz + 4, Palette.LECTERN);
+                k.set(bx + 8, 1, bz + 4, Palette.LECTERN);
+                k.set(bx + 12, 1, bz + 4, Palette.LECTERN);
+            }
+            case "treasury" -> {
+                hall(k, bx + 1, bz + 1, 13, 9, 8, true, Palette.STONE_BRICK);
+                for (int x = bx + 3; x <= bx + 12; x++) {
+                    for (int z = bz + 3; z <= bz + 8; z++) {
+                        k.set(x, 0, z, Palette.STONE_BRICK);
+                    }
+                }
+                for (int i = 0; i < 5; i++) {
+                    k.set(bx + 2, 1, bz + 2 + i, Palette.CHEST);
+                }
+            }
+            default -> {
+                hall(k, bx, bz, 16, 10, 9, false, Palette.PLASTER);
+                // 粥棚：院门内侧一条长桌
+                k.fill(bx - 2, 0, bz + 12, bx + 10, 0, bz + 13, Palette.OAK_PLANK);
+                for (int i = 0; i < 4; i++) {
+                    k.set(bx - 1 + i * 3, 0, bz + 16, Palette.BARREL);
+                }
+                for (int i = 0; i < 3; i++) {
+                    k.fill(bx + 12, 0, bz + 4 + i * 4, bx + 12, 3, bz + 4 + i * 4, Palette.SPRUCE_FENCE);
+                    k.set(bx + 12, 4, bz + 4 + i * 4, Palette.WOOL_CREAM);
+                }
+            }
+        }
+        k.bump("神职院");
+    }
+
+    /** 一座石砌小楼：墙、窗、门、坡顶。四个院子共用。 */
+    private static void hall(BuildKit k, int x, int z, int w, int d, int h, boolean sealed, Block plaster) {
+        k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.STONE_BRICK);
+        k.walls(x, 0, z, x + w - 1, h, z + d - 1, Palette.STONE_BRICK);
+        k.carve(x + 1, 0, z + 1, x + w - 2, h - 1, z + d - 2);
+        if (!sealed) {
+            for (int dx = 3; dx < w - 3; dx += 4) {
+                k.fill(x + dx, 2, z + d - 1, x + dx + 1, 4, z + d - 1, Palette.GLASS);
+            }
+            k.fill(x + w / 2 - 1, 0, z, x + w / 2, 2, z, Palette.DARK_PLANK);
+        } else {
+            // 铁门：两格宽、三格高，门框包石
+            k.fill(x + w / 2 - 1, 0, z, x + w / 2, 2, z, Palette.IRON);
+            k.fill(x + w / 2 - 2, 0, z, x + w / 2 - 2, 3, z, Palette.STONE_CHISELED);
+            k.fill(x + w / 2 + 1, 0, z, x + w / 2 + 1, 3, z, Palette.STONE_CHISELED);
+        }
+        k.roof(x - 2, z - 2, x + w + 1, z + d + 1, h + 1, true, Palette.SLATE_STAIR, plaster, 1);
+        k.set(x + 2, h + 1, z + 2, Palette.CAMPFIRE);
+    }
+
+    private static void tower(BuildKit k, int x, int z, int r, int h) {
+        for (int y = 0; y <= h; y++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    boolean edge = Math.abs(dx) == r || Math.abs(dz) == r;
+                    if (edge) {
+                        k.set(x + dx, y, z + dz, y % 6 == 0 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+                    }
+                }
+            }
+        }
+        k.fill(x - r, h, z - r, x + r, h, z + r, Palette.STONE_BRICK);
+        k.cone(x, z, r + 1, h + 1, 7, Palette.SLATE);
+        // 钟窗
+        for (int dz = -1; dz <= 1; dz++) {
+            k.set(x, h - 3, z + dz, Palette.BELL);
+        }
+    }
+
+    static void colosseumInterior(BuildKit k) {
+        colosseumInterior(k, 185, 193);
+    }
+
+    /**
+     * 演讲台：金字塔与王座厅之间的中轴。
+     *
+     * <p>它是全城唯一一处"一个人对所有人说话"的地方。空着的时间比用着的时间长。
+     */
+    static void tribune(BuildKit k) {
+        int x1 = -13;
+        int x2 = 13;
+        int z1 = -92;
+        int z2 = -80;
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                for (int y = 0; y <= 3; y++) {
+                    k.set(x, y, z, y == 3 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+                }
+            }
+        }
+        // 三级踏步朝南（面向广场）
+        for (int i = 0; i < 3; i++) {
+            for (int x = -6; x <= 6; x++) {
+                k.set(x, i, z2 + 1 + (2 - i), Palette.STONE_CHISELED);
+            }
+        }
+        // 背屏与四柱
+        k.fill(x1, 4, z1, x2, 7, z1, Palette.STONE_BRICK);
+        for (int x : new int[] {x1, x1 + 8, x2 - 8, x2}) {
+            k.fill(x, 4, z1, x, 9, z1, Palette.STONE_CHISELED);
+        }
+        // 华盖
+        k.fill(x1 - 1, 10, z1 - 1, x2 + 1, 10, z2 - 3, Palette.STONE_BRICK);
+        k.fill(x1 - 1, 11, z1 - 1, x2 + 1, 11, z2 - 3, Palette.STONE_CHISELED);
+        // 台上的旗与火盆
+        for (int x : new int[] {x1 + 2, x2 - 2}) {
+            k.fill(x, 4, z2 - 2, x, 8, z2 - 2, Palette.SPRUCE_FENCE);
+            k.fill(x, 7, z2 - 2, x, 8, z2 - 2, Palette.WOOL_RED);
+        }
+        k.set(x1 + 4, 4, z2 - 2, Palette.CAMPFIRE);
+        k.set(x2 - 4, 4, z2 - 2, Palette.CAMPFIRE);
+        k.bump("演讲台");
     }
 }

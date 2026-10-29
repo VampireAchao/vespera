@@ -176,7 +176,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
     /**
      * {@code /vespera verify [city|campus]}：抽查灰盒是否真的在那儿。
      *
-     * <p>八处探针，每处问一句"这块该是石砖吧"。验不出好看，但验得出"根本没盖"
+     * <p>十七处探针，每处问一句"这块该是石砖吧"。验不出好看，但验得出"根本没盖"
      * 和"盖到别处去了"——这两种情况光看日志是看不出来的。
      */
     private void verify(CommandSender sender, String target) {

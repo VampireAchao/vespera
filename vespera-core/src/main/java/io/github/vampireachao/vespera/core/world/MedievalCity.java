@@ -48,22 +48,39 @@ public final class MedievalCity {
             new District("plaza", "环市集", -112, -112, 112, 112, "绕塔一周的市集大道，摊位与市场棚"),
             new District("throne", "王座大厅", -80, -300, 80, -150, "三级台地，梯形向上，尽头是王座"),
             new District("castle", "灰烬堡", -300, -300, -146, -146, "台地、幕墙、主楼、马厩与营房"),
-            new District("colosseum", "角斗场", 105, 117, 265, 253, "椭圆看台、四门、沙地与地下关押区"),
-            new District("guild", "行会厅", 130, -74, 192, 6, "石砌拱廊 + 半木二层"),
-            new District("townhall", "市政厅", -190, -74, -142, -6, "阶梯山墙，钟塔 68 格"),
+            new District("colosseum", "角斗场", 105, 125, 265, 261, "椭圆看台、四门、包厢、沙地、地下兽笼"),
+            new District("guild", "断弦", 130, -76, 192, -14, "一层酒馆与穿堂巷、西半内厅、二层名单"),
+            new District("townhall", "市政厅", -190, -76, -142, -8, "阶梯山墙，钟塔 68 格"),
             new District("barracks", "兵营", -236, -120, -190, -80, "长屋、训练场、草人"),
             new District("graveyard", "安息园", 210, -290, 292, -200, "铁栅、碑列、紫杉"),
-            new District("crafts", "工匠街", 120, 20, 265, 110, "铁匠、制革、织工、陶坊"),
+            new District("crafts", "工匠街", 120, 20, 164, 110, "铁匠、制革、织工、陶坊"),
             new District("south-market", "南市", 20, 130, 100, 280, "面包、酒、鱼、布——过日子的一条街"),
             new District("residential", "民居带", -260, 20, -120, 280, "半木联排，院里一口井"),
             new District("docks", "南港", -256, 236, -90, 412, "运河、仓库、吊杆、驳船"),
             new District("farm", "西田", -520, 40, -340, 260, "条田、水渠、谷仓、风车"),
-            new District("hamlet", "北村", 310, -430, 430, -310, "六户人家、水井、小堂"));
+            new District("hamlet", "北村", 310, -430, 430, -310, "六户人家、水井、小堂"),
+            new District("clergy-nw", "修士居所", -99, -99, -72, -72, "神职院落，四角切 45° 让开水井"),
+            new District("clergy-ne", "缮写院", 72, -99, 99, -72, "抄书、修书、存卷"),
+            new District("clergy-se", "圣器库", 72, 72, 99, 99, "无窗单铁门，教会最硬的一间"),
+            new District("clergy-sw", "济贫院", -99, 72, -72, 99, "通铺与粥棚"),
+            new District("palace-wing", "王室内苑", -143, -294, 96, -254, "西翼国库与居所，东翼学堂"),
+            new District("noble", "贵族府邸", 100, -292, 206, -140, "六座府邸，带院、池、地窖，侧门开巷"),
+            new District("slum", "贫民窟", -192, 122, -122, 234, "六乘八联排，巷宽三，靠港吃饭"),
+            new District("middle-class", "中产区", 166, 20, 234, 110, "十乘十二带院，行会师傅住这儿"),
+            new District("vendors", "角斗场摊贩街", 103, 125, 294, 293, "矮铺面与固定摊位，卖的是当天"),
+            new District("gate-quarter", "南门里", -80, 236, -24, 296, "客栈、马厩、车马店——旅人第一站"),
+            new District("bank", "天平与钥匙", 22, 122, 62, 148, "银行与典当行二合一，地下有库"));
 
     public record Street(int x1, int z1, int x2, int z2, int width, boolean main) {
     }
 
-    /** 街道：一圈环路、四条出城大道、若干街巷。铺地时再按地标裁剪。 */
+    /**
+     * 街道：一圈环路、四条出城大道、若干街巷。
+     *
+     * <p>两条竖巷（x 156..164、236..244）与两条横巷（z 156..164、236..244）在角斗场南移之后
+     * 必须拆成两段：不拆的话，`blocked()` 会在场子那里把整条路吞掉——环路东南角曾经
+     * 就这样断了 162 格，走上去是一片草地。
+     */
     public static final List<Street> STREETS = List.of(
             new Street(-RING, -RING, RING, -RING + 8, 8, true),
             new Street(-RING, RING - 8, RING, RING, 8, true),
@@ -72,30 +89,76 @@ public final class MedievalCity {
             new Street(-AVENUE, RING, AVENUE, HALF, AVENUE * 2, true),
             new Street(RING, -AVENUE, HALF, AVENUE, AVENUE * 2, true),
             new Street(-HALF, -AVENUE, -RING, AVENUE, AVENUE * 2, true),
-            new Street(-10, -156, 10, -RING, 20, true),
-            new Street(-244, -HALF, -236, HALF, 7, false),
-            new Street(-164, -HALF, -156, HALF, 7, false),
-            new Street(156, -HALF, 164, HALF, 7, false),
-            new Street(236, -HALF, 244, HALF, 7, false),
-            new Street(-HALF, -244, HALF, -236, 7, false),
-            new Street(-HALF, -164, HALF, -156, 7, false),
-            new Street(-HALF, 156, HALF, 164, 7, false),
-            new Street(-HALF, 236, HALF, 244, 7, false));
+            new Street(-10, -147, 10, -RING, 20, true),
+            // 竖巷：在角斗场处断开
+            new Street(-245, -140, -239, 232, 7, false),
+            new Street(-164, -6, -156, 232, 7, false),
+            new Street(156, -HALF, 164, 122, 7, false),
+            new Street(156, 265, 164, HALF, 7, false),
+            new Street(236, -196, 244, 122, 7, false),
+            new Street(236, 265, 244, HALF, 7, false),
+            // 横巷：同样断开
+            new Street(-140, -244, -84, -236, 7, false),
+            new Street(84, -244, 206, -236, 7, false),
+            new Street(-140, -164, -84, -156, 7, false),
+            new Street(84, -164, HALF, -156, 7, false),
+            new Street(-HALF, 156, 101, 164, 7, false),
+            new Street(-HALF, 236, -256, 244, 7, false),
+            new Street(-84, 236, 101, 244, 7, false),
+            new Street(84, 236, 101, 244, 7, false));
 
-    /** 需要给地标让路的地方。铺街与盖房都要先问一句。 */
+    /**
+     * 需要给地标让路的地方。铺街与盖房都要先问一句。
+     *
+     * <p>规矩只有一条：**矩形绝不跨街**。跨了街，`blocked()` 就会把那条路整段跳过，
+     * 街道断头而没有任何报错——这比盖错一栋房子难查得多。
+     */
     private static final List<int[]> RESERVED = List.of(
-            new int[] {-66, -66, 66, 66},
-            new int[] {-114, -114, 114, 114},
-            new int[] {-82, -300, 82, -148},
-            new int[] {-300, -300, -144, -144},
-            new int[] {103, 115, 267, 255},
-            new int[] {128, -76, 194, 8},
-            new int[] {-192, -76, -140, -4},
-            new int[] {-238, -122, -188, -78},
-            new int[] {208, -292, 294, -198},
-            new int[] {-252, 234, -88, 414},
-            new int[] {-524, 36, -336, 264},
-            new int[] {306, -434, 434, -306});
+            new int[] {-66, -66, 66, 66},           // 圣座
+            new int[] {-111, -111, 111, 111},       // 环市集（不能碰到 112 的环路内沿）
+            new int[] {-82, -300, 82, -148},        // 王座厅
+            new int[] {-300, -300, -144, -144},     // 城堡
+            new int[] {103, 123, 267, 263},         // 角斗场（南移 8 格后不再压环路）
+            // 行会拆成东西两半：中间的穿堂巷是公共通道，不能算作建筑占地
+            new int[] {128, -76, 155, -12},
+            new int[] {165, -76, 194, -12},
+            new int[] {-192, -78, -140, -10},       // 市政厅（南墙让出西大道）
+            new int[] {-238, -122, -188, -78},      // 兵营
+            new int[] {208, -292, 294, -198},       // 墓地
+            new int[] {-252, 234, -88, 414},        // 码头
+            new int[] {-524, 36, -336, 264},        // 农田
+            new int[] {306, -434, 434, -306},       // 北村
+            new int[] {-101, -101, -70, -70},       // 修士居所
+            new int[] {70, -101, 101, -70},         // 缮写院
+            new int[] {70, 70, 101, 101},           // 圣器库
+            new int[] {-101, 70, -70, 101},         // 济贫院
+            new int[] {-15, -94, 15, -78},          // 演讲台
+            new int[] {-143, -294, -50, -254},      // 国库 + 王室居所
+            new int[] {-160, -296, -146, -238},     // 城堡与王室居所之间的服务巷：不许再塞房子
+            new int[] {52, -292, 96, -260},         // 王室学堂
+            new int[] {-188, -142, -122, -122},     // 城堡前庭
+            new int[] {-76, 246, -26, 282},         // 客栈与马厩
+            new int[] {22, 122, 62, 148},           // 天平与钥匙
+            new int[] {166, -144, 194, -98},        // 公会靶场
+            new int[] {128, -118, 154, -80},        // 学徒宿舍西
+            new int[] {166, -118, 192, -80},        // 学徒宿舍东
+            new int[] {98, -294, 154, -246},        // 府邸 G1
+            new int[] {166, -294, 206, -246},       // 府邸 G2
+            new int[] {98, -234, 154, -166},        // 府邸 G3
+            new int[] {166, -234, 206, -166},       // 府邸 G4
+            new int[] {98, -155, 154, -138},        // 马厩 S1
+            new int[] {166, -155, 206, -138},       // 马厩 S2
+            new int[] {-192, 122, -165, 155},       // 贫民窟 S1a
+            new int[] {-192, 165, -165, 233},       // 贫民窟 S1b
+            new int[] {-155, 122, -122, 155},       // 贫民窟 S2
+            new int[] {-155, 165, -122, 233},       // 贫民窟 S3
+            new int[] {166, 22, 234, 110},          // 中产区
+            new int[] {268, 125, 294, 234},         // 东摊贩街
+            new int[] {103, 264, 155, 293},         // 南摊贩街西段
+            new int[] {165, 264, 234, 293},         // 南摊贩街东段
+            new int[] {246, 264, 267, 293},         // 东南角小块
+            new int[] {58, 198, 98, 228},           // 粮仓新址
+            new int[] {-140, -210, -86, -172});     // 图书馆新址
 
     private MedievalCity() {
     }
@@ -117,19 +180,34 @@ public final class MedievalCity {
 
         Sacred.pyramid(k);
         Sacred.throneHall(k);
-        Sacred.colosseum(k, 185, 185);
+        // 角斗场南移八格：原先 (185,185) 的北缘压在南环路上，把路吃了 108 格
+        Sacred.colosseum(k, 185, 193);
 
         Landmarks.castle(k);
         Landmarks.townHall(k);
         Landmarks.guildHall(k);
 
+        Civic.guildTavern(k);
+        Civic.guildYard(k);
+        Civic.townHallOffices(k);
+        Civic.guildDorms(k);
+
+        // 圆盘铺装会重刷 y=-1，所以神职院与讲台必须在它之后
         marketRing(k);
+        Sacred.clergyCourts(k);
+        Sacred.tribune(k);
+        Landmarks.palaceWings(k);
+
+        // 三座功能商铺：钱、床、委托
+        Landmarks.bankAndPawn(k, 24, 124);
+        Landmarks.inn(k, -72, 246);
+
         life(k);
         Civic.tavern(k, -150, 150);
         Civic.smithy(k, 130, 40);
         Civic.bathhouse(k, -276, 200);
-        Civic.library(k, -170, -200);
-        Civic.granary(k, -160, 260);
+        Civic.library(k, -136, -206);
+        Civic.granary(k, 60, 200);
         Civic.barracks(k, -236, -120);
         Civic.graveyard(k, 210, -290, 82, 92);
         Civic.docks(k);
@@ -138,6 +216,13 @@ public final class MedievalCity {
         Civic.farm(k, -500, 40, 108, 84);
         Civic.barn(k, -360, 250);
         Civic.hamlet(k, 320, -420);
+
+        // 密度分级的三个样本，以及角斗场周边的小生意
+        Civic.slum(k);
+        Civic.middleClass(k);
+        Civic.arenaVendors(k);
+        Sacred.colosseumInterior(k);
+        Landmarks.nobleQuarter(k);
 
         fillGaps(k);
         outskirts(k);
@@ -661,6 +746,10 @@ public final class MedievalCity {
                 if (!k.free(x - 7, z - 6, x + 7, z + 6)) {
                     continue;
                 }
+                // 这一圈是贴墙的房子，最容易漏掉预留表——它们曾经长进了王室居所的院子里
+                if (intersectsReserved(x - 7, z - 6, x + 7, z + 6)) {
+                    continue;
+                }
                 if (k.rnd.nextInt(100) < 55) {
                     k.house(x - 7, z - 6, 15, 12, 2, horizontal ? "south" : "east", false);
                 }
@@ -685,7 +774,10 @@ public final class MedievalCity {
             westRow(k, x1, z1 + inset, z2 - inset, "west");
             eastRow(k, x2, z1 + inset, z2 - inset, "east");
         }
-        courtyard(k, x1 + 14, z1 + 14, x2 - 14, z2 - 14);
+        // 内院会铺草：压在街上就是把大道铺成草坪
+        if (!onStreet(x1 + 14, z1 + 14, x2 - 14, z2 - 14)) {
+            courtyard(k, x1 + 14, z1 + 14, x2 - 14, z2 - 14);
+        }
     }
 
     private static void northRow(BuildKit k, int fromX, int z, int toX, String facing) {
@@ -700,7 +792,8 @@ public final class MedievalCity {
             }
             int d = 10 + k.rnd.nextInt(4);
             if (k.free(x, z, x + w - 1, z + d - 1)
-                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)) {
+                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)
+                    && !onStreet(x, z, x + w - 1, z + d - 1)) {
                 k.house(x, z, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
                         k.rnd.nextInt(100) < 15);
             }
@@ -720,7 +813,8 @@ public final class MedievalCity {
             }
             int d = 10 + k.rnd.nextInt(4);
             if (k.free(x, z - d + 1, x + w - 1, z)
-                    && !intersectsReserved(x, z - d + 1, x + w - 1, z)) {
+                    && !intersectsReserved(x, z - d + 1, x + w - 1, z)
+                    && !onStreet(x, z - d + 1, x + w - 1, z)) {
                 k.house(x, z - d + 1, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
                         k.rnd.nextInt(100) < 15);
             }
@@ -740,7 +834,8 @@ public final class MedievalCity {
             }
             int w = 10 + k.rnd.nextInt(4);
             if (k.free(x, z, x + w - 1, z + d - 1)
-                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)) {
+                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)
+                    && !onStreet(x, z, x + w - 1, z + d - 1)) {
                 k.house(x, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
             }
             z += d + 1;
@@ -759,7 +854,8 @@ public final class MedievalCity {
             }
             int w = 10 + k.rnd.nextInt(4);
             if (k.free(x - w + 1, z, x, z + d - 1)
-                    && !intersectsReserved(x - w + 1, z, x, z + d - 1)) {
+                    && !intersectsReserved(x - w + 1, z, x, z + d - 1)
+                    && !onStreet(x - w + 1, z, x, z + d - 1)) {
                 k.house(x - w + 1, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
             }
             z += d + 1;
@@ -811,7 +907,8 @@ public final class MedievalCity {
                 if (x2 > HALF - 6 || z2 > HALF - 6) {
                     continue;
                 }
-                if (!k.openAir(x, z, x2, z2) || k.paved(x, z, x2, z2)) {
+                if (!k.openAir(x, z, x2, z2) || k.paved(x, z, x2, z2)
+                        || intersectsReserved(x, z, x2, z2)) {
                     continue;
                 }
                 int roll = k.rnd.nextInt(100);
@@ -907,6 +1004,7 @@ public final class MedievalCity {
 
     /** 街灯与火盆：夜里这条路要看得见。 */
     private static void lights(BuildKit k) {
+        // 四角火盆挪到 ±104：原来的 ±81 落在神职院正中，会把院子点着
         for (int i = 0; i < 4; i++) {
             double angle = Math.PI / 4 + i * Math.PI / 2;
             int x = (int) Math.round(Math.cos(angle) * (PLAZA + 2));
@@ -922,9 +1020,10 @@ public final class MedievalCity {
             k.lamp(x, -12);
             k.lamp(x, 12);
         }
-        for (int z = -150; z >= -240; z -= 22) {
-            k.lamp(-18, z);
-            k.lamp(18, z);
+        // 仪式道两侧：只铺到环路为止。再往北就是台地，灯会埋进挡土墙里
+        for (int z = -150; z <= -124; z += 12) {
+            k.lamp(-13, z);
+            k.lamp(13, z);
         }
     }
 
@@ -940,5 +1039,10 @@ public final class MedievalCity {
 
     public static int groundRadius() {
         return HALF + 8;
+    }
+
+    /** 给单测用：预留表与街道表都只读。它们错了不会报错，只会让路断掉。 */
+    static java.util.List<int[]> reservedAreas() {
+        return RESERVED;
     }
 }
