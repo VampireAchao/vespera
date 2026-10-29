@@ -992,7 +992,7 @@ final class Civic {
     static void arenaVendors(BuildKit k) {
         // 东街与南街
         k.pave(268, 127, 278, 259, Palette.COBBLE, Palette.GRAVEL);
-        k.pave(105, 263, 265, 275, Palette.COBBLE, Palette.GRAVEL);
+        k.pave(100, 263, 265, 275, Palette.COBBLE, Palette.GRAVEL);
 
         // 东侧矮铺面：五间，两层。间距 21 比进深 19 多两格——原来步长 20 会让相邻
         // 两间的地基与屋檐各叠一行，远看像连体，近看是穿插。
@@ -1000,13 +1000,14 @@ final class Civic {
             lowShop(k, 280, 128 + i * 21, 13, 19);
         }
         // 南侧矮铺面：四间，中间留给售票与闸口
+        // 两段要绕开两条竖巷（156..164、236..244），否则铺面正好坐在巷口上
         lowShop(k, 108, 277, 21, 15);
         lowShop(k, 132, 277, 21, 15);
-        lowShop(k, 218, 277, 21, 15);
-        lowShop(k, 242, 277, 21, 15);
+        lowShop(k, 196, 277, 21, 15);
+        lowShop(k, 246, 277, 20, 15);
 
         // 售票亭：两座，中间三个闸口
-        ticket(k, 158, 265);
+        ticket(k, 140, 265);
         ticket(k, 197, 265);
         for (int i = 0; i < 3; i++) {
             int gx = 178 + i * 5;
@@ -1026,14 +1027,20 @@ final class Civic {
                 {Palette.WOOL_GREEN, Palette.WOOL_CREAM},
                 {Palette.WOOL_BLUE, Palette.WOOL_YELLOW}};
         for (int i = 0; i < 10; i++) {
+            int sz = 130 + i * 12;
+            // 东门在 z=193，门口七格宽（189..197）。摊位排到那儿要让开——
+            // 否则人从场里出来，迎面是一个卖烤肉的木棚，门等于没有
+            if (sz <= 197 && sz + 3 >= 189) {
+                continue;
+            }
             Block[] pair = cloth[i % cloth.length];
-            k.stall(268, 130 + i * 12, pair[0], pair[1]);
+            k.stall(268, sz, pair[0], pair[1]);
         }
         // 摊位只摆在没有售票亭与闸口的两段。原来是一路排过去，两座亭子被摊子
         // 直接插进墙里——这就是"摊贩和房子穿在一起"的来源之一。
         for (int i = 0; i < 12; i++) {
             int x = 112 + i * 12;
-            boolean reserved = x + 5 >= 154 && x <= 216;
+            boolean reserved = x + 5 >= 138 && x <= 216;
             if (reserved) {
                 continue;
             }

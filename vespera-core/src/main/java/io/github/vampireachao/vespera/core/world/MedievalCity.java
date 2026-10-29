@@ -97,13 +97,15 @@ public final class MedievalCity {
             new Street(156, 265, 164, HALF, 7, false),
             new Street(236, -196, 244, 122, 7, false),
             new Street(236, 265, 244, HALF, 7, false),
-            // 横巷：同样断开
-            new Street(-140, -244, -84, -236, 7, false),
+            // 横巷：同样断开。
+            // 西侧那两条（-140..-84）原本夹在城堡与王座厅两块预留地之间，
+            // 两头都撞在别人的墙上，谁也走不进去——量出来全掉队，删掉。
             new Street(84, -244, 206, -236, 7, false),
-            new Street(-140, -164, -84, -156, 7, false),
             new Street(84, -164, HALF, -156, 7, false),
+            // 南市街的西段：南门外到角斗场售票处。原来摊贩街从 x=105 才开始，
+            // 西边 96 格空着，整条南市街成了走不到的一座孤岛
+            new Street(6, 263, 101, 275, 12, false),
             new Street(-HALF, 156, 101, 164, 7, false),
-            new Street(-HALF, 236, -256, 244, 7, false),
             new Street(-84, 236, 101, 244, 7, false),
             new Street(84, 236, 101, 244, 7, false));
 
@@ -211,7 +213,7 @@ public final class MedievalCity {
         life(k);
         Civic.tavern(k, -238, 122);
         Civic.smithy(k, 130, 40);
-        Civic.bathhouse(k, -276, 200);
+        Civic.bathhouse(k, -292, 200);
         Civic.library(k, -136, -206);
         Civic.granary(k, 60, 200);
         Civic.barracks(k, -236, -120);
@@ -343,7 +345,9 @@ public final class MedievalCity {
      * 沿街立面：一条街两侧连续排屋。
      *
      * <p>中世纪城市的密度不是靠"多盖几栋房子"，是靠"每一条街都贴着房子"。
-     * 临街的山墙一栋接一栋，只在巷口断开——远看就是一道连续的木与灰泥的墙。
+     * 但贴着不等于一个模子：同一条街上的房子，进深、门面、层数、退让各不相同，
+     * 中间还要有巷子和院子。全按"十二格宽、十二格深、一律两层"排下去，
+     * 远看是一道墙，走近了看是一排一模一样的盒子——这就是之前的问题。
      */
     private static void frontages(BuildKit k) {
         for (Street street : STREETS) {
@@ -354,56 +358,184 @@ public final class MedievalCity {
                 int zc = (street.z1() + street.z2()) / 2;
                 int x1 = Math.min(street.x1(), street.x2());
                 int x2 = Math.max(street.x1(), street.x2());
-                frontageRow(k, x1, x2, zc - half - 12, "south");
-                frontageRow(k, x1, x2, zc + half + 2, "north");
+                terrace(k, true, x1, x2, zc - half - 1, "south");
+                terrace(k, true, x1, x2, zc + half + 2, "north");
             } else {
                 int xc = (street.x1() + street.x2()) / 2;
                 int z1 = Math.min(street.z1(), street.z2());
                 int z2 = Math.max(street.z1(), street.z2());
-                frontageColumn(k, xc - half - 12, z1, z2, "east");
-                frontageColumn(k, xc + half + 2, z1, z2, "west");
+                terrace(k, false, z1, z2, xc - half - 1, "east");
+                terrace(k, false, z1, z2, xc + half + 2, "west");
             }
         }
     }
 
-    private static void frontageRow(BuildKit k, int fromX, int toX, int z, String front) {
-        int x = fromX;
-        while (x + 12 <= toX) {
-            int w = 12 + k.rnd.nextInt(6);
-            if (intersectsReserved(x, z, x + w - 1, z + 11)
-                    || onStreet(x, z, x + w - 1, z + 11)) {
-                x += 4;
+    /**
+     * 沿街一排房子。
+     *
+     * <p>逐栋决定：门面九到十八格、进深九到十八格、一层到三层、偶尔退后一两格
+     * 留个窄院、偶尔空出两三格当过道，一成不到的宅基地干脆只围个院子。
+     *
+     * @param alongX 房子沿 x 排开（临街面朝 ±z）；否则沿 z 排开
+     * @param from   这一排的起点
+     * @param to     这一排的终点
+     * @param edge   临街面所在的那一格
+     * @param facing 临街面朝向
+     */
+    private static void terrace(BuildKit k, boolean alongX, int from, int to,
+            int edge, String facing) {
+        boolean positive = facing.equals("south") || facing.equals("east");
+        int cursor = from;
+        while (cursor + 9 <= to) {
+            int w = 9 + k.rnd.nextInt(10);
+            int d = 9 + k.rnd.nextInt(10);
+            if (cursor + w > to) {
+                w = to - cursor;
+            }
+            if (w < 9) {
+                break;
+            }
+            int setback = k.rnd.nextInt(100) < 22 ? 1 + k.rnd.nextInt(2) : 0;
+            int face = edge + (positive ? -setback : setback);
+
+            int x1;
+            int x2;
+            int z1;
+            int z2;
+            if (alongX) {
+                x1 = cursor;
+                x2 = cursor + w - 1;
+                z1 = positive ? face - d + 1 : face;
+                z2 = positive ? face : face + d - 1;
+            } else {
+                z1 = cursor;
+                z2 = cursor + w - 1;
+                x1 = positive ? face - d + 1 : face;
+                x2 = positive ? face : face + d - 1;
+            }
+
+            // 过道：两三格宽的巷子。排屋之间不留缝，是"墙"；留一条，才是"街"
+            int gap = k.rnd.nextInt(100) < 34 ? 2 + k.rnd.nextInt(3) : 0;
+
+            if (intersectsReserved(x1, z1, x2, z2) || onStreet(x1, z1, x2, z2)) {
+                cursor += 3;
                 continue;
             }
-            if (!k.free(x, z, x + w - 1, z + 11) || k.taken(x, z, x + w - 1, z + 11)) {
-                x += 2;
+            if (k.taken(x1, z1, x2, z2)) {
+                cursor += 2;
                 continue;
             }
-            k.house(x, z, w, 12, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), front,
-                    k.rnd.nextInt(100) < 22);
-            x += w;
+            // 一成不到的宅基地只围院墙、种树：宅基地不都是房子
+            if (k.rnd.nextInt(100) < 7 && !k.paved(x1, z1, x2, z2)
+                    && x2 - x1 >= 8 && z2 - z1 >= 8) {
+                yard(k, x1, z1, x2, z2, alongX, edge, face, positive);
+                cursor += w + gap;
+                continue;
+            }
+            if (!k.free(x1, z1, x2, z2)) {
+                cursor += 2;
+                continue;
+            }
+            int floors = storeys(k.rnd);
+            if (floors == 1 && w > 12) {
+                floors = 2;
+            }
+            k.house(x1, z1, x2 - x1 + 1, z2 - z1 + 1, floors, facing,
+                    k.rnd.nextInt(100) < 18);
+            if (setback > 0) {
+                frontStrip(k, alongX, cursor, cursor + w - 1, edge, face);
+            }
+            if (gap >= 2) {
+                alley(k, alongX, cursor + w, cursor + w + gap - 1, edge, face);
+            }
+            cursor += w + gap;
         }
     }
 
-    private static void frontageColumn(BuildKit k, int x, int fromZ, int toZ, String front) {
-        int z = fromZ;
-        while (z + 12 <= toZ) {
-            int d = 12 + k.rnd.nextInt(6);
-            if (intersectsReserved(x, z, x + 11, z + d - 1)
-                    || onStreet(x, z, x + 11, z + d - 1)) {
-                z += 4;
-                continue;
+    /** 层数：一层的小屋、两层的铺面、三层的富户，按这个比例掺。 */
+    private static int storeys(java.util.Random rnd) {
+        int r = rnd.nextInt(100);
+        return r < 14 ? 1 : (r < 72 ? 2 : 3);
+    }
+
+    /**
+     * 门前退让出来的那条窄院：一道半人高的矮墙，中间留门，墙根种点东西。
+     *
+     * <p>它不只是装饰——有了它，临街立面才有凹凸，一排房子才不像一堵贴了窗的墙。
+     */
+    private static void frontStrip(BuildKit k, boolean alongX, int from, int to,
+            int edge, int face) {
+        int lo = Math.min(edge, face);
+        int hi = Math.max(edge, face);
+        int mid = (from + to) / 2;
+        for (int t = from; t <= to; t++) {
+            for (int p = lo; p <= hi; p++) {
+                int x = alongX ? t : p;
+                int z = alongX ? p : t;
+                k.set(x, -1, z, k.rnd.nextInt(100) < 30 ? Palette.GRASS : Palette.PATH);
             }
-            if (!k.free(x, z, x + 11, z + d - 1) || k.taken(x, z, x + 11, z + d - 1)) {
-                z += 2;
-                continue;
+            boolean gate = Math.abs(t - mid) <= 1;
+            int x = alongX ? t : edge;
+            int z = alongX ? edge : t;
+            if (!gate) {
+                k.set(x, 0, z, Palette.COBBLE);
+                if (k.rnd.nextInt(100) < 22) {
+                    k.set(x, 1, z, Palette.GRASS_TUFT);
+                }
             }
-            k.house(x, z, 12, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), front,
-                    k.rnd.nextInt(100) < 22);
-            z += d;
+            if (k.rnd.nextInt(100) < 8) {
+                int px = alongX ? t : face;
+                int pz = alongX ? face : t;
+                k.set(px, 0, pz, k.rnd.nextBoolean() ? Palette.FLOWER_RED : Palette.POT);
+            }
         }
     }
 
+    /** 两栋房子之间的过道：铺碎石，尽头挂一盏灯。 */
+    private static void alley(BuildKit k, boolean alongX, int from, int to, int edge, int face) {
+        int lo = Math.min(face, edge);
+        int hi = Math.max(face, edge);
+        for (int t = from; t <= to; t++) {
+            for (int p = lo; p <= hi; p++) {
+                int x = alongX ? t : p;
+                int z = alongX ? p : t;
+                k.set(x, -1, z, Palette.GRAVEL);
+            }
+        }
+        int x = alongX ? (from + to) / 2 : face;
+        int z = alongX ? face : (from + to) / 2;
+        k.set(x, -1, z, Palette.COBBLE);
+        k.lamp(x, z);
+    }
+
+    /** 只围院墙的宅基地：墙、门、一口井或一棵树。宅基地不都是房子。 */
+    private static void yard(BuildKit k, int x1, int z1, int x2, int z2,
+            boolean alongX, int edge, int face, boolean positive) {
+        k.pave(x1, z1, x2, z2, Palette.GRASS, Palette.PATH);
+        k.walls(x1, 0, z1, x2, 1, z2, Palette.COBBLE);
+        k.claim("院子", x1, z1, x2, z2);
+        int mx = (x1 + x2) / 2;
+        int mz = (z1 + z2) / 2;
+        int gx = alongX ? mx : edge + (positive ? -1 : 1);
+        int gz = alongX ? edge + (positive ? -1 : 1) : mz;
+        for (int d = -1; d <= 1; d++) {
+            int x = alongX ? gx + d : gx;
+            int z = alongX ? gz : gz + d;
+            k.set(x, 0, z, null);
+            k.set(x, 1, z, null);
+        }
+        if (x2 - x1 >= 12 && z2 - z1 >= 12) {
+            Civic.well(k, mx, mz);
+        }
+        for (int i = 0; i < 2; i++) {
+            int tx = x1 + 2 + k.rnd.nextInt(Math.max(1, x2 - x1 - 4));
+            int tz = z1 + 2 + k.rnd.nextInt(Math.max(1, z2 - z1 - 4));
+            if (Math.abs(tx - mx) <= 2 && Math.abs(tz - mz) <= 2) {
+                continue;
+            }
+            k.tree(tx, tz, 4 + k.rnd.nextInt(3), k.rnd.nextBoolean());
+        }
+    }
     private static boolean intersectsReserved(int x1, int z1, int x2, int z2) {
         for (int[] r : RESERVED) {
             if (x1 <= r[2] && x2 >= r[0] && z1 <= r[3] && z2 >= r[1]) {
@@ -912,7 +1044,11 @@ public final class MedievalCity {
                     continue;
                 }
                 if (k.rnd.nextInt(100) < 55 && !k.taken(x - 7, z - 6, x + 7, z + 5)) {
-                    k.house(x - 7, z - 6, 15, 12, 2, horizontal ? "south" : "east", false);
+                    // 贴墙这一圈也不排成一条线：宽窄、进深、层数各随各的
+                    int w = 12 + k.rnd.nextInt(6);
+                    int d = 10 + k.rnd.nextInt(6);
+                    k.house(x - w / 2, z - 6, w, d, storeys(k.rnd),
+                            horizontal ? "south" : "east", false);
                 }
             }
         }
@@ -929,101 +1065,17 @@ public final class MedievalCity {
 
     private static void block(BuildKit k, int x1, int z1, int x2, int z2) {
         int inset = 16;
-        northRow(k, x1 + 2, z1, x2 - 2, "north");
-        southRow(k, x1 + 2, z2, x2 - 2, "south");
+        // 四条边各一排房子：北南两排沿 x 排开，东西两排沿 z 排开
+        terrace(k, true, x1 + 2, x2 - 2, z1, "north");
+        terrace(k, true, x1 + 2, x2 - 2, z2, "south");
         if (z2 - z1 > 50) {
-            westRow(k, x1, z1 + inset, z2 - inset, "west");
-            eastRow(k, x2, z1 + inset, z2 - inset, "east");
+            terrace(k, false, z1 + inset, z2 - inset, x1, "west");
+            terrace(k, false, z1 + inset, z2 - inset, x2, "east");
         }
-        // 内院会铺草：压在街上就是把大道铺成草坪
-        if (!onStreet(x1 + 14, z1 + 14, x2 - 14, z2 - 14)) {
-            courtyard(k, x1 + 14, z1 + 14, x2 - 14, z2 - 14);
-        }
-    }
-
-    private static void northRow(BuildKit k, int fromX, int z, int toX, String facing) {
-        int x = fromX;
-        while (x + 12 <= toX) {
-            int w = 12 + k.rnd.nextInt(6);
-            if (x + w > toX) {
-                w = toX - x;
-            }
-            if (w < 10) {
-                break;
-            }
-            int d = 10 + k.rnd.nextInt(4);
-            if (k.free(x, z, x + w - 1, z + d - 1)
-                    && !k.taken(x, z, x + w - 1, z + d - 1)
-                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)
-                    && !onStreet(x, z, x + w - 1, z + d - 1)) {
-                k.house(x, z, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
-                        k.rnd.nextInt(100) < 15);
-            }
-            x += w;
-        }
-    }
-
-    private static void southRow(BuildKit k, int fromX, int z, int toX, String facing) {
-        int x = fromX;
-        while (x + 12 <= toX) {
-            int w = 12 + k.rnd.nextInt(6);
-            if (x + w > toX) {
-                w = toX - x;
-            }
-            if (w < 10) {
-                break;
-            }
-            int d = 10 + k.rnd.nextInt(4);
-            if (k.free(x, z - d + 1, x + w - 1, z)
-                    && !k.taken(x, z - d + 1, x + w - 1, z)
-                    && !intersectsReserved(x, z - d + 1, x + w - 1, z)
-                    && !onStreet(x, z - d + 1, x + w - 1, z)) {
-                k.house(x, z - d + 1, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
-                        k.rnd.nextInt(100) < 15);
-            }
-            x += w;
-        }
-    }
-
-    private static void westRow(BuildKit k, int x, int fromZ, int toZ, String facing) {
-        int z = fromZ;
-        while (z + 12 <= toZ) {
-            int d = 12 + k.rnd.nextInt(6);
-            if (z + d > toZ) {
-                d = toZ - z;
-            }
-            if (d < 10) {
-                break;
-            }
-            int w = 10 + k.rnd.nextInt(4);
-            if (k.free(x, z, x + w - 1, z + d - 1)
-                    && !k.taken(x, z, x + w - 1, z + d - 1)
-                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)
-                    && !onStreet(x, z, x + w - 1, z + d - 1)) {
-                k.house(x, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
-            }
-            z += d;
-        }
-    }
-
-    private static void eastRow(BuildKit k, int x, int fromZ, int toZ, String facing) {
-        int z = fromZ;
-        while (z + 12 <= toZ) {
-            int d = 12 + k.rnd.nextInt(6);
-            if (z + d > toZ) {
-                d = toZ - z;
-            }
-            if (d < 10) {
-                break;
-            }
-            int w = 10 + k.rnd.nextInt(4);
-            if (k.free(x - w + 1, z, x, z + d - 1)
-                    && !k.taken(x - w + 1, z, x, z + d - 1)
-                    && !intersectsReserved(x - w + 1, z, x, z + d - 1)
-                    && !onStreet(x - w + 1, z, x, z + d - 1)) {
-                k.house(x - w + 1, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
-            }
-            z += d;
+        // 内院会铺草：压在街上就是把大道铺成草坪。
+        // 退到 20 格，是因为进深最大能到 18——原来按 14 收，房深一变就压进院里
+        if (!onStreet(x1 + 20, z1 + 20, x2 - 20, z2 - 20)) {
+            courtyard(k, x1 + 20, z1 + 20, x2 - 20, z2 - 20);
         }
     }
 
