@@ -48,6 +48,15 @@ public final class IsoRenderer {
      */
     public static BufferedImage render(Scene scene, int x0, int z0, int x1, int z1,
             int width, int height, double maxPx, String caption) {
+        return render(scene, x0, z0, x1, z1, width, height, maxPx, caption, -2);
+    }
+
+    /**
+     * @param baseY 画面的地面高度。场景里的地一般在 y=-1，所以底板画在 -2：
+     *              地贴着底板，房子贴着地，谁也不会浮。
+     */
+    public static BufferedImage render(Scene scene, int x0, int z0, int x1, int z1,
+            int width, int height, double maxPx, String caption, double baseY) {
         int w = width * SUPERSAMPLE;
         int h = height * SUPERSAMPLE;
 
@@ -93,8 +102,8 @@ public final class IsoRenderer {
         Projector p = new Projector(cx, cz, cy, scale, w / 2.0, h / 2.0);
 
         // 地：一块比城稍大的平面，让城有落脚的地方。
-        ground(g, p, x0 - 70, z0 - 70, x1 + 70, z1 + 70, minY - 1.06, shade(0x4c7038, 0.80));
-        ground(g, p, x0 - 60, z0 - 60, x1 + 60, z1 + 60, minY - 1, shade(0x6f9a4c, 0.92));
+        ground(g, p, x0 - 90, z0 - 90, x1 + 90, z1 + 90, baseY - 0.08, shade(0x4c7038, 0.80));
+        ground(g, p, x0 - 80, z0 - 80, x1 + 80, z1 + 80, baseY, shade(0x6f9a4c, 0.92));
 
         for (Scene.Entry entry : visible) {
             drawBlock(g, p, entry.x(), entry.y(), entry.z(), entry.block());

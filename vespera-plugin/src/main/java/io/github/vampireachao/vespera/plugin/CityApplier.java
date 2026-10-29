@@ -181,21 +181,25 @@ public final class CityApplier {
                     world.getChunkAt(x >> 4, z >> 4);
                 }
                 int top = world.getHighestBlockYAt(x, z, HeightMap.WORLD_SURFACE);
-                if (top > ground) {
-                    for (int y = ground + 1; y <= top; y++) {
+                // 城外三十格缓降三格：城墙不会在草原上切出一道直角
+                int r = Math.max(Math.abs(x - ox), Math.abs(z - oz));
+                int target = r <= MedievalCity.HALF ? ground
+                        : ground - Math.min(3, (r - MedievalCity.HALF) / 10);
+                if (top > target) {
+                    for (int y = target + 1; y <= top; y++) {
                         if (!world.getBlockAt(x, y, z).isEmpty()) {
                             world.getBlockAt(x, y, z).setType(Material.AIR, false);
                             cleared++;
                         }
                     }
-                } else if (top < ground) {
-                    for (int y = top + 1; y <= ground; y++) {
+                } else if (top < target) {
+                    for (int y = top + 1; y <= target; y++) {
                         world.getBlockAt(x, y, z)
-                                .setType(y == ground ? Material.GRASS_BLOCK : Material.DIRT, false);
+                                .setType(y == target ? Material.GRASS_BLOCK : Material.DIRT, false);
                         filled++;
                     }
                 }
-                world.getBlockAt(x, ground, z).setType(Material.GRASS_BLOCK, false);
+                world.getBlockAt(x, target, z).setType(Material.GRASS_BLOCK, false);
             }
         }
         plugin.getLogger().info("  削掉 " + cleared + " 格，填上 " + filled + " 格。");
@@ -232,8 +236,7 @@ public final class CityApplier {
     /** 城外要整平的小块：竞技场、两块田、村落、码头堆场。 */
     private List<int[]> outerPads() {
         List<int[]> pads = new ArrayList<>();
-        pads.add(new int[] {404, 4, 536, 136});     // 竞技场
-        pads.add(new int[] {-512, 28, -344, 256});  // 农田与风车
+                pads.add(new int[] {-512, 28, -344, 256});  // 农田与风车
         pads.add(new int[] {310, -430, 430, -310}); // 北村
         pads.add(new int[] {-262, 240, -84, 420});  // 码头
         return pads;
@@ -260,6 +263,10 @@ public final class CityApplier {
     private int apply(World world, Scene scene, int ox, int oz, int ground) {
         int placed = 0;
         for (Scene.Entry entry : scene.entries()) {
+            // 这一层地面落地器已经整平过，不必再写一遍（能省三十万次 setBlockData）。
+            if (entry.y() == -1 && entry.block().id().endsWith("grass_block")) {
+                continue;
+            }
             BlockData data = data(entry.block());
             if (data == null) {
                 continue;
@@ -330,16 +337,19 @@ public final class CityApplier {
         List<String> failures = new ArrayList<>();
         probe(world, failures, "南城墙", ox + 40, ground + 4, oz + MedievalCity.HALF,
                 Material.STONE_BRICKS, Material.MOSSY_STONE_BRICKS);
-        probe(world, failures, "主街铺地", ox, ground - 1, oz + 120,
-                Material.STONE_BRICKS, Material.ANDESITE);
-        probe(world, failures, "喷泉水面", ox, ground, oz, Material.WATER);
-        probe(world, failures, "市政厅钟塔", ox - 76, ground + 30, oz - 32, Material.STONE_BRICKS);
-        probe(world, failures, "教堂塔身", ox + 106, ground + 40, oz - 118, Material.STONE_BRICKS);
+        probe(world, failures, "主街铺地", ox, ground - 1, oz + 200,
+                Material.STONE_BRICKS, Material.ANDESITE, Material.COBBLESTONE);
+        probe(world, failures, "环市集", ox, ground - 1, oz + 100,
+                Material.STONE_BRICKS, Material.ANDESITE, Material.CRACKED_STONE_BRICKS);
+        probe(world, failures, "金字塔塔身", ox + 66, ground + 5, oz,
+                Material.SANDSTONE, Material.STONE_BRICKS, Material.CHISELED_STONE_BRICKS);
+        probe(world, failures, "金字塔祭坛", ox, ground + 64, oz,
+                Material.CHISELED_STONE_BRICKS, Material.GOLD_BLOCK);
+        probe(world, failures, "王座大厅", ox - 46, ground + 20, oz - 260, Material.STONE_BRICKS);
+        probe(world, failures, "角斗场沙地", ox + 185, ground - 1, oz + 185,
+                Material.SAND, Material.COARSE_DIRT);
         probe(world, failures, "城堡主楼", ox - 268, ground + 30, oz - 268, Material.STONE_BRICKS);
         probe(world, failures, "码头水面", ox - 170, ground - 1, oz + 350, Material.WATER);
-        probe(world, failures, "竞技场地面", ox + 470, ground - 1, oz + 70, Material.SAND,
-                Material.COARSE_DIRT);
-        probe(world, failures, "市集十字", ox, ground + 8, oz + 46, Material.STONE_BRICKS);
         return failures;
     }
 

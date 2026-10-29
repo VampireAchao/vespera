@@ -152,6 +152,82 @@ final class Civic {
         k.bump("市集");
     }
 
+    /**
+     * 一间临街铺子：底楼敞开、布棚遮阳，门外摆它这一行该有的东西。
+     *
+     * <p>城的"生活感"不来自房子数量，来自门口那几样东西——面包房门口是面粉袋，
+     * 酒馆门口是酒桶，铁匠门口是水桶。走过一条街，看门口就知道住着谁。
+     */
+    static void shop(BuildKit k, int x, int z, String front, String type) {
+        k.house(x, z, 16, 12, 2, front, true);
+        int cx = x + 8;
+        int cz = z + 6;
+        int ox = 0;
+        int oz = 0;
+        switch (front) {
+            case "west" -> ox = -18;
+            case "east" -> ox = 18;
+            case "north" -> oz = -14;
+            default -> oz = 14;
+        }
+        int px = cx + ox;
+        int pz = cz + oz;
+        switch (type) {
+            case "bakery" -> {
+                k.set(px, 0, pz, Palette.FURNACE);
+                k.set(px + 1, 0, pz, Palette.HAY);
+                k.set(px + 2, 0, pz, Palette.HAY);
+                k.set(px - 1, 0, pz, Palette.BARREL);
+            }
+            case "brewery" -> {
+                for (int i = 0; i < 4; i++) {
+                    k.set(px + i, 0, pz, Palette.BARREL);
+                    k.set(px + i, 1, pz, i % 2 == 0 ? Palette.BARREL : null);
+                }
+            }
+            case "butcher" -> {
+                k.set(px, 0, pz, Palette.CAMPFIRE);
+                k.set(px + 1, 0, pz, Palette.CAULDRON);
+                k.fill(px + 3, 0, pz, px + 3, 2, pz, Palette.SPRUCE_FENCE);
+                k.set(px + 3, 3, pz, Palette.WOOL_RED);
+            }
+            case "fish" -> {
+                k.set(px, 0, pz, Palette.BARREL);
+                k.set(px + 1, 0, pz, Palette.CAULDRON);
+                k.set(px + 2, 0, pz, Palette.BARREL);
+            }
+            case "tailor" -> {
+                k.set(px, 0, pz, Palette.WOOL_BLUE);
+                k.set(px + 1, 0, pz, Palette.WOOL_RED);
+                k.set(px + 2, 0, pz, Palette.WOOL_CREAM);
+                k.set(px, 1, pz, Palette.WOOL_GREEN);
+            }
+            case "apothecary", "potter" -> {
+                k.set(px, 0, pz, Palette.CAULDRON);
+                k.set(px + 1, 0, pz, Palette.POT);
+                k.set(px + 2, 0, pz, Palette.CLAY);
+            }
+            case "chandler" -> {
+                k.fill(px, 0, pz, px, 2, pz, Palette.SPRUCE_FENCE);
+                k.set(px, 3, pz, Palette.LANTERN);
+                k.set(px + 2, 0, pz, Palette.BARREL);
+            }
+            case "weaver" -> {
+                k.set(px, 0, pz, Palette.CRAFTING);
+                k.set(px + 1, 0, pz, Palette.WOOL_CREAM);
+            }
+            default -> {
+                k.set(px, 0, pz, Palette.CAULDRON);
+                k.set(px + 1, 0, pz, Palette.WATER);
+                k.set(px + 2, 0, pz, Palette.BARREL);
+            }
+        }
+        // 店招
+        k.fill(px, 3, pz, px, 5, pz, Palette.SPRUCE_FENCE);
+        k.set(px, 4, pz, Palette.SIGN);
+        k.bump("铺子");
+    }
+
     // -- 酒馆 ---------------------------------------------------------------
 
     static void tavern(BuildKit k, int x, int z) {

@@ -142,6 +142,8 @@ public final class Palette {
         color("deepslate_bricks", 0x4b4c50);
         color("polished_blackstone_bricks", 0x35343a);
         color("sandstone", 0xd8cba4);
+        color("sandstone_stairs", 0xd8cba4);
+        color("smooth_sandstone", 0xdfd2ae);
         color("terracotta", 0x9a5b40);
 
         // 木与墙

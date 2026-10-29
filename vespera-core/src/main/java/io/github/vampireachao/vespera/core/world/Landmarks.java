@@ -446,10 +446,12 @@ final class Landmarks {
     // -- 市政厅 -------------------------------------------------------------
 
     static void townHall(BuildKit k) {
-        int x1 = -120;
-        int z1 = -34;
-        int x2 = -72;
-        int z2 = 34;
+        townHall(k, -190, -74);
+    }
+
+    static void townHall(BuildKit k, int x1, int z1) {
+        int x2 = x1 + 48;
+        int z2 = z1 + 68;
 
         k.fill(x1 - 2, -3, z1 - 2, x2 + 2, -1, z2 + 2, Palette.STONE_BRICK);
         k.walls(x1, 0, z1, x2, 20, z2, Palette.STONE_BRICK);
@@ -507,10 +509,12 @@ final class Landmarks {
     // -- 行会厅 -------------------------------------------------------------
 
     static void guildHall(BuildKit k) {
-        int x1 = 74;
-        int z1 = -38;
-        int x2 = 136;
-        int z2 = 42;
+        guildHall(k, 130, -74);
+    }
+
+    static void guildHall(BuildKit k, int x1, int z1) {
+        int x2 = x1 + 62;
+        int z2 = z1 + 80;
 
         k.fill(x1 - 2, -3, z1 - 2, x2 + 2, -1, z2 + 2, Palette.STONE_BRICK);
         k.walls(x1, 0, z1, x2, 12, z2, Palette.STONE_BRICK);

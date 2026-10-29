@@ -44,7 +44,13 @@ public final class BuildKit {
     }
 
     public boolean free(int x1, int z1, int x2, int z2) {
-        return !scene.anyBlockIn(x1, -1, z1, x2, 2, z2);
+        return !scene.anyBlockIn(x1, 0, z1, x2, 3, z2);
+    }
+
+    private static boolean isPaved(String id) {
+        return id.contains("stone") || id.contains("cobble") || id.contains("andesite")
+                || id.contains("brick") || id.contains("tile") || id.contains("deepslate")
+                || id.contains("sandstone") || id.contains("sand");
     }
 
     /** 地面以上是否什么都没有（不看铺地）。补空用这个。 */
@@ -57,8 +63,7 @@ public final class BuildKit {
         for (int x = x1; x <= x2; x += 2) {
             for (int z = z1; z <= z2; z += 2) {
                 Block block = scene.get(x, -1, z);
-                if (block != null && !block.id().contains("grass")
-                        && !block.id().contains("coarse_dirt")) {
+                if (block != null && isPaved(block.id())) {
                     return true;
                 }
             }

@@ -3,38 +3,34 @@ package io.github.vampireachao.vespera.core.world;
 import io.github.vampireachao.vespera.core.voxel.Block;
 import io.github.vampireachao.vespera.core.voxel.Palette;
 import io.github.vampireachao.vespera.core.voxel.Scene;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * 流明陨城：一座 600×600 的中世纪城市，加上墙外的港区、农田、竞技场与村落。
+ * 流明陨城：以圣座金字塔为心、以王座大厅为北端的一座中世纪城市。
  *
- * <p>布局不是画出来的，是<b>排出来的</b>。先定四件事，剩下的都从它们推：
+ * <p>这一版的布局只有一句话：<b>三条轴线，一个中心</b>。
  *
- * <ol>
- *   <li><b>十字大街</b>从四个城门通到中央广场——所有商业都在它两侧。</li>
- *   <li><b>四座地标</b>各占一个象限：教堂（东北）、城堡（西北）、市政厅（西）、行会（东）。</li>
- *   <li><b>环路</b>把内城与外墙之间那圈住人的地方分成街区。</li>
- *   <li><b>城墙</b>不是边界，是取景框：站在南门往里看，钟楼、教堂尖顶、城堡塔楼要叠成三层。</li>
- * </ol>
+ * <ul>
+ *   <li><b>中心</b>是七层圣座金字塔——教会不靠尖顶够天，靠一级级台阶把人和神分开。</li>
+ *   <li><b>正北</b>是梯形向上的王座大厅，来朝见的人必须一级级走上去。</li>
+ *   <li><b>东南</b>是罗马式角斗场，教会把"不该留在城里的人"放逐到沙地上。</li>
+ * </ul>
  *
- * <p>房子沿街排，院子藏在里面——这是中世纪城市真实的生长方式：临街的地皮贵，所以窄而高；
- * 里面不值钱，所以堆货、种菜、挖井。
+ * <p>城市不是先画轮廓再填空，而是先定这三件事，其余的房子、作坊、水井、街灯
+ * 都长在它们之间的缝里。
  */
 public final class MedievalCity {
 
-    /** 城墙中线。城是 600×600。 */
     public static final int HALF = 300;
-
-    /** 城墙厚。 */
-    public static final int WALL_THICK = 4;
-
-    /** 城墙高到走道。 */
+    public static final int WALL_THICK = 5;
     public static final int WALL_HEIGHT = 12;
-
-    /** 主街半宽。 */
     public static final int AVENUE = 8;
+
+    /** 金字塔与环市集的边界。 */
+    public static final int SACRED = 66;
+    public static final int PLAZA = 112;
+    public static final int RING = 120;
 
     public record District(String id, String name, int x1, int z1, int x2, int z2, String note) {
 
@@ -47,54 +43,59 @@ public final class MedievalCity {
         }
     }
 
-    /** 分区表：图纸、文档、区域判定都读这一份。 */
     public static final List<District> DISTRICTS = List.of(
-            new District("market", "中央市集", -72, -72, 72, 72, "喷泉、十字碑、二十四个摊位"),
-            new District("cathedral", "第九时圣座", 96, -300, 222, -86, "双塔 92 格，飞扶壁，玫瑰窗"),
-            new District("castle", "灰烬堡", -298, -298, -144, -144, "土台、幕墙、主楼、吊桥"),
-            new District("townhall", "市政厅", -124, -38, -68, 38, "阶梯山墙，钟塔 68 格"),
-            new District("guild", "行会厅", 68, -42, 140, 46, "石砌拱廊，半木二层"),
-            new District("crafts", "工匠街", 84, 84, 236, 236, "铁匠、制革、织工、陶坊"),
-            new District("residential", "民居带", -236, 84, -84, 236, "半木联排，内院与水井"),
-            new District("barracks", "兵营", -236, -120, -190, -80, "长屋与训练场"),
-            new District("temple-green", "圣座前庭", 96, -84, 222, -20, "柱廊与朝圣者宿处"),
-            new District("graveyard", "安息园", 226, -292, 298, -160, "铁栅、碑列、紫杉"),
+            new District("sacred", "圣座金字塔", -66, -66, 66, 66, "七层，高 63，顶置祭坛，内部为教会居所"),
+            new District("plaza", "环市集", -112, -112, 112, 112, "绕塔一周的市集大道，摊位与市场棚"),
+            new District("throne", "王座大厅", -80, -300, 80, -150, "三级台地，梯形向上，尽头是王座"),
+            new District("castle", "灰烬堡", -300, -300, -146, -146, "台地、幕墙、主楼、马厩与营房"),
+            new District("colosseum", "角斗场", 105, 117, 265, 253, "椭圆看台、四门、沙地与地下关押区"),
+            new District("guild", "行会厅", 130, -74, 192, 6, "石砌拱廊 + 半木二层"),
+            new District("townhall", "市政厅", -190, -74, -142, -6, "阶梯山墙，钟塔 68 格"),
+            new District("barracks", "兵营", -236, -120, -190, -80, "长屋、训练场、草人"),
+            new District("graveyard", "安息园", 210, -290, 292, -200, "铁栅、碑列、紫杉"),
+            new District("crafts", "工匠街", 120, 20, 265, 110, "铁匠、制革、织工、陶坊"),
+            new District("south-market", "南市", 20, 130, 100, 280, "面包、酒、鱼、布——过日子的一条街"),
+            new District("residential", "民居带", -260, 20, -120, 280, "半木联排，院里一口井"),
             new District("docks", "南港", -256, 236, -90, 412, "运河、仓库、吊杆、驳船"),
-            new District("arena", "东竞技场", 414, 14, 526, 126, "圆形看台，四门"),
-            new District("farm", "西田", -520, 60, -340, 260, "条田、水渠、谷仓、风车"),
-            new District("hamlet", "北村", 320, -420, 420, -320, "六户人家、水井、小堂"));
+            new District("farm", "西田", -520, 40, -340, 260, "条田、水渠、谷仓、风车"),
+            new District("hamlet", "北村", 310, -430, 430, -310, "六户人家、水井、小堂"));
 
-    private static final int[] STREET_X = {-240, -160, -84, 0, 84, 160, 240};
-    private static final int[] STREET_Z = {-240, -160, -84, 0, 84, 160, 240};
-    private static final int[] STREET_W = {7, 9, 7, 16, 7, 9, 7};
-
-    /** 一条街：起止与宽度。图纸与铺地都读这一份。 */
     public record Street(int x1, int z1, int x2, int z2, int width, boolean main) {
     }
 
-    /** 全部街道。主街宽 16，环路 9，其余 7。 */
-    public static final List<Street> STREETS = buildStreets();
+    /** 街道：一圈环路、四条出城大道、若干街巷。铺地时再按地标裁剪。 */
+    public static final List<Street> STREETS = List.of(
+            new Street(-RING, -RING, RING, -RING + 8, 8, true),
+            new Street(-RING, RING - 8, RING, RING, 8, true),
+            new Street(-RING, -RING, -RING + 8, RING, 8, true),
+            new Street(RING - 8, -RING, RING, RING, 8, true),
+            new Street(-AVENUE, RING, AVENUE, HALF, AVENUE * 2, true),
+            new Street(RING, -AVENUE, HALF, AVENUE, AVENUE * 2, true),
+            new Street(-HALF, -AVENUE, -RING, AVENUE, AVENUE * 2, true),
+            new Street(-10, -156, 10, -RING, 20, true),
+            new Street(-244, -HALF, -236, HALF, 7, false),
+            new Street(-164, -HALF, -156, HALF, 7, false),
+            new Street(156, -HALF, 164, HALF, 7, false),
+            new Street(236, -HALF, 244, HALF, 7, false),
+            new Street(-HALF, -244, HALF, -236, 7, false),
+            new Street(-HALF, -164, HALF, -156, 7, false),
+            new Street(-HALF, 156, HALF, 164, 7, false),
+            new Street(-HALF, 236, HALF, 244, 7, false));
 
-    private static List<Street> buildStreets() {
-        List<Street> list = new ArrayList<>();
-        list.add(new Street(-AVENUE, -HALF, AVENUE, HALF, AVENUE * 2, true));
-        list.add(new Street(-HALF, -AVENUE, HALF, AVENUE, AVENUE * 2, true));
-        for (int i = 0; i < STREET_X.length; i++) {
-            int x = STREET_X[i];
-            if (x == 0) {
-                continue;
-            }
-            list.add(new Street(x - STREET_W[i] / 2, -HALF, x + STREET_W[i] / 2, HALF, STREET_W[i], false));
-        }
-        for (int i = 0; i < STREET_Z.length; i++) {
-            int z = STREET_Z[i];
-            if (z == 0) {
-                continue;
-            }
-            list.add(new Street(-HALF, z - STREET_W[i] / 2, HALF, z + STREET_W[i] / 2, STREET_W[i], false));
-        }
-        return List.copyOf(list);
-    }
+    /** 需要给地标让路的地方。铺街与盖房都要先问一句。 */
+    private static final List<int[]> RESERVED = List.of(
+            new int[] {-66, -66, 66, 66},
+            new int[] {-114, -114, 114, 114},
+            new int[] {-82, -300, 82, -148},
+            new int[] {-300, -300, -144, -144},
+            new int[] {103, 115, 267, 255},
+            new int[] {128, -76, 194, 8},
+            new int[] {-192, -76, -140, -4},
+            new int[] {-238, -122, -188, -78},
+            new int[] {208, -292, 294, -198},
+            new int[] {-252, 234, -88, 414},
+            new int[] {-524, 36, -336, 264},
+            new int[] {306, -434, 434, -306});
 
     private MedievalCity() {
     }
@@ -107,46 +108,80 @@ public final class MedievalCity {
         Scene scene = new Scene();
         BuildKit k = new BuildKit(scene, seed);
 
+        ground(k);
         streets(k);
+        frontages(k);
+        houses(k);
         walls(k);
-        Landmarks.cathedral(k);
+        banks(k);
+
+        Sacred.pyramid(k);
+        Sacred.throneHall(k);
+        Sacred.colosseum(k, 185, 185);
+
         Landmarks.castle(k);
         Landmarks.townHall(k);
         Landmarks.guildHall(k);
-        Civic.market(k);
-        Civic.tavern(k, -196, 76);
-        Civic.smithy(k, 100, 100);
-        Civic.bathhouse(k, -276, 156);
-        Civic.library(k, 150, 60);
-        Civic.granary(k, -172, 196);
+
+        marketRing(k);
+        life(k);
+        Civic.tavern(k, -150, 150);
+        Civic.smithy(k, 130, 40);
+        Civic.bathhouse(k, -276, 200);
+        Civic.library(k, -170, -200);
+        Civic.granary(k, -160, 260);
         Civic.barracks(k, -236, -120);
-        Civic.graveyard(k, 226, -292, 72, 132);
+        Civic.graveyard(k, 210, -290, 82, 92);
         Civic.docks(k);
-        Civic.arena(k, 470, 70, 56);
         Civic.windmill(k, -420, 100);
         Civic.farm(k, -500, 160, 108, 84);
         Civic.farm(k, -500, 40, 108, 84);
         Civic.barn(k, -360, 250);
         Civic.hamlet(k, 320, -420);
 
-        houses(k);
         fillGaps(k);
         outskirts(k);
-        plazaDetails(k);
+        lights(k);
 
         return scene;
+    }
+
+    // -- 地 -----------------------------------------------------------------
+
+    /**
+     * 城里的地面。这一层很关键：有了它，房子才有"底"。
+     *
+     * <p>之前地面交给落地器整平，图上用一张平面代替——结果城堡那种抬高两格的建筑，
+     * 在图上像浮着。地面进场景之后，图和游戏看到的是同一块地。
+     */
+    private static void ground(BuildKit k) {
+        for (int x = -HALF; x <= HALF; x++) {
+            for (int z = -HALF; z <= HALF; z++) {
+                int roll = k.rnd.nextInt(100);
+                Block top = roll < 6 ? Palette.PATH : (roll < 12 ? Palette.COARSE : Palette.GRASS);
+                k.set(x, -1, z, top);
+            }
+        }
+        // 城外一圈裙边：三级缓降，城墙不会直接切在空气上
+        for (int r = HALF + 1; r <= HALF + 10; r++) {
+            int y = -1 - (r - HALF) / 4;
+            for (int x = -r; x <= r; x++) {
+                for (int z = -r; z <= r; z++) {
+                    if (Math.max(Math.abs(x), Math.abs(z)) != r) {
+                        continue;
+                    }
+                    k.set(x, y, z, (r % 3 == 0) ? Palette.COARSE : Palette.GRASS);
+                }
+            }
+        }
     }
 
     // -- 街道 ---------------------------------------------------------------
 
     private static void streets(BuildKit k) {
         for (Street street : STREETS) {
-            Block main = Palette.STONE_BRICK;
-            Block accent = street.main() ? Palette.ANDESITE : Palette.STONE;
-            Block body = street.main() ? Palette.STONE_BRICK : Palette.COBBLE;
-            k.pave(street.x1(), street.z1(), street.x2(), street.z2(), body, accent);
+            paveStreet(k, street);
         }
-        // 街灯：主街每 28 格一盏，交错在两侧
         for (int z = -HALF + 24; z < HALF - 20; z += 28) {
             k.lamp(-AVENUE - 2, z);
             k.lamp(AVENUE + 2, z + 14);
@@ -157,56 +192,198 @@ public final class MedievalCity {
         }
     }
 
-    // -- 城墙与城门 ---------------------------------------------------------
+    private static void paveStreet(BuildKit k, Street street) {
+        int ax = Math.min(street.x1(), street.x2());
+        int bx = Math.max(street.x1(), street.x2());
+        int az = Math.min(street.z1(), street.z2());
+        int bz = Math.max(street.z1(), street.z2());
+        Block body = street.main() ? Palette.STONE_BRICK : Palette.COBBLE;
+        Block accent = street.main() ? Palette.ANDESITE : Palette.STONE;
+        for (int x = ax; x <= bx; x++) {
+            for (int z = az; z <= bz; z++) {
+                if (blocked(x, z)) {
+                    continue;
+                }
+                int roll = k.rnd.nextInt(100);
+                Block block = roll < 8 ? accent : (roll < 20 ? Palette.COBBLE : body);
+                k.set(x, -1, z, block);
+            }
+        }
+    }
 
+    private static boolean blocked(int x, int z) {
+        for (int[] r : RESERVED) {
+            if (x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 沿街立面：一条街两侧连续排屋。
+     *
+     * <p>中世纪城市的密度不是靠"多盖几栋房子"，是靠"每一条街都贴着房子"。
+     * 临街的山墙一栋接一栋，只在巷口断开——远看就是一道连续的木与灰泥的墙。
+     */
+    private static void frontages(BuildKit k) {
+        for (Street street : STREETS) {
+            boolean horizontal = Math.abs(street.z2() - street.z1())
+                    <= Math.abs(street.x2() - street.x1());
+            int half = street.width() / 2;
+            if (horizontal) {
+                int zc = (street.z1() + street.z2()) / 2;
+                int x1 = Math.min(street.x1(), street.x2());
+                int x2 = Math.max(street.x1(), street.x2());
+                frontageRow(k, x1, x2, zc - half - 12, "south");
+                frontageRow(k, x1, x2, zc + half + 2, "north");
+            } else {
+                int xc = (street.x1() + street.x2()) / 2;
+                int z1 = Math.min(street.z1(), street.z2());
+                int z2 = Math.max(street.z1(), street.z2());
+                frontageColumn(k, xc - half - 12, z1, z2, "east");
+                frontageColumn(k, xc + half + 2, z1, z2, "west");
+            }
+        }
+    }
+
+    private static void frontageRow(BuildKit k, int fromX, int toX, int z, String front) {
+        int x = fromX;
+        while (x + 12 <= toX) {
+            int w = 12 + k.rnd.nextInt(6);
+            if (intersectsReserved(x, z, x + w - 1, z + 11)
+                    || onStreet(x, z, x + w - 1, z + 11)) {
+                x += 4;
+                continue;
+            }
+            if (!k.free(x, z, x + w - 1, z + 11)) {
+                x += 2;
+                continue;
+            }
+            k.house(x, z, w, 12, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), front,
+                    k.rnd.nextInt(100) < 22);
+            x += w + 1;
+        }
+    }
+
+    private static void frontageColumn(BuildKit k, int x, int fromZ, int toZ, String front) {
+        int z = fromZ;
+        while (z + 12 <= toZ) {
+            int d = 12 + k.rnd.nextInt(6);
+            if (intersectsReserved(x, z, x + 11, z + d - 1)
+                    || onStreet(x, z, x + 11, z + d - 1)) {
+                z += 4;
+                continue;
+            }
+            if (!k.free(x, z, x + 11, z + d - 1)) {
+                z += 2;
+                continue;
+            }
+            k.house(x, z, 12, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), front,
+                    k.rnd.nextInt(100) < 22);
+            z += d + 1;
+        }
+    }
+
+    private static boolean intersectsReserved(int x1, int z1, int x2, int z2) {
+        for (int[] r : RESERVED) {
+            if (x1 <= r[2] && x2 >= r[0] && z1 <= r[3] && z2 >= r[1]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 这块地压到任何一条街了吗。压到就不盖房——否则会把街口堵死。 */
+    private static boolean onStreet(int x1, int z1, int x2, int z2) {
+        for (Street street : STREETS) {
+            int ax = Math.min(street.x1(), street.x2());
+            int bx = Math.max(street.x1(), street.x2());
+            int az = Math.min(street.z1(), street.z2());
+            int bz = Math.max(street.z1(), street.z2());
+            if (x1 <= bx && x2 >= ax && z1 <= bz && z2 >= az) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // -- 城墙：能走、能守、能巡逻 -------------------------------------------
+
+    /**
+     * 城墙不是一堵墙，是一条环形的路。
+     *
+     * <p>墙身十二格，墙顶一条走道；外侧女儿墙开垛口，内侧一道矮墙防跌落；
+     * 每九十格一座登城梯，塔里留一间守卫室，墙上每隔一段一支火盆。
+     * 站上去能绕着城走一圈——这才是"巡逻"。
+     */
     private static void walls(BuildKit k) {
         int h = WALL_HEIGHT;
         for (int side = 0; side < 4; side++) {
             boolean horizontal = side < 2;
             int fixed = side % 2 == 0 ? HALF : -HALF;
+            int dirIn = fixed > 0 ? -1 : 1;
+
             for (int t = 0; t < WALL_THICK; t++) {
-                int offset = fixed > 0 ? -t : t;
+                int offset = dirIn * t;
                 for (int along = -HALF; along <= HALF; along++) {
-                    if (Math.abs(along) <= 7) {
-                        continue; // 城门洞
-                    }
-                    int x = horizontal ? along : fixed + offset;
-                    int z = horizontal ? fixed + offset : along;
-                    Block block = (t == 0) ? Palette.STONE_BRICK
-                            : ((along % 13 == 0) ? Palette.STONE_MOSSY : Palette.STONE_BRICK);
-                    k.fill(x, 0, z, x, h - 1, z, block);
-                    if (t == 0 && Math.abs(along % 24) == 8) {
-                        k.set(x, 7, z, Palette.STONE_CHISELED);
-                        k.set(x, 8, z, Palette.STONE_CHISELED);
-                    }
-                }
-            }
-            // 走道与雉堞
-            for (int along = -HALF; along <= HALF; along++) {
-                for (int t = 0; t < WALL_THICK; t++) {
-                    int offset = fixed > 0 ? -t : t;
-                    int x = horizontal ? along : fixed + offset;
-                    int z = horizontal ? fixed + offset : along;
                     if (Math.abs(along) <= 7) {
                         continue;
                     }
-                    k.set(x, h, z, Palette.STONE_BRICK);
-                    if (t == 0 && (along & 1) == 0) {
-                        k.set(x, h + 1, z, Palette.STONE_BRICK);
+                    int x = horizontal ? along : fixed + offset;
+                    int z = horizontal ? fixed + offset : along;
+                    for (int y = 0; y <= h; y++) {
+                        Block block = (y == 0) ? Palette.STONE_CHISELED
+                                : ((y % 6 == 0) ? Palette.STONE_MOSSY : Palette.STONE_BRICK);
+                        k.set(x, y, z, block);
+                    }
+                    if (t == 0 && Math.floorMod(along, 12) == 5) {
+                        k.set(x, 7, z, Palette.STONE_CHISELED);
                     }
                 }
             }
-            // 外侧的托石
-            for (int along = -HALF; along <= HALF; along += 3) {
-                int x = horizontal ? along : fixed + (fixed > 0 ? 1 : -1);
-                int z = horizontal ? fixed + (fixed > 0 ? 1 : -1) : along;
-                if (Math.abs(along) > 8) {
-                    k.set(x, h - 2, z, Palette.STONE_CHISELED);
+
+            for (int along = -HALF; along <= HALF; along++) {
+                if (Math.abs(along) <= 7) {
+                    continue;
                 }
+                for (int t = 0; t < WALL_THICK; t++) {
+                    int offset = dirIn * t;
+                    int x = horizontal ? along : fixed + offset;
+                    int z = horizontal ? fixed + offset : along;
+                    k.set(x, h + 1, z, Palette.STONE_BRICK);
+                    if (t == 0 && Math.floorMod(along, 2) == 0) {
+                        k.set(x, h + 2, z, Palette.STONE_BRICK);
+                    }
+                    if (t == WALL_THICK - 1) {
+                        k.set(x, h + 2, z, Palette.STONE_CHISELED);
+                    }
+                }
+            }
+
+            for (int along = -HALF; along <= HALF; along += 3) {
+                int x = horizontal ? along : fixed + dirIn * -1;
+                int z = horizontal ? fixed + dirIn * -1 : along;
+                if (Math.abs(along) > 8) {
+                    k.set(x, h - 1, z, Palette.STONE_CHISELED);
+                    if (Math.floorMod(along, 9) == 0) {
+                        k.set(x, h, z, Palette.STONE_BRICK);
+                    }
+                }
+            }
+
+            for (int along = -HALF + 45; along < HALF - 30; along += 90) {
+                wallStairs(k, horizontal, fixed, dirIn, along);
+            }
+
+            for (int along = -HALF + 30; along < HALF - 20; along += 48) {
+                int x = horizontal ? along : fixed + dirIn * (WALL_THICK - 1);
+                int z = horizontal ? fixed + dirIn * (WALL_THICK - 1) : along;
+                k.set(x, h + 2, z, Palette.STONE_BRICK);
+                k.set(x, h + 3, z, Palette.CAMPFIRE);
             }
         }
 
-        // 沿线圆塔：每隔 60 格一座，向外凸出
         for (int side = 0; side < 4; side++) {
             boolean horizontal = side < 2;
             int fixed = side % 2 == 0 ? HALF : -HALF;
@@ -216,68 +393,89 @@ public final class MedievalCity {
                 }
                 int x = horizontal ? along : fixed;
                 int z = horizontal ? fixed : along;
-                k.roundTower(x, z, 7, 0, 20, Palette.STONE_BRICK, Palette.STONE_CHISELED,
+                k.roundTower(x, z, 7, 0, 22, Palette.STONE_BRICK, Palette.STONE_CHISELED,
                         Palette.SLATE_STAIR, 1);
+                k.disc(x, z, 5, WALL_HEIGHT + 1, Palette.SPRUCE_PLANK);
+                k.set(x + 3, WALL_HEIGHT + 2, z, Palette.CAMPFIRE);
+                k.set(x - 3, WALL_HEIGHT + 2, z, Palette.CHEST);
                 k.bump("墙塔");
             }
         }
 
-        // 四座城门
-        gate(k, 0, HALF, "south");
-        gate(k, 0, -HALF, "north");
-        gate(k, HALF, 0, "east");
-        gate(k, -HALF, 0, "west");
+        gate(k, 0, HALF, "south", true);
+        // 北门是"仪式门"：门后就是王座大厅的台基，常年闭着，只在加冕与出殡时开
+        gate(k, 0, -HALF, "north", false);
+        gate(k, HALF, 0, "east", true);
+        gate(k, -HALF, 0, "west", true);
         k.bump("城墙");
     }
 
-    private static void gate(BuildKit k, int cx, int cz, String facing) {
+    private static void wallStairs(BuildKit k, boolean horizontal, int fixed, int dirIn, int along) {
+        int h = WALL_HEIGHT;
+        for (int i = 0; i <= h; i++) {
+            for (int w = 0; w < 3; w++) {
+                int x;
+                int z;
+                if (horizontal) {
+                    x = along + w;
+                    z = fixed + dirIn * (WALL_THICK - 1);
+                } else {
+                    x = fixed + dirIn * (WALL_THICK - 1);
+                    z = along + w;
+                }
+                k.set(x, i, z, Block.stairs("minecraft:stone_brick_stairs",
+                        horizontal ? "east" : "south"));
+                for (int up = 1; up <= 3; up++) {
+                    k.set(x, i + up, z, null);
+                }
+            }
+        }
+        k.bump("登城梯");
+    }
+
+    private static void gate(BuildKit k, int cx, int cz, String facing, boolean open) {
         boolean alongZ = facing.equals("north") || facing.equals("south");
         int dir = facing.equals("south") || facing.equals("east") ? 1 : -1;
 
-        // 两座圆塔夹住门洞
         for (int side = -1; side <= 1; side += 2) {
             int tx = alongZ ? cx + side * 13 : cx;
             int tz = alongZ ? cz : cz + side * 13;
-            k.roundTower(tx, tz, 8, 0, 24, Palette.STONE_BRICK, Palette.STONE_CHISELED,
+            k.roundTower(tx, tz, 8, 0, 26, Palette.STONE_BRICK, Palette.STONE_CHISELED,
                     Palette.SLATE_STAIR, 1);
         }
-        // 门楼：一段厚墙
         for (int dx = -11; dx <= 11; dx++) {
             for (int dz = -WALL_THICK; dz <= WALL_THICK; dz++) {
                 for (int y = 0; y < 18; y++) {
                     int x = alongZ ? cx + dx : cx + dz;
                     int z = alongZ ? cz + dz : cz + dx;
-                    boolean passage = Math.abs(dx) <= 5 && y <= 8;
+                    boolean passage = open && Math.abs(dx) <= 5 && y <= 9;
                     if (passage) {
                         continue;
                     }
-                    if (y > WALL_HEIGHT && ((dx + dz) & 1) == 0) {
+                    if (y > 13 && ((dx + dz) & 1) == 0) {
                         continue;
                     }
-                    k.set(x, y, z, y == 9 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
+                    k.set(x, y, z, y == 10 ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
                 }
             }
         }
-        // 拱
         for (int i = 0; i <= 5; i++) {
             int x = alongZ ? cx - 5 + i : cx;
             int z = alongZ ? cz : cz - 5 + i;
-            for (int y = 9 + (5 - Math.abs(i - 5)); y <= 12; y++) {
+            for (int y = 10 + (5 - Math.abs(i - 5)); y <= 13; y++) {
                 k.set(x, y, z, Palette.STONE_CHISELED);
             }
         }
-        // 闸门：竖铁栅，不是一面铁板
         for (int dx = -4; dx <= 4; dx++) {
             if ((dx & 1) != 0) {
                 continue;
             }
-            for (int y = 0; y <= 7; y++) {
+            for (int y = 0; y <= 8; y++) {
                 int x = alongZ ? cx + dx : cx + dir * 2;
                 int z = alongZ ? cz + dir * 2 : cz + dx;
                 k.set(x, y, z, Palette.IRON_BARS);
             }
         }
-        // 门外的石坡道：直接把路铺出去，不吊在半空
         for (int i = 3; i <= 12; i++) {
             for (int dx = -6; dx <= 6; dx++) {
                 int x = alongZ ? cx + dx : cx + dir * i;
@@ -285,38 +483,162 @@ public final class MedievalCity {
                 k.set(x, -1, z, Math.abs(dx) == 6 ? Palette.ANDESITE : Palette.STONE_BRICK);
             }
         }
-        // 门上的徽记
-        int bx = cx;
+        int bx = alongZ ? cx : cx + dir * (WALL_THICK + 1);
         int bz = alongZ ? cz + dir * (WALL_THICK + 1) : cz;
-        k.fill(bx - 2, 14, bz, bx + 2, 16, bz, Palette.WOOL_RED);
-        k.fill(bx - 1, 15, bz, bx + 1, 15, bz, Palette.GOLD);
+        k.fill(bx - 2, 15, bz, bx + 2, 17, bz, Palette.WOOL_RED);
+        k.fill(bx - 1, 16, bz, bx + 1, 16, bz, Palette.GOLD);
+        for (int side = -1; side <= 1; side += 2) {
+            int fx = alongZ ? cx + side * 20 : cx;
+            int fz = alongZ ? cz : cz + side * 20;
+            k.set(fx, 15, fz, Palette.CAMPFIRE);
+        }
         k.bump("城门");
     }
 
-    // -- 街区：房子 ---------------------------------------------------------
+    // -- 河岸 ---------------------------------------------------------------
 
-    private static final List<int[]> RESERVED = new ArrayList<>();
-
-    static {
-        for (District d : DISTRICTS) {
-            if (!d.id().equals("residential") && !d.id().equals("crafts")) {
-                RESERVED.add(new int[] {d.x1(), d.z1(), d.x2(), d.z2()});
+    /**
+     * 运河两岸：不做垂直的切面，做三级石阶 + 一段草坡。
+     *
+     * <p>水与陆之间要有过渡，人才走得下去、船才靠得住、草才长到边上。
+     * 之前的河是一刀切下去的，看着像地形被人用刀裁过。
+     */
+    private static void banks(BuildKit k) {
+        int zWater = 306;
+        int zEnd = 404;
+        for (int x = -252; x <= -92; x++) {
+            for (int i = 0; i < 6; i++) {
+                int z = zWater - 1 - i;
+                int y = -1 - (i / 2);
+                k.set(x, y, z, i < 2 ? Palette.GRASS : Palette.STONE_BRICK);
+                if (i == 5) {
+                    k.set(x, y + 1, z, Palette.GRASS_TUFT);
+                }
+            }
+            for (int i = 0; i < 6; i++) {
+                int z = zEnd + 1 + i;
+                int y = -1 - (i / 2);
+                k.set(x, y, z, i < 2 ? Palette.GRASS : Palette.STONE_BRICK);
+                if (i == 0) {
+                    k.set(x, y + 1, z, Palette.GRASS_TUFT);
+                }
+            }
+            if (Math.floorMod(x, 24) == 0) {
+                for (int i = 0; i < 5; i++) {
+                    k.set(x, -1 - i, zWater - 1 - i, Palette.STONE_CHISELED);
+                    k.set(x + 1, -1 - i, zWater - 1 - i, Palette.STONE_CHISELED);
+                }
             }
         }
-        RESERVED.add(new int[] {-298, -298, -144, -144});   // 城堡
-        RESERVED.add(new int[] {90, -300, 226, -80});        // 教堂
-        RESERVED.add(new int[] {-130, -44, -64, 44});        // 市政厅
-        RESERVED.add(new int[] {64, -48, 146, 52});          // 行会
-        RESERVED.add(new int[] {-76, -76, 76, 76});          // 市集
+        for (int i = 0; i < 120; i++) {
+            int x = -250 + k.rnd.nextInt(156);
+            int z = k.rnd.nextBoolean() ? zWater - 1 : zEnd + 1;
+            k.set(x, 0, z, Palette.GRASS_TUFT);
+        }
+        // 一座石桥跨过运河，接上南门大路
+        int bx = -8;
+        for (int z = 296; z <= 414; z++) {
+            for (int x = bx - 5; x <= bx + 5; x++) {
+                k.set(x, 1, z, Palette.STONE_BRICK);
+                k.set(x, 0, z, Palette.STONE_BRICK);
+            }
+            for (int x : new int[] {bx - 6, bx + 6}) {
+                k.set(x, 2, z, Palette.STONE_BRICK);
+            }
+        }
+        k.bump("河岸");
     }
 
+    // -- 环市集 -------------------------------------------------------------
+
+    private static void marketRing(BuildKit k) {
+        for (int x = -PLAZA; x <= PLAZA; x++) {
+            for (int z = -PLAZA; z <= PLAZA; z++) {
+                double d = Math.sqrt(x * x + z * z);
+                Block block;
+                if (d < SACRED + 4) {
+                    block = Palette.STONE_CHISELED;
+                } else if (d < PLAZA - 4) {
+                    block = ((int) (d / 7)) % 2 == 0 ? Palette.STONE_BRICK : Palette.ANDESITE;
+                } else {
+                    block = Palette.ANDESITE_POLISHED;
+                }
+                if (k.rnd.nextInt(100) < 5) {
+                    block = Palette.STONE_CRACKED;
+                }
+                k.set(x, -1, z, block);
+            }
+        }
+        Block[][] cloth = {
+                {Palette.WOOL_RED, Palette.WOOL_CREAM},
+                {Palette.WOOL_BLUE, Palette.WOOL_CREAM},
+                {Palette.WOOL_GREEN, Palette.WOOL_YELLOW},
+                {Palette.WOOL_YELLOW, Palette.WOOL_RED}};
+        int index = 0;
+        for (int i = -2; i <= 2; i++) {
+            int x = i * 24;
+            if (Math.abs(x) < 10) {
+                continue;
+            }
+            for (int side = -1; side <= 1; side += 2) {
+                Block[] pair = cloth[index++ % cloth.length];
+                k.stall(x - 3, side * 86, pair[0], pair[1]);
+            }
+        }
+        for (int i = -2; i <= 2; i++) {
+            int z = i * 24;
+            if (Math.abs(z) < 10) {
+                continue;
+            }
+            for (int side = -1; side <= 1; side += 2) {
+                Block[] pair = cloth[index++ % cloth.length];
+                k.stall(side * 86 - 3, z, pair[0], pair[1]);
+            }
+        }
+        for (int x : new int[] {-96, 96}) {
+            for (int z : new int[] {-96, 96}) {
+                Civic.well(k, x, z);
+                k.lamp(x, z + 6);
+                k.lamp(x + 6, z);
+            }
+        }
+        k.bump("环市集");
+    }
+
+    // -- 市井 ---------------------------------------------------------------
+
+    /** 过日子的一条街：面包、酒、肉、鱼、布、药。 */
+    private static void life(BuildKit k) {
+        String[] types = {"bakery", "brewery", "butcher", "fish", "tailor", "apothecary",
+                "chandler", "potter", "weaver", "tanner"};
+        int index = 0;
+        for (int z = 150; z <= 270; z += 20) {
+            for (int side = -1; side <= 1; side += 2) {
+                int x = side > 0 ? 22 : -26;
+                if (k.openAir(x, z, x + 14, z + 12) && !k.paved(x, z, x + 14, z + 12)) {
+                    Civic.shop(k, x, z, side > 0 ? "west" : "east", types[index++ % types.length]);
+                }
+            }
+        }
+        k.pave(20, 280, 60, 296, Palette.COARSE, Palette.PATH);
+        for (int i = 0; i < 6; i++) {
+            k.set(24 + i * 6, 0, 284, Palette.HAY);
+            k.set(24 + i * 6, 0, 290, Palette.BARREL);
+        }
+        k.bump("市井");
+    }
+
+    // -- 房子 ---------------------------------------------------------------
+
     private static void houses(BuildKit k) {
-        for (int i = 0; i < STREET_X.length - 1; i++) {
-            for (int j = 0; j < STREET_Z.length - 1; j++) {
-                int x1 = STREET_X[i] + STREET_W[i] / 2 + 2;
-                int x2 = STREET_X[i + 1] - STREET_W[i + 1] / 2 - 2;
-                int z1 = STREET_Z[j] + STREET_W[j] / 2 + 2;
-                int z2 = STREET_Z[j + 1] - STREET_W[j + 1] / 2 - 2;
+        int[] xs = {-296, -240, -160, -80, 80, 160, 240, 296};
+        int[] zs = {-296, -240, -160, -80, 80, 160, 240, 296};
+        for (int i = 0; i < xs.length - 1; i++) {
+            for (int j = 0; j < zs.length - 1; j++) {
+                int x1 = xs[i] + 4;
+                int x2 = xs[i + 1] - 4;
+                int z1 = zs[j] + 4;
+                int z2 = zs[j + 1] - 4;
                 if (x2 - x1 < 26 || z2 - z1 < 26) {
                     continue;
                 }
@@ -324,17 +646,15 @@ public final class MedievalCity {
                     continue;
                 }
                 if (k.rnd.nextInt(100) < 8) {
-                    // 一成的街区留成小广场 / 果园，城才不会密得像军营
                     square(k, x1, z1, x2, z2);
                     continue;
                 }
                 block(k, x1, z1, x2, z2);
             }
         }
-        // 墙边零碎地：补一圈小屋与棚子
         for (int side = 0; side < 4; side++) {
             boolean horizontal = side < 2;
-            int fixed = side % 2 == 0 ? HALF - 14 : -HALF + 14;
+            int fixed = side % 2 == 0 ? HALF - 12 : -HALF + 12;
             for (int along = -HALF + 30; along < HALF - 30; along += 26) {
                 int x = horizontal ? along : fixed;
                 int z = horizontal ? fixed : along;
@@ -357,7 +677,6 @@ public final class MedievalCity {
         return false;
     }
 
-    /** 一个街区：四边临街的房子，中间是院子。 */
     private static void block(BuildKit k, int x1, int z1, int x2, int z2) {
         int inset = 16;
         northRow(k, x1 + 2, z1, x2 - 2, "north");
@@ -380,7 +699,11 @@ public final class MedievalCity {
                 break;
             }
             int d = 10 + k.rnd.nextInt(4);
-            k.house(x, z, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing, shopChance(k, facing));
+            if (k.free(x, z, x + w - 1, z + d - 1)
+                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)) {
+                k.house(x, z, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
+                        k.rnd.nextInt(100) < 15);
+            }
             x += w + 1;
         }
     }
@@ -396,8 +719,11 @@ public final class MedievalCity {
                 break;
             }
             int d = 10 + k.rnd.nextInt(4);
-            k.house(x, z - d + 1, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
-                    shopChance(k, facing));
+            if (k.free(x, z - d + 1, x + w - 1, z)
+                    && !intersectsReserved(x, z - d + 1, x + w - 1, z)) {
+                k.house(x, z - d + 1, w, d, 2 + (k.rnd.nextInt(10) < 4 ? 1 : 0), facing,
+                        k.rnd.nextInt(100) < 15);
+            }
             x += w + 1;
         }
     }
@@ -413,7 +739,10 @@ public final class MedievalCity {
                 break;
             }
             int w = 10 + k.rnd.nextInt(4);
-            k.house(x, z, w, d, 2, facing, shopChance(k, facing));
+            if (k.free(x, z, x + w - 1, z + d - 1)
+                    && !intersectsReserved(x, z, x + w - 1, z + d - 1)) {
+                k.house(x, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
+            }
             z += d + 1;
         }
     }
@@ -429,46 +758,31 @@ public final class MedievalCity {
                 break;
             }
             int w = 10 + k.rnd.nextInt(4);
-            k.house(x - w + 1, z, w, d, 2, facing, shopChance(k, facing));
+            if (k.free(x - w + 1, z, x, z + d - 1)
+                    && !intersectsReserved(x - w + 1, z, x, z + d - 1)) {
+                k.house(x - w + 1, z, w, d, 2, facing, k.rnd.nextInt(100) < 20);
+            }
             z += d + 1;
         }
     }
 
-    private static boolean shopChance(BuildKit k, String facing) {
-        boolean alongAvenue = facing.equals("east") || facing.equals("west");
-        return k.rnd.nextInt(100) < (alongAvenue ? 45 : 18);
-    }
-
-    /** 内院：井、菜地、树、柴堆。它在图上看不见，但决定了这座城有没有后院。 */
     private static void courtyard(BuildKit k, int x1, int z1, int x2, int z2) {
         if (x2 - x1 < 8 || z2 - z1 < 8) {
             return;
         }
-        k.pave(x1, z1, x2, z2, Palette.COARSE, Palette.GRASS);
+        k.pave(x1, z1, x2, z2, Palette.GRASS, Palette.PATH);
         if (x2 - x1 > 14 && z2 - z1 > 14 && k.rnd.nextBoolean()) {
             Civic.well(k, x1 + (x2 - x1) / 2, z1 + (z2 - z1) / 2);
         }
-        int trees = 1 + k.rnd.nextInt(2);
-        for (int i = 0; i < trees; i++) {
+        for (int i = 0; i < 2; i++) {
             int tx = x1 + 3 + k.rnd.nextInt(Math.max(1, x2 - x1 - 5));
             int tz = z1 + 3 + k.rnd.nextInt(Math.max(1, z2 - z1 - 5));
             if (k.free(tx - 1, tz - 1, tx + 1, tz + 1)) {
                 k.tree(tx, tz, 4 + k.rnd.nextInt(3), k.rnd.nextBoolean());
             }
         }
-        if (k.rnd.nextInt(100) < 40) {
-            for (int i = 0; i < 4; i++) {
-                k.set(x1 + 1 + i, 0, z2 - 1, Palette.HAY);
-            }
-        }
     }
 
-    /**
-     * 街区里的小广场：草坪、十字小径、一口井、几棵树。
-     *
-     * <p>第一版把它整块铺成石板，结果从空中看是一个空荡荡的灰色停车场。
-     * 中世纪的"广场"多半是块绿地加一口井——铺满石头的是市集，不是街角。
-     */
     private static void square(BuildKit k, int x1, int z1, int x2, int z2) {
         int cx = (x1 + x2) / 2;
         int cz = (z1 + z2) / 2;
@@ -483,26 +797,11 @@ public final class MedievalCity {
         k.tree(x1 + 7, z1 + 7, 6, false);
         k.tree(x2 - 7, z2 - 7, 6, false);
         k.tree(x1 + 7, z2 - 7, 5, true);
-        k.tree(x2 - 7, z1 + 7, 5, false);
-        for (int i = 0; i < 4; i++) {
-            k.set(cx - 6 + i * 4, 0, cz + 10, Palette.OAK_PLANK);
-            if (i == 0 || i == 3) {
-                k.set(cx - 6 + i * 4, 1, cz + 10, Palette.OAK_FENCE);
-            }
-        }
-        // 花圃
-        for (int i = 0; i < 6; i++) {
-            k.set(x1 + 4 + i * 2, 0, z1 + 4, i % 2 == 0 ? Palette.FLOWER_RED : Palette.FLOWER_YELLOW);
-            k.set(x2 - 4 - i * 2, 0, z2 - 4, i % 2 == 0 ? Palette.FLOWER_YELLOW : Palette.FLOWER_RED);
-        }
         k.bump("小广场");
     }
 
-    /**
-     * 补空：城里总会留下一些零碎地块——地标让出来的边角、街区之间的错位。
-     * 空着就是一块草坪，看起来像"还没盖完"。补成菜园、果园或棚屋，它们不是装饰，
-     * 是城里的副食来源。
-     */
+    // -- 补空 ---------------------------------------------------------------
+
     private static void fillGaps(BuildKit k) {
         int step = 26;
         for (int x = -HALF + 8; x < HALF - 20; x += step) {
@@ -581,18 +880,15 @@ public final class MedievalCity {
     // -- 城外 ---------------------------------------------------------------
 
     private static void outskirts(BuildKit k) {
-        // 四条官道伸出城门
         k.pave(-7, HALF, 7, HALF + 120, Palette.PATH, Palette.COARSE);
         k.pave(-7, -HALF - 140, 7, -HALF, Palette.PATH, Palette.COARSE);
         k.pave(HALF, -7, HALF + 240, 7, Palette.PATH, Palette.COARSE);
         k.pave(-HALF - 240, -7, -HALF, 7, Palette.PATH, Palette.COARSE);
-        // 路边灯
         for (int i = 0; i < 4; i++) {
             k.lamp(9, HALF + 20 + i * 26);
             k.lamp(-9, -HALF - 20 - i * 26);
             k.lamp(HALF + 20 + i * 40, 9);
         }
-        // 城外树：疏林，不挡视线
         for (int i = 0; i < 260; i++) {
             int x = k.rnd.nextInt(1600) - 800;
             int z = k.rnd.nextInt(1600) - 800;
@@ -609,41 +905,39 @@ public final class MedievalCity {
         }
     }
 
-    /** 广场与街口的杂物：车、桶、告示牌。它们让空地看着像有人走过。 */
-    private static void plazaDetails(BuildKit k) {
-        for (int i = 0; i < 40; i++) {
-            int x = k.rnd.nextInt(560) - 280;
-            int z = k.rnd.nextInt(560) - 280;
-            if (!k.free(x, z, x, z)) {
-                continue;
-            }
-            if (Math.abs(x) < 10 || Math.abs(z) < 10) {
-                k.set(x, 0, z, k.rnd.nextBoolean() ? Palette.BARREL : Palette.CRATE);
-            }
+    /** 街灯与火盆：夜里这条路要看得见。 */
+    private static void lights(BuildKit k) {
+        for (int i = 0; i < 4; i++) {
+            double angle = Math.PI / 4 + i * Math.PI / 2;
+            int x = (int) Math.round(Math.cos(angle) * (PLAZA + 2));
+            int z = (int) Math.round(Math.sin(angle) * (PLAZA + 2));
+            k.fill(x, 0, z, x, 4, z, Palette.STONE_BRICK);
+            k.set(x, 5, z, Palette.CAMPFIRE);
         }
-        // 广场四角的长椅
-        for (int dx : new int[] {-52, 52}) {
-            for (int dz : new int[] {-52, 52}) {
-                for (int i = 0; i < 4; i++) {
-                    k.set(dx + i, 0, dz, Palette.OAK_PLANK);
-                }
-                k.set(dx, 1, dz, Palette.OAK_FENCE);
-                k.set(dx + 3, 1, dz, Palette.OAK_FENCE);
-            }
+        for (int z = 140; z <= 290; z += 30) {
+            k.lamp(-12, z);
+            k.lamp(12, z);
+        }
+        for (int x = 140; x <= 290; x += 30) {
+            k.lamp(x, -12);
+            k.lamp(x, 12);
+        }
+        for (int z = -150; z >= -240; z -= 22) {
+            k.lamp(-18, z);
+            k.lamp(18, z);
         }
     }
 
     public static String summary() {
-        return String.format(Locale.ROOT, "%d×%d 城墙 · %d 个分区 · 墙外含港区/农田/竞技场/村落",
+        return String.format(Locale.ROOT, "%d×%d 城墙 · %d 个分区 · 圣座金字塔 / 王座大厅 / 角斗场",
                 HALF * 2, HALF * 2, DISTRICTS.size());
     }
 
-    /** 出生点：南门内四十格，正对中央广场与钟楼。 */
+    /** 出生点：南门内四十格，正对环市集与金字塔。 */
     public static int[] spawn() {
         return new int[] {0, HALF - 40};
     }
 
-    /** 城里一共要铺多少地——落地器据此决定平整范围。 */
     public static int groundRadius() {
         return HALF + 8;
     }

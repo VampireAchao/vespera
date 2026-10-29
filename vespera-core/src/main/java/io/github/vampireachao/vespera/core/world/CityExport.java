@@ -26,13 +26,13 @@ public final class CityExport {
 
     private static final List<Shot> SHOTS = List.of(
             new Shot("01-全城鸟瞰", "流明陨城 · 全景", -330, -330, 330, 330, 2200, 1450, 3.0),
-            new Shot("02-南门与主街", "南门 · 吊桥与主街", -70, 210, 90, 335, 1700, 1150, 7.0),
-            new Shot("03-中央市集", "中央市集 · 喷泉与市场棚", -80, -80, 80, 80, 1700, 1200, 8.0),
-            new Shot("04-第九时圣座", "第九时圣座 · 西立面", 92, -300, 232, -80, 1700, 1300, 7.0),
-            new Shot("05-灰烬堡", "灰烬堡 · 主楼与幕墙", -300, -300, -140, -140, 1700, 1300, 7.0),
-            new Shot("06-南港", "南港 · 仓库与驳船", -270, 230, -70, 420, 1700, 1150, 6.0),
-            new Shot("07-民居与工匠街", "工匠街 · 半木联排", 84, 84, 250, 250, 1700, 1200, 7.0),
-            new Shot("08-城外农田", "西田 · 风车与谷仓", -520, 20, -330, 270, 1700, 1200, 6.0));
+            new Shot("02-南门与主街", "南门 · 铁闸与主街", -70, 210, 70, 335, 1700, 1150, 7.0),
+            new Shot("03-圣座金字塔", "圣座 · 七层金字塔与顶坛", -95, -95, 95, 95, 1700, 1250, 8.0),
+            new Shot("04-王座大厅", "王座大厅 · 三级台地", -100, -310, 100, -140, 1700, 1250, 6.0),
+            new Shot("05-角斗场", "角斗场 · 看台与沙地", 90, 90, 290, 290, 1700, 1250, 6.0),
+            new Shot("06-灰烬堡", "灰烬堡 · 主楼与幕墙", -300, -300, -140, -140, 1700, 1300, 7.0),
+            new Shot("07-南市", "南市 · 面包房与酒坊", -60, 120, 60, 300, 1700, 1250, 7.0),
+            new Shot("08-南港", "南港 · 仓库与驳船", -270, 230, -70, 420, 1700, 1150, 6.0));
 
     public static void main(String[] args) throws Exception {
         Path out = Path.of(args.length > 0 ? args[0] : "docs/设计图");
@@ -72,7 +72,7 @@ public final class CityExport {
         svg.append("<rect width=\"1240\" height=\"1200\" fill=\"#f6efdd\"/>\n");
         svg.append("<text x=\"46\" y=\"46\" font-size=\"22\" fill=\"#2a231b\">流明陨城 · 规划图</text>\n");
         svg.append("<text x=\"46\" y=\"68\" font-size=\"12\" fill=\"#8a7a63\" letter-spacing=\"2\">")
-                .append("LUMENFALL · 600×600 城墙 · 14 个分区</text>\n");
+                .append("LUMENFALL · 600×600 城墙 · 15 个分区</text>\n");
 
         // 城外地形与道路
         svg.append("<rect x=\"").append(px(-560)).append("\" y=\"").append(px(-560))
@@ -84,9 +84,9 @@ public final class CityExport {
         svg.append(road(-560, -8, -MedievalCity.HALF, 8, 16, "#cfc39a"));
 
         // 运河
-        svg.append("<rect x=\"").append(px(-112)).append("\" y=\"").append(px(300))
+        svg.append("<rect x=\"").append(px(-250)).append("\" y=\"").append(px(306))
                 .append("\" width=\"").append(158 * MAP / SPAN).append("\" height=\"")
-                .append(106 * MAP / SPAN).append("\" fill=\"#9dc0d4\"/>\n");
+                .append(98 * MAP / SPAN).append("\" fill=\"#9dc0d4\"/>\n");
 
         // 农田
         svg.append("<rect x=\"").append(px(-500)).append("\" y=\"").append(px(40))
@@ -114,12 +114,13 @@ public final class CityExport {
         }
 
         // 地标
-        marker(svg, 0, 0, "喷泉");
-        marker(svg, 160, -200, "圣座");
-        marker(svg, -260, -260, "主楼");
-        marker(svg, -96, 0, "市政厅");
-        marker(svg, 100, 0, "行会");
-        marker(svg, 470, 70, "竞技场");
+        marker(svg, 0, 0, "圣座金字塔");
+        marker(svg, 0, -230, "王座大厅");
+        marker(svg, 185, 185, "角斗场");
+        marker(svg, -220, -220, "灰烬堡");
+        marker(svg, -166, -40, "市政厅");
+        marker(svg, 160, -34, "行会");
+        marker(svg, -170, 350, "南港");
         marker(svg, -420, 100, "风车");
         marker(svg, 370, -370, "北村");
 
@@ -171,7 +172,7 @@ public final class CityExport {
                 + "<h2>规模</h2>\n<table>\n"
                 + "<tr><td>城墙</td><td>600 × 600，四门、十二座墙塔</td></tr>\n"
                 + "<tr><td>方块</td><td>" + String.format(Locale.ROOT, "%,d", scene.size()) + "（含墙外）</td></tr>\n"
-                + "<tr><td>最高点</td><td>圣座西塔 110 格</td></tr>\n"
+                + "<tr><td>最高点</td><td>王座塔 74 格 / 圣座顶坛 63 格</td></tr>\n"
                 + "<tr><td>街区</td><td>8 × 8 网格，含 6 处小广场</td></tr>\n"
                 + "</table>\n"
                 + "<p class=\"note\">这张图与服务器里的方块同源：都从 <code>MedievalCity</code> 生成。"
@@ -207,7 +208,10 @@ public final class CityExport {
 
     private static String fill(String id) {
         return switch (id) {
-            case "market" -> "#e6cf9a";
+            case "sacred" -> "#e8d3a0";
+            case "plaza" -> "#e6cf9a";
+            case "throne" -> "#cbb9a8";
+            case "colosseum" -> "#d8c7a8";
             case "cathedral", "temple-green" -> "#d9b7a0";
             case "castle" -> "#b8b2a6";
             case "townhall", "guild" -> "#c6c3a0";

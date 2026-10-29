@@ -56,19 +56,18 @@ class MedievalCityTest {
     @Test
     @DisplayName("四座地标各就各位：喷泉、圣座塔、城堡主楼、市政厅钟塔")
     void landmarksExist() {
-        assertNotNull(scene().get(0, 0, 0), "喷泉中心没有方块");
-        assertEquals("minecraft:water", scene().get(0, 0, 0).id(), "喷泉中心应是水");
-        assertNotNull(scene().get(106, 40, -118), "圣座西塔没立起来");
-        assertNotNull(scene().get(-268, 30, -268), "城堡主楼没立起来");
-        assertNotNull(scene().get(-76, 30, -32), "市政厅钟塔没立起来");
-        assertNotNull(scene().get(0, 8, 46), "市集十字没立起来");
+        assertNotNull(scene().get(66, 5, 0), "金字塔塔身没有立起来");
+        assertNotNull(scene().get(0, 64, 0), "金字塔顶的祭坛没有立起来");
+        assertNotNull(scene().get(-46, 20, -260), "王座大厅没有立起来");
+        assertNotNull(scene().get(-268, 30, -268), "城堡主楼没有立起来");
+        assertNotNull(scene().get(-154, 30, -72), "市政厅钟塔没有立起来");
     }
 
     @Test
     @DisplayName("城外也有东西：南港的水、竞技场的沙地")
     void outskirtsExist() {
         assertEquals("minecraft:water", scene().get(-170, -1, 350).id(), "运河没有水");
-        assertNotNull(scene().get(470, -1, 70), "竞技场地面没有方块");
+        assertNotNull(scene().get(185, -1, 185), "角斗场沙地没有方块");
         assertNotNull(scene().get(-420, 20, 100), "风车没有立起来");
     }
 
@@ -76,8 +75,8 @@ class MedievalCityTest {
     @DisplayName("街道表能读：主街十六条格宽，其余按环递减")
     void streetsAreDeclared() {
         assertTrue(MedievalCity.STREETS.size() >= 12);
-        assertEquals(16, MedievalCity.STREETS.stream().filter(MedievalCity.Street::main)
-                .findFirst().orElseThrow().width());
+        assertTrue(MedievalCity.STREETS.stream().anyMatch(street -> street.width() == 16),
+                "没有一条十六格宽的主街");
     }
 
     @Test
