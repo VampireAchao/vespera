@@ -68,7 +68,8 @@ class MedievalCityTest {
     @Test
     @DisplayName("城外也有东西：南港的水、竞技场的沙地")
     void outskirtsExist() {
-        assertEquals("minecraft:water", scene().get(-170, -1, 350).id(), "运河没有水");
+        // 水面比岸低两格：与岸齐平的水看着像泳池
+        assertEquals("minecraft:water", scene().get(-170, -2, 350).id(), "运河没有水");
         assertNotNull(scene().get(185, -1, 185), "角斗场沙地没有方块");
         assertNotNull(scene().get(-420, 20, 100), "风车没有立起来");
     }

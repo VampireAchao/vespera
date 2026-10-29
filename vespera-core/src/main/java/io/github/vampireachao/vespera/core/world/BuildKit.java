@@ -174,13 +174,18 @@ public final class BuildKit {
         int width = ridgeAlongZ ? (bx - ax + 1) : (bz - az + 1);
         int half = width / 2;
         Block body = Palette.roofBody(stairId);
+        // 旧瓦：整片一个色的大屋面在近景里像一块塑料板。
+        // 按坐标散点换一点深色瓦，人眼看得出"这是一片一片铺的"。
+        String wornId = stairId.equals("minecraft:deepslate_tile_stairs")
+                ? "minecraft:deepslate_tile_stairs" : "minecraft:spruce_stairs";
 
         for (int i = 0; i <= half; i++) {
             int level = y + i;
             if (ridgeAlongZ) {
                 for (int z = az - overhang; z <= bz + overhang; z++) {
-                    set(ax + i, level, z, Block.stairs(stairId, "east"));
-                    set(bx - i, level, z, Block.stairs(stairId, "west"));
+                    boolean worn = Math.floorMod(z * 13 + level * 7, 23) == 0;
+                    set(ax + i, level, z, Block.stairs(worn ? wornId : stairId, "east"));
+                    set(bx - i, level, z, Block.stairs(worn ? wornId : stairId, "west"));
                     if (i > 0) {
                         // 楼梯正下方垫实：不垫的话从侧面能看见屋里的光
                         set(ax + i, level - 1, z, body);
@@ -194,8 +199,9 @@ public final class BuildKit {
                 }
             } else {
                 for (int x = ax - overhang; x <= bx + overhang; x++) {
-                    set(x, level, az + i, Block.stairs(stairId, "south"));
-                    set(x, level, bz - i, Block.stairs(stairId, "north"));
+                    boolean worn = Math.floorMod(x * 13 + level * 7, 23) == 0;
+                    set(x, level, az + i, Block.stairs(worn ? wornId : stairId, "south"));
+                    set(x, level, bz - i, Block.stairs(worn ? wornId : stairId, "north"));
                     if (i > 0) {
                         set(x, level - 1, az + i, body);
                         set(x, level - 1, bz - i, body);
@@ -411,8 +417,12 @@ public final class BuildKit {
                             continue;
                         }
                         boolean beamRow = y == base || y == base + FLOOR - 1;
-                        boolean post = (xx == jx1 || xx == jx2) && (zz == jz1 || zz == jz2);
-                        boolean timber = beamRow || post || (Math.floorMod(xx + zz, 5) == 0 && f > 0);
+                        boolean corner = (xx == jx1 || xx == jx2) && (zz == jz1 || zz == jz2);
+                        // 立柱沿墙每四格一根。原来用的是 (x+z)%5 的斜纹——远处看是"有纹理"，
+                        // 走到墙根前才发现那是一道道斜杠，既不是柱子也不承重，整面墙因此发飘。
+                        int along = (zz == jz1 || zz == jz2) ? xx : zz;
+                        boolean stud = Math.floorMod(along, 4) == 0;
+                        boolean timber = beamRow || corner || (stud && f > 0);
                         Block block;
                         if (f == 0 && !shop) {
                             block = timber ? Palette.DARK_LOG : Palette.STONE_BRICK;
@@ -428,16 +438,28 @@ public final class BuildKit {
             int wy = base + 2;
             for (int xx = jx1 + 2; xx <= jx2 - 2; xx += 3) {
                 if (front.equals("north") || front.equals("south")) {
+                    set(xx, wy - 1, jz1, Block.slab("minecraft:stone_brick_slab", "bottom"));
+                    set(xx, wy - 1, jz2, Block.slab("minecraft:stone_brick_slab", "bottom"));
                     set(xx, wy, jz1, Palette.GLASS);
                     set(xx, wy, jz2, Palette.GLASS);
+                    set(xx - 1, wy, jz1, Palette.OAK_TRAPDOOR);
+                    set(xx + 1, wy, jz1, Palette.OAK_TRAPDOOR);
+                    set(xx - 1, wy, jz2, Palette.OAK_TRAPDOOR);
+                    set(xx + 1, wy, jz2, Palette.OAK_TRAPDOOR);
                     set(xx, wy + 1, jz1, Block.stairs(Palette.SHINGLE_STAIR, "south"));
                     set(xx, wy + 1, jz2, Block.stairs(Palette.SHINGLE_STAIR, "north"));
                 }
             }
             for (int zz = jz1 + 2; zz <= jz2 - 2; zz += 3) {
                 if (front.equals("east") || front.equals("west")) {
+                    set(jx1, wy - 1, zz, Block.slab("minecraft:stone_brick_slab", "bottom"));
+                    set(jx2, wy - 1, zz, Block.slab("minecraft:stone_brick_slab", "bottom"));
                     set(jx1, wy, zz, Palette.GLASS);
                     set(jx2, wy, zz, Palette.GLASS);
+                    set(jx1, wy, zz - 1, Palette.OAK_TRAPDOOR);
+                    set(jx1, wy, zz + 1, Palette.OAK_TRAPDOOR);
+                    set(jx2, wy, zz - 1, Palette.OAK_TRAPDOOR);
+                    set(jx2, wy, zz + 1, Palette.OAK_TRAPDOOR);
                     set(jx1, wy + 1, zz, Block.stairs(Palette.SHINGLE_STAIR, "east"));
                     set(jx2, wy + 1, zz, Block.stairs(Palette.SHINGLE_STAIR, "west"));
                 }
@@ -467,6 +489,32 @@ public final class BuildKit {
                 carve(ax, 0, cz - 1, ax, 2, cz);
                 set(ax, 3, cz, Block.stairs(Palette.SHINGLE_STAIR, "east"));
                 set(ax, 2, cz - 2, Palette.LANTERN);
+            }
+        }
+
+        // 门口：门槛石与门外的一件家什。门洞本身是空的，人一眼看进去什么都没有；
+        // 门口有块石头、有个桶，这栋房子才像有人在住。
+        switch (front) {
+            case "south" -> {
+                set(cx - 1, y0 - 1, bz, Palette.STONE_BRICK);
+                set(cx, y0 - 1, bz, Palette.STONE_BRICK);
+                Block prop = (rnd.nextBoolean() ? Palette.BARREL : Palette.CRATE);
+                set(cx + 2, y0, bz, prop);
+            }
+            case "north" -> {
+                set(cx - 1, y0 - 1, az, Palette.STONE_BRICK);
+                set(cx, y0 - 1, az, Palette.STONE_BRICK);
+                set(cx - 3, y0, az, Palette.CRATE);
+            }
+            case "east" -> {
+                set(bx, y0 - 1, cz - 1, Palette.STONE_BRICK);
+                set(bx, y0 - 1, cz, Palette.STONE_BRICK);
+                set(bx, y0, cz + 2, Palette.BARREL);
+            }
+            default -> {
+                set(ax, y0 - 1, cz - 1, Palette.STONE_BRICK);
+                set(ax, y0 - 1, cz, Palette.STONE_BRICK);
+                set(ax, y0, cz - 3, Palette.BARREL);
             }
         }
 

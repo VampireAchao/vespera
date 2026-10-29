@@ -230,6 +230,7 @@ public final class MedievalCity {
         Sacred.colosseumInterior(k);
         Landmarks.nobleQuarter(k);
 
+        streetProps(k);
         fillGaps(k);
         outskirts(k);
         lights(k);
@@ -250,16 +251,19 @@ public final class MedievalCity {
             for (int z = -HALF; z <= HALF; z++) {
                 // 城里不该是草地：一座住满人的中世纪城，空地被踩成夯土、碾成碎石、铺上石头。
                 // 草只留在院子里（courtyard 自己会铺），不留给"没人来过"的空地。
-                int roll = k.rnd.nextInt(100);
+                // 成片，不是逐格随机。远看两者都是"土色"，但人站在街上时，
+                // 每格换一次颜色只会被眼睛读成噪点——这也是街景"发虚"的来源之一。
+                double p = patch(x, z, 0.045, 1.0);
+                double q = patch(x, z, 0.12, 7.0);
                 Block top;
-                if (roll < 34) {
-                    top = Palette.COARSE;
-                } else if (roll < 64) {
-                    top = Palette.PATH;
-                } else if (roll < 88) {
-                    top = Palette.GRAVEL;
+                if (p > 0.42) {
+                    top = Palette.PATH;          // 被踩实的土
+                } else if (q > 0.72) {
+                    top = Palette.GRAVEL;        // 碎石
+                } else if (p < -0.72) {
+                    top = Palette.COBBLE;        // 残存的旧铺石
                 } else {
-                    top = Palette.COBBLE;
+                    top = Palette.COARSE;
                 }
                 k.set(x, -1, z, top);
             }
@@ -278,6 +282,17 @@ public final class MedievalCity {
                 }
             }
         }
+    }
+
+    /**
+     * 低频场：同一块地上取值连续，才会成"片"。
+     *
+     * <p>用两个错相的正弦，够平滑也够便宜；不需要 Perlin。
+     */
+    private static double patch(int x, int z, double scale, double phase) {
+        double a = Math.sin(x * scale * 2.1 + Math.sin(z * scale * 1.3 + phase) * 2.4);
+        double b = Math.sin(z * scale * 2.6 + Math.sin(x * scale * 1.1 + phase) * 2.0);
+        return (a + b * 0.6) / 1.6;
     }
 
     // -- 街道 ---------------------------------------------------------------
@@ -739,6 +754,89 @@ public final class MedievalCity {
             k.set(24 + i * 6, 0, 290, Palette.BARREL);
         }
         k.bump("市井");
+    }
+
+    /**
+     * 街边的东西：墙根的木桶、柴堆、推车、马槽、指路牌、水洼、晾衣杆。
+     *
+     * <p>这些东西只有一到两格高，在远景图里几乎看不见——这也正是问题所在：
+     * 从高处看，城市的"密度"由屋顶与街道构成；站在街上，视线只落在 0–2 格，
+     * 而这一层原来是空的。一条街于是只剩两排墙和一片地。
+     */
+    private static void streetProps(BuildKit k) {
+        for (Street street : STREETS) {
+            int ax = Math.min(street.x1(), street.x2());
+            int bx = Math.max(street.x1(), street.x2());
+            int az = Math.min(street.z1(), street.z2());
+            int bz = Math.max(street.z1(), street.z2());
+            boolean horizontal = (bx - ax) >= (bz - az);
+            if (horizontal) {
+                for (int x = ax + 2; x <= bx - 2; x++) {
+                    prop(k, x, az, 0, -1);
+                    prop(k, x, bz, 0, 1);
+                }
+            } else {
+                for (int z = az + 2; z <= bz - 2; z++) {
+                    prop(k, ax, z, -1, 0);
+                    prop(k, bx, z, 1, 0);
+                }
+            }
+        }
+    }
+
+    /**
+     * 在街沿放一件东西。{@code (dx,dz)} 指向街外——只有那一侧是墙，才说明这是"门口"。
+     */
+    private static void prop(BuildKit k, int x, int z, int dx, int dz) {
+        if (k.taken(x, z, x, z)) {
+            return;
+        }
+        if (!k.taken(x + dx, z + dz, x + dx, z + dz)) {
+            return;
+        }
+        if (Math.floorMod(x * 31 + z * 17, 13) != 0) {
+            return;
+        }
+        // 沿街方向：与 (dx,dz) 垂直
+        int lx = dz != 0 ? 1 : 0;
+        int lz = dx != 0 ? 1 : 0;
+        switch (Math.floorMod(x * 7 + z * 13, 9)) {
+            case 0 -> k.set(x, 0, z, Palette.BARREL);
+            case 1 -> k.set(x, 0, z, Palette.CRATE);
+            case 2 -> {
+                // 柴堆：两捆，一横一竖
+                k.fill(x, 0, z, x + lx, 0, z + lz, Block.log("minecraft:oak_log",
+                        lx != 0 ? "x" : "z"));
+                k.set(x, 1, z, Block.log("minecraft:oak_log", "y"));
+            }
+            case 3 -> {
+                // 手推车
+                k.fill(x, 0, z, x + lx, 0, z + lz, Palette.OAK_PLANK);
+                k.set(x, 1, z, Palette.OAK_PLANK);
+                k.set(x + lx, 0, z + lz, Palette.OAK_FENCE);
+            }
+            case 4 -> {
+                // 马槽：三面栅栏，中间有水
+                for (int i = 0; i <= 2; i++) {
+                    int px = x + lx * i;
+                    int pz = z + lz * i;
+                    k.set(px, 0, pz, i == 1 ? Palette.WATER : Palette.SPRUCE_PLANK);
+                    k.set(px, 1, pz, Palette.SPRUCE_FENCE);
+                }
+            }
+            case 5 -> {
+                // 指路牌
+                k.fill(x, 0, z, x, 2, z, Palette.SPRUCE_FENCE);
+                k.set(x, 3, z, Palette.SIGN);
+            }
+            case 6 -> {
+                // 水洼：雨后的低处
+                k.set(x, -1, z, Palette.WATER);
+                k.set(x + lx, -1, z + lz, Palette.COARSE);
+            }
+            case 7 -> k.set(x, 0, z, Palette.POT);
+            default -> k.set(x, 0, z, Palette.HAY);
+        }
     }
 
     // -- 房子 ---------------------------------------------------------------
