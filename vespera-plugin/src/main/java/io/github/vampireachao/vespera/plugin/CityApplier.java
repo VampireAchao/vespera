@@ -361,8 +361,9 @@ public final class CityApplier {
     /** 城外要整平的小块：竞技场、两块田、村落、码头堆场。 */
     private List<int[]> outerPads() {
         List<int[]> pads = new ArrayList<>();
-                pads.add(new int[] {-512, 28, -344, 256});  // 农田与风车
-        pads.add(new int[] {310, -430, 430, -310}); // 北村
+        // 坐标跟着 core 里那几条预留走：城扩到 ±460 之后，农田和北村都挪到了墙外
+        pads.add(new int[] {-590, 30, -462, 270});  // 农田与风车
+        pads.add(new int[] {294, -606, 386, -518}); // 北村
         pads.add(new int[] {-262, 240, -84, 420});  // 码头
         return pads;
     }
@@ -424,7 +425,7 @@ public final class CityApplier {
                 org.bukkit.entity.EntityType.CHICKEN, org.bukkit.entity.EntityType.PIG};
         int spawned = 0;
         for (int i = 0; i < 16; i++) {
-            int x = ox - 470 + (i % 4) * 28;
+            int x = ox - 580 + (i % 4) * 28;
             int z = oz + 70 + (i / 4) * 30;
             int y = world.getHighestBlockYAt(x, z) + 1;
             if (world.getBlockAt(x, y - 1, z).getType() != Material.GRASS_BLOCK) {

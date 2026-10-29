@@ -62,8 +62,12 @@ city:
   auto: true
   world: world
   # 期望的中心。若这里是水或陡坡，会自动就近另选，并把结果记在世界里。
-  origin-x: 0
-  origin-z: 0
+  #
+  # 20261028 这张种子图在 (0,0) 是水面，第一次建城时自动退到了 (512,512)。
+  # 现在把它写死：城心跟着 world 的实际位置走，regions.yml 也按 512 平移过。
+  # 换种子时要重新对齐这三处——config 的 origin、regions.yml、以及旧的存档世界。
+  origin-x: 512
+  origin-z: 512
   pull-strays: true
 
 # 校区灰盒（钟塔学院）

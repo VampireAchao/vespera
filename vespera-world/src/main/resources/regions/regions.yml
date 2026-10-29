@@ -3,6 +3,10 @@
 # 这一份是**唯一**的坐标来源：插件读它做区域判定与下界门定向，地图组按它建造，
 # 文档按它画图。`layouts/world.yml` 只讲关系与手法，不重复坐标——重复的坐标迟早会漂。
 #
+# 坐标是**世界绝对坐标**，不是以城心为原点。这张种子图（20261028）在 (0,0)
+# 是一片水面，建城时按"就近找干燥平地"退到了 (512,512)，所以主世界这七块地方
+# 整体平移了 +512。城心 = (512,512)，城墙 ±460，塑形到 ±600。
+#
 # 混合形态：一块连续的生存大陆 + 原版下界 + 原版末地外岛 + 一个独立终局世界。
 # 四个维度全是原版维度，玩家用原版传送门与折跃门就能走完，不靠命令传送。
 #
@@ -21,21 +25,21 @@ regions:
   - id: lumenfall
     name: 流明陨城
     world: world
-    # 城与墙外的田、港、村一起算：-524 到 540 的西东跨度都在这块区域里
-    from: [-560, 20, -480]
-    to: [560, 200, 460]
+    # 城与墙外的田、港、村一起算：城墙 ±460，塑形到 ±600，两边各留 20 格余量
+    from: [-108, 20, -108]
+    to: [1132, 200, 1132]
     biome: minecraft:plains
     kind: city
     tags: [safe, trade, spawn]
     blend: 建在平原河湾的北岸。城墙用石砖与苔石，越靠外越旧；城内不铺满，留出耕地与院子。
-    transition: 城外三百格内由农田→疏林→密林渐变，看不到一条笔直的边界。
+    transition: 城外从台地坡脚（±488）到五百格外由农田→疏林→密林渐变，看不到一条笔直的边界。
     entrance: 出生点就在城里。
 
   - id: college
     name: 钟塔学院
     world: world
-    from: [220, 40, -160]
-    to: [520, 140, 160]
+    from: [1032, 40, 352]
+    to: [1412, 140, 672]
     biome: minecraft:forest
     kind: school
     tags: [safe, class, gate]
@@ -46,8 +50,8 @@ regions:
   - id: greybell
     name: 灰钟修道院
     world: world
-    from: [-900, 60, -700]
-    to: [-500, 220, -300]
+    from: [-488, 60, -188]
+    to: [-108, 220, 212]
     biome: minecraft:windswept_hills
     kind: abbey
     tags: [storm, holy, climb]
@@ -58,8 +62,8 @@ regions:
   - id: moonring
     name: 环月林
     world: world
-    from: [300, 50, 300]
-    to: [900, 140, 900]
+    from: [1012, 50, 1012]
+    to: [1612, 140, 1612]
     biome: minecraft:dark_forest
     kind: wood
     tags: [night, wolf, forage]
@@ -70,8 +74,8 @@ regions:
   - id: drowned-bell
     name: 沉钟湖
     world: world
-    from: [-600, 30, 300]
-    to: [-100, 90, 800]
+    from: [-208, 30, 812]
+    to: [32, 90, 1312]
     biome: minecraft:river
     kind: lake
     tags: [water, dive, drown]
@@ -82,8 +86,8 @@ regions:
   - id: silent-choir
     name: 无声墓道
     world: world
-    from: [200, 20, -900]
-    to: [700, 90, -400]
+    from: [712, 20, -388]
+    to: [1212, 90, 12]
     biome: minecraft:swamp
     kind: crypt
     tags: [dark, undead, water]
@@ -94,8 +98,8 @@ regions:
   - id: white-tower
     name: 白塔原
     world: world
-    from: [-400, 120, -1400]
-    to: [100, 320, -900]
+    from: [112, 120, -888]
+    to: [612, 320, -388]
     biome: minecraft:jagged_peaks
     kind: tower
     tags: [fall, wind, cold]

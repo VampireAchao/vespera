@@ -22,7 +22,22 @@ import java.util.Locale;
  */
 public final class MedievalCity {
 
-    public static final int HALF = 300;
+    /**
+     * 城墙到中轴的距离。600×600 是"一座城"，不是"一座都城"。
+     *
+     * <p>怎么定这个数：以人的脚为准，不以图为谁准。
+     * <ul>
+     *   <li>穿城：920 格，步行 3.6 分钟、疾跑 2.7 分钟。再大就开始像通勤。</li>
+     *   <li>从圣座到墙：460 格，走 1.8 分钟——站在金字塔上能看见整片屋顶，但一眼望不到边。</li>
+     *   <li>区块：57×57 = 3249 个，服端一次生成约三分钟。</li>
+     *   <li>方块：约 430 万，插件里用哈希表装得下（2G 堆留足余量）。</li>
+     * </ul>
+     * 900 以下显不出"都城"，1200 以上开始出现三件事：第一次生成超过五分钟、
+     * 走一趟要五分钟、地形塑形的面积翻四倍。460 是这三条的交点。
+     */
+    public static final int HALF = 460;
+    /** 第二道环：老城墙的位置。城扩之后它变成街，不再是墙。 */
+    public static final int MID = 300;
     public static final int WALL_THICK = 5;
     public static final int WALL_HEIGHT = 12;
     public static final int AVENUE = 8;
@@ -86,6 +101,26 @@ public final class MedievalCity {
             new Street(-RING, RING - 8, RING, RING, 8, true),
             new Street(-RING, -RING, -RING + 8, RING, 8, true),
             new Street(RING - 8, -RING, RING, RING, 8, true),
+            // 第二道环：老城墙挪到 ±460 之后，±300 这一圈就空出来了。
+            // 北段在宫城正面断开：王座厅、国库、王室学堂一整片压在 z −300 这条线上，
+            // 环路只能从东西两侧贴上去，中间留给宫前庭
+            // 只有西段。z=−300 这条线往东全是宫城：王座厅、国库、王室居所、
+            // 服务巷、学堂、靶场挨着排下来，从 −162 一直占到 206，中间插不进一条路。
+            // 硬要绕就得拐到外圈去，那不叫环，叫绕路——所以北面这一环就断在这儿，
+            // 由四条放射街把东半边接回主网
+            new Street(-MID, -MID, -162, -MID + 8, 8, true),
+            // 南段在码头处断开：码头占着 -252..-88 一整片水面与货场
+            new Street(-MID, MID - 8, -256, MID, 8, true),
+            new Street(-84, MID - 8, MID, MID, 8, true),
+            new Street(-MID, -MID, -MID + 8, MID, 8, true),
+            new Street(MID - 8, -MID, MID, MID, 8, true),
+            // 放射：新城四条街，把外圈切成八块。南边那条在码头处断开
+            new Street(-380, -HALF, -372, HALF, 8, true),
+            new Street(372, -HALF, 380, HALF, 8, true),
+            new Street(-HALF, -380, HALF, -372, 8, true),
+            // 南边这条在码头处断开：码头占了 -252..-88 一整片
+            new Street(-HALF, 372, -256, 380, 8, true),
+            new Street(-84, 372, HALF, 380, 8, true),
             new Street(-AVENUE, RING, AVENUE, HALF, AVENUE * 2, true),
             new Street(RING, -AVENUE, HALF, AVENUE, AVENUE * 2, true),
             new Street(-HALF, -AVENUE, -RING, AVENUE, AVENUE * 2, true),
@@ -119,17 +154,17 @@ public final class MedievalCity {
             new int[] {-66, -66, 66, 66},           // 圣座
             new int[] {-111, -111, 111, 111},       // 环市集（不能碰到 112 的环路内沿）
             new int[] {-82, -300, 82, -148},        // 王座厅
-            new int[] {-300, -300, -144, -144},     // 城堡
+            new int[] {-290, -290, -144, -144},     // 城堡（西/北各让 10 格给第二道环）
             new int[] {103, 123, 267, 263},         // 角斗场（南移 8 格后不再压环路）
             // 行会拆成东西两半：中间的穿堂巷是公共通道，不能算作建筑占地
             new int[] {128, -76, 155, -12},
             new int[] {165, -76, 194, -12},
             new int[] {-192, -78, -140, -10},       // 市政厅（南墙让出西大道）
             new int[] {-238, -122, -188, -78},      // 兵营
-            new int[] {208, -292, 294, -198},       // 墓地
+            new int[] {208, -290, 290, -198},       // 墓地（北/东各让 10 格给第二道环）
             new int[] {-252, 234, -88, 414},        // 码头
-            new int[] {-524, 36, -336, 264},        // 农田
-            new int[] {306, -434, 434, -306},       // 北村
+            new int[] {-584, 36, -468, 264},        // 农田
+            new int[] {300, -600, 380, -524},       // 北村（搬到北墙外）
             new int[] {-101, -101, -70, -70},       // 修士居所
             new int[] {70, -101, 101, -70},         // 缮写院
             new int[] {70, 70, 101, 101},           // 圣器库
@@ -156,10 +191,10 @@ public final class MedievalCity {
             new int[] {-155, 122, -122, 155},       // 贫民窟 S2
             new int[] {-155, 165, -122, 233},       // 贫民窟 S3
             new int[] {166, 22, 234, 110},          // 中产区
-            new int[] {268, 125, 294, 234},         // 东摊贩街
-            new int[] {103, 264, 155, 293},         // 南摊贩街西段
-            new int[] {165, 264, 234, 293},         // 南摊贩街东段
-            new int[] {246, 264, 267, 293},         // 东南角小块
+            new int[] {268, 125, 288, 234},         // 东摊贩街（东边让 4 格给第二道环）
+            new int[] {103, 264, 155, 290},         // 南摊贩街西段（南边让 2 格给第二道环）
+            new int[] {165, 264, 234, 290},         // 南摊贩街东段（南边让 2 格给第二道环）
+            new int[] {246, 264, 267, 290},         // 东南角小块（同上）
             new int[] {58, 198, 98, 228},           // 粮仓新址
             new int[] {-140, -210, -86, -172});     // 图书馆新址
 
@@ -220,10 +255,10 @@ public final class MedievalCity {
         Civic.graveyard(k, 210, -290, 82, 92);
         Civic.docks(k);
         Civic.windmill(k, -420, 100);
-        Civic.farm(k, -500, 160, 108, 84);
-        Civic.farm(k, -500, 40, 108, 84);
+        Civic.farm(k, -580, 160, 108, 84);
+        Civic.farm(k, -580, 40, 108, 84);
         Civic.barn(k, -360, 250);
-        Civic.hamlet(k, 320, -420);
+        Civic.hamlet(k, 320, -580);
 
         // 密度分级的三个样本，以及角斗场周边的小生意
         Civic.slum(k);
@@ -1036,8 +1071,9 @@ public final class MedievalCity {
     // -- 房子 ---------------------------------------------------------------
 
     private static void houses(BuildKit k) {
-        int[] xs = {-296, -240, -160, -80, 80, 160, 240, 296};
-        int[] zs = {-296, -240, -160, -80, 80, 160, 240, 296};
+        // 每一条线都是一道街（环路、放射或大道），街区夹在中间
+        int[] xs = {-440, -380, -MID, -240, -160, -80, 80, 160, 240, MID, 380, 440};
+        int[] zs = {-440, -380, -MID, -240, -160, -80, 80, 160, 240, MID, 380, 440};
         for (int i = 0; i < xs.length - 1; i++) {
             for (int j = 0; j < zs.length - 1; j++) {
                 int x1 = xs[i] + 4;
@@ -1063,20 +1099,29 @@ public final class MedievalCity {
             for (int along = -HALF + 30; along < HALF - 30; along += 26) {
                 int x = horizontal ? along : fixed;
                 int z = horizontal ? fixed : along;
-                if (!k.free(x - 7, z - 6, x + 7, z + 6)) {
+                if (k.rnd.nextInt(100) >= 55) {
                     continue;
                 }
-                // 这一圈是贴墙的房子，最容易漏掉预留表——它们曾经长进了王室居所的院子里
-                if (intersectsReserved(x - 7, z - 6, x + 7, z + 6)) {
+                // 这一圈是贴墙的房子，最容易漏掉预留表——它们曾经长进了王室居所的院子里。
+                // 判断必须按<b>真实足迹</b>来：原来按写死的 ±7 查，而门面能到 17 格宽，
+                // 查完是空的、盖下去却压住邻居。街区扩到 ±440 之后这一条立刻炸了出来
+                int w = 12 + k.rnd.nextInt(6);
+                int d = 10 + k.rnd.nextInt(6);
+                int hx = x - w / 2;
+                int hz = z - 6;
+                int hx2 = hx + w - 1;
+                int hz2 = hz + d - 1;
+                if (hz2 >= HALF - WALL_THICK || hx >= HALF - WALL_THICK
+                        || hx2 <= -HALF + WALL_THICK || hz <= -HALF + WALL_THICK) {
                     continue;
                 }
-                if (k.rnd.nextInt(100) < 55 && !k.taken(x - 7, z - 6, x + 7, z + 5)) {
-                    // 贴墙这一圈也不排成一条线：宽窄、进深、层数各随各的
-                    int w = 12 + k.rnd.nextInt(6);
-                    int d = 10 + k.rnd.nextInt(6);
-                    k.house(x - w / 2, z - 6, w, d, storeys(k.rnd),
-                            horizontal ? "south" : "east", false, styleAt(x, z));
+                if (!k.free(hx, hz, hx2, hz2) || k.taken(hx, hz, hx2, hz2)
+                        || intersectsReserved(hx, hz, hx2, hz2)
+                        || onStreet(hx, hz, hx2, hz2)) {
+                    continue;
                 }
+                k.house(hx, hz, w, d, storeys(k.rnd),
+                        horizontal ? "south" : "east", false, styleAt(x, z));
             }
         }
     }

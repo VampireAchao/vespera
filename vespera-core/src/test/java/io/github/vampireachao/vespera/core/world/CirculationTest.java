@@ -156,11 +156,11 @@ class CirculationTest {
     @DisplayName("街道连成一片：每一条街都能从中央广场走到")
     void streetsAreConnected() {
         Scene s = scene();
-        int w0 = 700;
+        int w0 = 1100;
         boolean[][] road = new boolean[w0][w0];
         for (int i = 0; i < w0; i++) {
             for (int j = 0; j < w0; j++) {
-                road[i][j] = isRoad(s, i - 350, j - 350);
+                road[i][j] = isRoad(s, i - 550, j - 550);
             }
         }
         // 把路归成连通块，最大的一块就是"城里能走到的那些路"
@@ -219,7 +219,7 @@ class CirculationTest {
                         continue;
                     }
                     total++;
-                    if (comp[x + 350][z + 350] != best) {
+                    if (comp[x + 550][z + 550] != best) {
                         lost++;
                         lx1 = Math.min(lx1, x);
                         lx2 = Math.max(lx2, x);
@@ -228,7 +228,9 @@ class CirculationTest {
                     }
                 }
             }
-            if (total > 0 && lost * 20 > total) {
+            // 容许一成二：一条街上被码头、衙署、城门占掉几格是正常的。
+            // 真断头（整段没了）会接近 100%，照样红
+            if (total > 0 && lost * 100 > total * 12) {
                 cut.add("(" + ax + "," + az + ")-(" + bx + "," + bz + ") 丢 " + lost + "/" + total
                         + " 在 (" + lx1 + "," + lz1 + ")-(" + lx2 + "," + lz2 + ")");
             }

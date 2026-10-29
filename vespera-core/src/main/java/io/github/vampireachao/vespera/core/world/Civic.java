@@ -791,7 +791,9 @@ final class Civic {
 
     /** 市政厅的书记处与档案库：账簿在地下一层，墙上一排抽屉。 */
     static void townHallOffices(BuildKit k) {
-        int x = -188;
+        // 西移八格：原来东墙压在 -164..-156 那条巷子上，整段巷子被括进档案库里，
+        // 走不进去也出不来（街网检查一次就抓出来了）
+        int x = -196;
         int z = 0;
         int w = 31;
         int d = 25;
@@ -1026,7 +1028,8 @@ final class Civic {
                 {Palette.WOOL_YELLOW, Palette.WOOL_RED},
                 {Palette.WOOL_GREEN, Palette.WOOL_CREAM},
                 {Palette.WOOL_BLUE, Palette.WOOL_YELLOW}};
-        for (int i = 0; i < 10; i++) {
+        // 九顶就够了：第十顶会落到 z=238，出了预留地，那一片该是民居
+        for (int i = 0; i < 9; i++) {
             int sz = 130 + i * 12;
             // 东门在 z=193，门口七格宽（189..197）。摊位排到那儿要让开——
             // 否则人从场里出来，迎面是一个卖烤肉的木棚，门等于没有

@@ -582,7 +582,7 @@ public final class DevServer {
     private static Process launch(Config config, boolean interactive) throws IOException {
         List<String> command = new ArrayList<>(List.of(
                 javaBinary(),
-                "-Xms2G", "-Xmx2G",
+                "-Xms3G", "-Xmx4G",
                 "-Dfile.encoding=UTF-8",
                 "-Duser.language=zh",
                 "-Duser.country=CN"));
