@@ -35,12 +35,27 @@ public final class WalkAudit {
         this.seen = new BitSet(width * depth * height);
     }
 
+    /**
+     * 这一格拦不拦人。
+     *
+     * <p>门算"不拦"：门是关着的，但玩家右键就开。审动线时如果按实心算，
+     * 每一栋房子都会判成"进不去"——而我们想知道的恰恰是"推开门走不走得进去"。
+     * 所以只有门在这个类里享有通行权，玻璃、栅栏、牌子都没有。
+     */
+    private boolean open(int x, int y, int z) {
+        var b = scene.get(x, y, z);
+        if (b == null || b.isAir()) {
+            return true;
+        }
+        return b.id().endsWith("_door");
+    }
+
     /** 脚下实、身上两格空——玩家能站在这一格。 */
     public boolean canStand(int x, int y, int z) {
         if (!inside(x, y, z)) {
             return false;
         }
-        if (scene.isAir(x, y - 1, z) || !scene.isAir(x, y, z) || !scene.isAir(x, y + 1, z)) {
+        if (scene.isAir(x, y - 1, z) || !open(x, y, z) || !open(x, y + 1, z)) {
             return false;
         }
         return true;
@@ -97,7 +112,7 @@ public final class WalkAudit {
                         continue;
                     }
                     // 往上抬一格时，头顶那一格也要是空的（钻石边不算）
-                    if (dy == 1 && !scene.isAir(x, y + 2, z)) {
+                    if (dy == 1 && !open(x, y + 2, z)) {
                         continue;
                     }
                     int ni = index(nx, ny, nz);

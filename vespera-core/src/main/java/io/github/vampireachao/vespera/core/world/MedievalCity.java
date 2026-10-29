@@ -274,6 +274,10 @@ public final class MedievalCity {
         outskirts(k);
         lights(k);
 
+        // 门是最后一件事。上面这些都可能在门口摆过东西——墙根的花、指路牌、
+        // 拴马桩。所以走完最后一遍：门重新钉上，门口那一格腾出来
+        k.sealDoors();
+
         return k;
     }
 
@@ -807,14 +811,29 @@ public final class MedievalCity {
             k.set(alongZ ? cx : kx, springY + radius + 1, alongZ ? cz - WALL_THICK : kz,
                     Palette.STONE_CHISELED);
         }
-        for (int dx = -4; dx <= 4; dx++) {
-            if ((dx & 1) != 0) {
-                continue;
+        // 铁闸。
+        //
+        // 原来是"每两格一根、落到底"——那不是闸，那是一排只挡住一半的柱子：
+        // 通道十一格宽，铁栅只占 5 列，剩下六列是空的，人从缝里侧着身子就出去了。
+        // 图上看着像铁闸，走起来像钻栏杆。
+        //
+        // 现在分两种：开着的门，闸是<b>提起来</b>的，挂在券顶下三格，路面完全空着；
+        // 关着的门，闸是<b>落下来</b>的，十一格一根不缺，从里面能看见外面但出不去。
+        if (open) {
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int y = 12; y <= 14; y++) {
+                    int x = alongZ ? cx + dx : cx + dir * 2;
+                    int z = alongZ ? cz + dir * 2 : cz + dx;
+                    k.set(x, y, z, Palette.IRON_BARS);
+                }
             }
-            for (int y = 0; y <= 8; y++) {
-                int x = alongZ ? cx + dx : cx + dir * 2;
-                int z = alongZ ? cz + dir * 2 : cz + dx;
-                k.set(x, y, z, Palette.IRON_BARS);
+        } else {
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int y = 0; y <= 8; y++) {
+                    int x = alongZ ? cx + dx : cx + dir * 2;
+                    int z = alongZ ? cz + dir * 2 : cz + dx;
+                    k.set(x, y, z, Palette.IRON_BARS);
+                }
             }
         }
         for (int i = 3; i <= 12; i++) {
@@ -1020,6 +1039,10 @@ public final class MedievalCity {
         if (k.taken(x, z, x, z)) {
             return;
         }
+        // 门口不摆东西：柴堆、手推车、马槽都是"沿街的家具"，摆在门口就是堵门
+        if (k.doorFront(x, z)) {
+            return;
+        }
         if (!k.taken(x + dx, z + dz, x + dx, z + dz)) {
             return;
         }
@@ -1097,22 +1120,31 @@ public final class MedievalCity {
             boolean horizontal = side < 2;
             int fixed = side % 2 == 0 ? HALF - 12 : -HALF + 12;
             for (int along = -HALF + 30; along < HALF - 30; along += 26) {
-                int x = horizontal ? along : fixed;
-                int z = horizontal ? fixed : along;
                 if (k.rnd.nextInt(100) >= 55) {
                     continue;
                 }
-                // 这一圈是贴墙的房子，最容易漏掉预留表——它们曾经长进了王室居所的院子里。
-                // 判断必须按<b>真实足迹</b>来：原来按写死的 ±7 查，而门面能到 17 格宽，
-                // 查完是空的、盖下去却压住邻居。街区扩到 ±440 之后这一条立刻炸了出来
+                // 贴墙这一排：房子<b>朝城里长</b>，门也朝城里开。
+                //
+                // 原来是门朝墙开——"facing south" 配在 z=+448 那一侧，门就开在
+                // 房子靠墙的那一面，推门出去是城墙。量出来 14 栋房子门口站不住人，
+                // 全是这条写反了的朝向。
                 int w = 12 + k.rnd.nextInt(6);
                 int d = 10 + k.rnd.nextInt(6);
-                int hx = x - w / 2;
-                int hz = z - 6;
+                String facing = horizontal ? (fixed > 0 ? "north" : "south")
+                        : (fixed > 0 ? "west" : "east");
+                int hx;
+                int hz;
+                if (horizontal) {
+                    hx = along - w / 2;
+                    hz = fixed > 0 ? fixed - d : fixed + 1;
+                } else {
+                    hz = along - d / 2;
+                    hx = fixed > 0 ? fixed - w : fixed + 1;
+                }
                 int hx2 = hx + w - 1;
                 int hz2 = hz + d - 1;
-                if (hz2 >= HALF - WALL_THICK || hx >= HALF - WALL_THICK
-                        || hx2 <= -HALF + WALL_THICK || hz <= -HALF + WALL_THICK) {
+                int lim = HALF - WALL_THICK;
+                if (hx < -lim || hx2 > lim || hz < -lim || hz2 > lim) {
                     continue;
                 }
                 if (!k.free(hx, hz, hx2, hz2) || k.taken(hx, hz, hx2, hz2)
@@ -1120,8 +1152,7 @@ public final class MedievalCity {
                         || onStreet(hx, hz, hx2, hz2)) {
                     continue;
                 }
-                k.house(hx, hz, w, d, storeys(k.rnd),
-                        horizontal ? "south" : "east", false, styleAt(x, z));
+                k.house(hx, hz, w, d, storeys(k.rnd), facing, false, styleAt(hx, hz));
             }
         }
     }

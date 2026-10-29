@@ -164,7 +164,8 @@ final class StreetLife {
                     if (wall == 0) {
                         continue;
                     }
-                    boolean post = Math.floorMod(t, 3) == 0;
+                    // 柱子在门口就是一根挡路的桩子——玩家推门出来迎面撞柱子
+                    boolean post = Math.floorMod(t, 3) == 0 && !k.doorFront(px, pz);
                     if (post) {
                         for (int y = 0; y <= 3; y++) {
                             k.set(px, y, pz, y == 3 ? Palette.STONE_CHISELED : Palette.SPRUCE_LOG);

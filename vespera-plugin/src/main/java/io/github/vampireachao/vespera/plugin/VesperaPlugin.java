@@ -45,7 +45,7 @@ public final class VesperaPlugin extends JavaPlugin {
     private int cityZ;
 
     /** 已建成的版本标记。改了平面就把它加一，下次启动重建。 */
-    public static final String CITY_VERSION = "7";
+    public static final String CITY_VERSION = "9";
     public static final String CAMPUS_VERSION = "1";
 
     @Override

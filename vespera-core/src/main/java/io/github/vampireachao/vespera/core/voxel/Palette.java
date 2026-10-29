@@ -83,6 +83,21 @@ public final class Palette {
     public static final Block POTATO = Block.of("minecraft:potatoes", "age=7");
     public static final Block BEET = Block.of("minecraft:beetroots", "age=3");
     public static final Block HAY = Block.of("minecraft:hay_block", "axis=y");
+
+    /**
+     * 一扇门。门是两格高的：下半 {@code half=lower} 是门板，上半 {@code half=upper} 是门楣那半扇。
+     *
+     * <p>这两格必须成对写，且 {@code facing} 要跟墙的走向一致——门装错了朝向，
+     * 方块照样存在，但它在墙里是斜着卡的，玩家右键打不开，看上去就是"这栋房子没有门"。
+     *
+     * @param wood   oak / spruce / birch / dark_oak / jungle / acacia / iron
+     * @param facing 门所朝的方向（也是它开出去的方向）
+     */
+    public static Block door(String wood, String facing, boolean upper) {
+        return Block.of("minecraft:" + wood + "_door",
+                "facing=" + facing + ",half=" + (upper ? "upper" : "lower")
+                        + ",hinge=left,open=false,powered=false");
+    }
     public static final Block OAK_LEAVES = Block.of("minecraft:oak_leaves", "persistent=true");
     public static final Block DARK_LEAVES = Block.of("minecraft:dark_oak_leaves", "persistent=true");
     public static final Block SPRUCE_LEAVES = Block.of("minecraft:spruce_leaves", "persistent=true");
@@ -97,7 +112,9 @@ public final class Palette {
     public static final Block GOLD = Block.of("minecraft:gold_block");
     public static final Block COPPER = Block.of("minecraft:copper_block");
     public static final Block COPPER_OXIDIZED = Block.of("minecraft:oxidized_copper");
-    public static final Block CHAIN = Block.of("minecraft:chain", "axis=y");
+    // 1.21.9 之后 chain 拆成了 iron_chain / copper_chain，老的 minecraft:chain 已经不存在。
+    // 服务端每次启动都会为它打一行"方块状态不认识"，然后跳过——灯笼全都挂在天上
+    public static final Block CHAIN = Block.of("minecraft:iron_chain", "axis=y");
     public static final Block WOOL_RED = Block.of("minecraft:red_wool");
     public static final Block WOOL_BLUE = Block.of("minecraft:blue_wool");
     public static final Block WOOL_YELLOW = Block.of("minecraft:yellow_wool");
@@ -158,6 +175,14 @@ public final class Palette {
         color("spruce_planks", 0x7a5734);
         color("oak_log", 0x9c7b4d);
         color("oak_planks", 0xb08a52);
+        // 门：比同色的木板略深一档，不然在立面上一整片看不出哪是门
+        color("oak_door", 0x8f6b3c);
+        color("spruce_door", 0x5c4326);
+        color("birch_door", 0xc9bb88);
+        color("dark_oak_door", 0x3d2a14);
+        color("jungle_door", 0xa0703f);
+        color("acacia_door", 0xa85c33);
+        color("iron_door", 0xb9bcc0);
         color("oak_fence", 0xa98450);
         color("spruce_fence", 0x6d4c2c);
         color("dark_oak_fence", 0x453019);
@@ -183,6 +208,7 @@ public final class Palette {
         color("torch", 0xf3c968);
         color("campfire", 0xd08a3a);
         color("chain", 0x4a4a4d);
+        color("iron_chain", 0x4a4a4d);
 
         // 地
         color("grass_block", 0x6f9a4c);

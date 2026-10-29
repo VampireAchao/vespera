@@ -392,21 +392,10 @@ final class Landmarks {
         // 院子：马厩、营房、训练场、井
         int sx = wx1 + 8;
         int sz = wz2 - 34;
-        // 马厩：三面墙 + 单坡顶
-        k.walls(sx, platform + 1, sz, sx + 34, platform + 6, sz + 14, Palette.SPRUCE_PLANK);
-        k.carve(sx + 1, platform + 1, sz + 1, sx + 33, platform + 5, sz + 13);
-        k.carve(sx + 1, platform + 1, sz + 14, sx + 10, platform + 4, sz + 14);
+        // 马厩：同样的做法。原来这间四面封死、门口只是把墙凿开十格宽——马进不去人也不进
+        stalls(k, sx, sz, 35, 15, platform);
         k.roof(sx - 1, sz - 1, sx + 35, sz + 15, platform + 7, false, Palette.SHINGLE_STAIR,
                 Palette.SPRUCE_PLANK, 1);
-        for (int i = 0; i < 4; i++) {
-            k.set(sx + 4 + i * 7, platform + 1, sz + 4, Palette.HAY);
-            k.set(sx + 4 + i * 7, platform + 2, sz + 4, Palette.BARREL);
-        }
-        for (int i = 0; i < 3; i++) {
-            for (int y = platform + 1; y <= platform + 3; y++) {
-                k.set(sx + 36 + i * 2, y, sz + 3, Palette.SPRUCE_FENCE);
-            }
-        }
         // 营房
         int bx = wx2 - 34;
         int bz = wz2 - 26;
@@ -791,17 +780,57 @@ final class Landmarks {
 
     private static void stable(BuildKit k, int x, int z, int w) {
         k.claim("马厩", x - 1, z - 1, x + w, z + 11);
-        k.fill(x - 1, -1, z - 1, x + w, 0, z + 11, Palette.COBBLE);
-        k.walls(x, 1, z, x + w - 1, 7, z + 10, Palette.SPRUCE_PLANK);
-        k.carve(x + 1, 1, z + 1, x + w - 2, 6, z + 9);
-        // 隔栏：每七格一间，门朝北
-        for (int i = 0; i < w - 7; i += 7) {
-            k.fill(x + i, 1, z, x + i, 4, z + 8, Palette.SPRUCE_FENCE);
-            k.set(x + i + 3, 0, z, Palette.HAY);
-            k.set(x + i + 4, 0, z, Palette.HAY);
-        }
-        k.roof(x - 2, z - 2, x + w + 1, z + 11, 8, true, Palette.SHINGLE_STAIR,
+        stalls(k, x, z, w, 11, 0);
+        // 屋面压在墙顶：原来是 8 而墙只到 6，中间留了一圈一格的缝，
+        // 站近了能看进去，雨天漏雨
+        k.roof(x - 2, z - 2, x + w + 1, z + 11, 7, true, Palette.SHINGLE_STAIR,
                 Palette.SPRUCE_PLANK, 1);
+    }
+
+    /**
+     * 一间能用的马厩：双开大门、分栏、草料、水槽、门外的拴马桩。
+     *
+     * <p>原来的写法是"三面墙 + 掏空 + 一排干草"——从外面看是马厩，走进去才发现
+     * 四面都是墙，一扇门也没有，而且栏是拦在<b>墙外面</b>的。马厩的第一功能是
+     * "马进得去、人进得去"，所以这一版先解决门，再解决一间一间的栏与水草。
+     *
+     * @param base 地面那一层（地板顶面）
+     */
+    private static void stalls(BuildKit k, int x, int z, int w, int d, int base) {
+        k.fill(x - 1, base - 1, z - 1, x + w, base, z + d, Palette.COBBLE);
+        k.walls(x, base + 1, z, x + w - 1, base + 6, z + d - 1, Palette.SPRUCE_PLANK);
+        k.carve(x + 1, base + 1, z + 1, x + w - 2, base + 5, z + d - 2);
+        // 大门：朝街那面墙的正中，双开、两格高——马能过，人能推
+        int gx = x + (w - 2) / 2;
+        k.gate(gx, base + 1, z, "north", true, "spruce", "马厩门");
+        // 门两侧挂灯，夜里认得出来这是马厩不是柴房
+        k.set(gx - 1, base + 2, z - 1, Palette.LANTERN);
+        k.set(gx + 2, base + 2, z - 1, Palette.LANTERN);
+        // 分栏：每六格一间。栏到胸口，人看得见马，马跨不出来
+        for (int i = 6; i < w - 3; i += 6) {
+            k.fill(x + i, base + 1, z + 1, x + i, base + 3, z + d - 3, Palette.SPRUCE_FENCE);
+        }
+        // 每间：靠后墙一垛草、一只桶
+        for (int i = 0; i * 6 + 3 < w - 2; i++) {
+            int sx = x + i * 6 + 3;
+            if (sx >= x + w - 2) {
+                break;
+            }
+            k.set(sx, base + 1, z + d - 3, Palette.HAY);
+            k.set(sx, base + 2, z + d - 3, Palette.HAY);
+            k.set(sx + 1, base + 1, z + d - 3, Palette.BARREL);
+        }
+        // 水槽：石沿围一格水，就在走廊边上——马出门前先喝水
+        int tx = x + 2;
+        int tz = z + d - 6;
+        k.fill(tx - 1, base + 1, tz - 1, tx + 2, base + 1, tz + 1, Palette.STONE_CHISELED);
+        k.fill(tx, base + 1, tz, tx + 1, base + 1, tz, Palette.WATER);
+        // 门外：拴马桩与草料车
+        for (int i = 0; i < 3; i++) {
+            k.fill(x + 2 + i * 4, base + 1, z - 2, x + 2 + i * 4, base + 3, z - 2,
+                    Palette.SPRUCE_FENCE);
+        }
+        k.set(x + w - 3, base + 1, z - 2, Palette.HAY);
         k.bump("马厩");
     }
 
@@ -977,16 +1006,8 @@ final class Landmarks {
         // 马厩：西侧，六间
         int sx = x - 28;
         int sz = z + 4;
-        k.fill(sx - 1, -1, sz - 1, sx + 22, 0, sz + 20, Palette.COBBLE);
-        k.walls(sx, 1, sz, sx + 21, 7, sz + 19, Palette.SPRUCE_PLANK);
-        k.carve(sx + 1, 1, sz + 1, sx + 20, 6, sz + 18);
-        for (int i = 0; i < 3; i++) {
-            k.fill(sx + 1, 1, sz + 5 + i * 5, sx + 20, 4, sz + 5 + i * 5, Palette.SPRUCE_FENCE);
-        }
-        for (int i = 0; i < 6; i++) {
-            k.set(sx + 4 + (i % 3) * 6, 0, sz + 2 + (i / 3) * 5, Palette.HAY);
-        }
-        k.roof(sx - 2, sz - 2, sx + 23, sz + 20, 8, false, Palette.SHINGLE_STAIR,
+        stalls(k, sx, sz, 22, 20, 0);
+        k.roof(sx - 2, sz - 2, sx + 23, sz + 20, 7, false, Palette.SHINGLE_STAIR,
                 Palette.SPRUCE_PLANK, 1);
         k.bump("客栈马厩");
     }

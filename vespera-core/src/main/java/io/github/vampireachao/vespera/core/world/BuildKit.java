@@ -51,6 +51,32 @@ public final class BuildKit {
         }
     }
 
+    /**
+     * 一道门。
+     *
+     * <p>为什么要把"门"单独记下来：体素里"墙上有洞"和"有一扇门"长得一模一样，
+     * 都是两格空。可玩家进去的第一件事是右键——洞是打不开的，门能开。
+     * 所以每装一扇就记一笔，收工后可以逐扇问：它是不是两格高、是不是成对、
+     * 从外面走不走得到。
+     */
+    public record Door(String kind, int x, int y, int z, String facing, String wood) {
+
+        public String where() {
+            return kind + " (" + x + "," + y + "," + z + ") 朝" + facing;
+        }
+
+        /** 门外那一格。 */
+        public int outX() {
+            return x + (facing.equals("east") ? 1 : facing.equals("west") ? -1 : 0);
+        }
+
+        public int outZ() {
+            return z + (facing.equals("south") ? 1 : facing.equals("north") ? -1 : 0);
+        }
+    }
+
+    public final java.util.List<Door> doors = new java.util.ArrayList<>();
+
     public void claim(String kind, int x1, int z1, int x2, int z2) {
         claims.add(new Claim(kind, Math.min(x1, x2), Math.min(z1, z2),
                 Math.max(x1, x2), Math.max(z1, z2)));
@@ -91,8 +117,164 @@ public final class BuildKit {
         scene.fill(x1, y1, z1, x2, y2, z2, block);
     }
 
+    /**
+     * 开一道真门：宽一格、高两格，装上下两半门扇，门槛压一块石。
+     *
+     * <p>两格高不是随便定的——玩家身高正好两格。开三格是"洞"，一眼能看到天花；
+     * 开一格是"猫洞"，人过不去。所以门洞只挖两格，第三格留作过梁。
+     *
+     * <p>门扇用 {@code open=false}：玩家右键就开。这是"门"与"洞"唯一的区别。
+     */
+    public void door(int x, int y, int z, String facing, String wood, String kind) {
+        carve(x, y, z, x, y + 1, z);
+        scene.set(x, y, z, Palette.door(wood, facing, false));
+        scene.set(x, y + 1, z, Palette.door(wood, facing, true));
+        scene.set(x, y - 1, z, Palette.STONE_BRICK);
+        doors.add(new Door(kind, x, y, z, facing, wood));
+    }
+
+    /**
+     * 双开大门：宽两格、高两格。马厩、仓房、城门内侧那种能进车的门。
+     *
+     * <p>两扇各自带上下半，合成一扇对开的门——所以它是"两扇门"，不是"一个洞"。
+     */
+    public void gate(int x, int y, int z, String facing, boolean alongX, String wood,
+            String kind) {
+        for (int i = 0; i <= 1; i++) {
+            int px = alongX ? x + i : x;
+            int pz = alongX ? z : z + i;
+            carve(px, y, pz, px, y + 1, pz);
+            scene.set(px, y - 1, pz, Palette.COBBLE);
+            scene.set(px, y, pz, Palette.door(wood, facing, false));
+            scene.set(px, y + 1, pz, Palette.door(wood, facing, true));
+            doors.add(new Door(kind, px, y, pz, facing, wood));
+        }
+    }
+
     public void carve(int x1, int y1, int z1, int x2, int y2, int z2) {
         scene.carve(x1, y1, z1, x2, y2, z2);
+    }
+
+    /**
+     * 收尾：把所有门重新钉一遍，并把门口那一格腾出来。
+     *
+     * <p>城是一样一样堆上去的，后堆的会盖住先堆的。墙根种花的循环、指路牌、
+     * 摊位木架，都会恰好落在门口那一格——图上完全看不出来，进服一推门才发现
+     * 门外立着一截栅栏。门是最后一件事，所以最后再钉一遍。
+     *
+     * <p>只清"软"东西（花、栅栏、牌子、桶、草垛）。清到石头就说明这扇门
+     * 确实被另一栋建筑压住了，那种情况要人去看，不能在这里硬凿。
+     */
+    public int sealDoors() {
+        int fixed = 0;
+        for (Door d : doors) {
+            carve(d.x(), d.y(), d.z(), d.x(), d.y() + 1, d.z());
+            set(d.x(), d.y(), d.z(), Palette.door(d.wood(), d.facing(), false));
+            set(d.x(), d.y() + 1, d.z(), Palette.door(d.wood(), d.facing(), true));
+            // 过梁：门上方那一格必须是实的，两格是门、三格就是洞。
+            // 少数房子的墙在这一格被后盖的东西咬掉了，这里补回去，材料沿用旁边的墙
+            Block over = scene.get(d.x(), d.y() + 2, d.z());
+            if (over == null || over.isAir()) {
+                Block near = wallMaterial(d);
+                set(d.x(), d.y() + 2, d.z(), near);
+                fixed++;
+            }
+            // 门口两格：软装饰清掉，石头留着
+            for (int dy = 0; dy <= 1; dy++) {
+                Block out = scene.get(d.outX(), d.y() + dy, d.outZ());
+                if (out != null && soft(out.id())) {
+                    carve(d.outX(), d.y() + dy, d.outZ(), d.outX(), d.y() + dy, d.outZ());
+                    fixed++;
+                }
+            }
+            // 屋里正对门那一格：家什要清掉，否则推门进去迎面一只桶
+            int inX = d.x() - (d.outX() - d.x());
+            int inZ = d.z() - (d.outZ() - d.z());
+            for (int dy = 0; dy <= 1; dy++) {
+                Block in = scene.get(inX, d.y() + dy, inZ);
+                if (in != null && soft(in.id())) {
+                    carve(inX, d.y() + dy, inZ, inX, d.y() + dy, inZ);
+                    fixed++;
+                }
+            }
+            // 门口那一格底下不能是空的——否则推门出去先掉一格。
+            // 这种地方多半是街道边缘没铺到，补一块石阶就成
+            Block under = scene.get(d.outX(), d.y() - 1, d.outZ());
+            if (under == null || under.isAir()) {
+                set(d.outX(), d.y() - 1, d.outZ(), Palette.COBBLE);
+                fixed++;
+            }
+        }
+        return fixed;
+    }
+
+    /** 这一面出去能不能站人：脚下有地、身上两格空。 */
+    private boolean canExit(int ax, int az, int bx, int bz, String side) {
+        int x = side.equals("east") ? bx + 1 : side.equals("west") ? ax - 1 : (ax + bx) / 2;
+        int z = side.equals("south") ? bz + 1 : side.equals("north") ? az - 1 : (az + bz) / 2;
+        Block under = scene.get(x, -1, z);
+        if (under == null || under.isAir()) {
+            return false;
+        }
+        for (int dy = 0; dy <= 1; dy++) {
+            Block b = scene.get(x, dy, z);
+            if (b != null && !b.isAir()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 门开哪一面：指定的那一面出不去就换对面；两个都不行就用原来的。 */
+    private String exitSide(int ax, int az, int bx, int bz, String front) {
+        if (canExit(ax, az, bx, bz, front)) {
+            return front;
+        }
+        String back = switch (front) {
+            case "south" -> "north";
+            case "north" -> "south";
+            case "east" -> "west";
+            default -> "east";
+        };
+        return canExit(ax, az, bx, bz, back) ? back : front;
+    }
+
+    /** 这一格是不是某扇门的门口——柱廊立柱子之前必须先问一句。 */
+    public boolean doorFront(int x, int z) {
+        for (Door d : doors) {
+            if (d.outX() == x && d.outZ() == z) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 门旁边那堵墙用什么材料，过梁就跟着用什么。 */
+    private Block wallMaterial(Door d) {
+        int[] dx = {1, -1, 0, 0};
+        int[] dz = {0, 0, 1, -1};
+        for (int i = 0; i < 4; i++) {
+            Block b = scene.get(d.x() + dx[i], d.y() + 2, d.z() + dz[i]);
+            if (b != null && !b.isAir()) {
+                return b;
+            }
+            Block c = scene.get(d.x() + dx[i], d.y() + 1, d.z() + dz[i]);
+            if (c != null && !c.isAir() && !c.id().endsWith("_door")) {
+                return c;
+            }
+        }
+        return Palette.STONE_BRICK;
+    }
+
+    /** 花、栅栏、牌子、桶、草垛这些"摆上去的"，不是"砌上去的"。 */
+    private static boolean soft(String id) {
+        return id.contains("fence") || id.contains("sign") || id.contains("lantern")
+                || id.contains("flower") || id.contains("poppy") || id.contains("dandelion")
+                || id.contains("pot") || id.contains("barrel") || id.contains("crate")
+                || id.contains("hay") || id.contains("torch") || id.contains("grass")
+                || id.contains("wheat") || id.contains("carpet") || id.contains("sapling")
+                || id.contains("lantern") || id.contains("chain") || id.contains("ladder")
+                || id.contains("trapdoor") || id.contains("candle");
     }
 
     public boolean free(int x1, int z1, int x2, int z2) {
@@ -488,30 +670,59 @@ public final class BuildKit {
             }
         }
 
-        // 门
+        // 门：宽一格、高两格，装真门扇。
+        //
+        // 原来是宽两格、高三格的"洞"——能走进去，但右键没反应，抬头能看见屋架。
+        // 玩家的身高正好两格，所以门就是两格；第三格留成过梁，门上方才是墙。
         int cx = (ax + bx) / 2;
         int cz = (az + bz) / 2;
-        switch (front) {
-            case "south" -> {
+        String wood = switch (style) {
+            case 1 -> "spruce";
+            case 2 -> "birch";
+            case 3 -> "dark_oak";
+            default -> "oak";
+        };
+        // 门开在哪一面：先看指定的那一面，出不去就换对面。
+        //
+        // 街区是网格排的，但网格线不全是街——两条街之间还夹着后院与巷道。
+        // 门正好开在"后院那一面"时，门外就是邻居的墙，这一栋等于没有门。
+        // 与其事后封死，不如开的时候就换一面。
+        String side = exitSide(ax, az, bx, bz, front);
+        String hood = side.equals("south") ? "north"
+                : side.equals("north") ? "south"
+                : side.equals("east") ? "west" : "east";
+        if (side.equals("south")) {
+            if (!shop) {
+                door(cx, 0, bz, "south", wood, "民居");
+            } else {
                 carve(cx - 1, 0, bz, cx, 2, bz);
-                set(cx, 3, bz, Block.stairs(Palette.SHINGLE_STAIR, "north"));
-                set(cx - 2, 2, bz, Palette.LANTERN);
             }
-            case "north" -> {
+            set(cx, 2, bz, Block.stairs(Palette.SHINGLE_STAIR, hood));
+            set(cx - 2, 2, bz, Palette.LANTERN);
+        } else if (side.equals("north")) {
+            if (!shop) {
+                door(cx, 0, az, "north", wood, "民居");
+            } else {
                 carve(cx - 1, 0, az, cx, 2, az);
-                set(cx, 3, az, Block.stairs(Palette.SHINGLE_STAIR, "south"));
-                set(cx - 2, 2, az, Palette.LANTERN);
             }
-            case "east" -> {
+            set(cx, 2, az, Block.stairs(Palette.SHINGLE_STAIR, hood));
+            set(cx - 2, 2, az, Palette.LANTERN);
+        } else if (side.equals("east")) {
+            if (!shop) {
+                door(bx, 0, cz, "east", wood, "民居");
+            } else {
                 carve(bx, 0, cz - 1, bx, 2, cz);
-                set(bx, 3, cz, Block.stairs(Palette.SHINGLE_STAIR, "west"));
-                set(bx, 2, cz - 2, Palette.LANTERN);
             }
-            default -> {
+            set(bx, 2, cz, Block.stairs(Palette.SHINGLE_STAIR, hood));
+            set(bx, 2, cz - 2, Palette.LANTERN);
+        } else {
+            if (!shop) {
+                door(ax, 0, cz, "west", wood, "民居");
+            } else {
                 carve(ax, 0, cz - 1, ax, 2, cz);
-                set(ax, 3, cz, Block.stairs(Palette.SHINGLE_STAIR, "east"));
-                set(ax, 2, cz - 2, Palette.LANTERN);
             }
+            set(ax, 2, cz, Block.stairs(Palette.SHINGLE_STAIR, hood));
+            set(ax, 2, cz - 2, Palette.LANTERN);
         }
 
         // 门口：门槛石与门外的一件家什。门洞本身是空的，人一眼看进去什么都没有；
