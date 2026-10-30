@@ -1,0 +1,26 @@
+# 仓库执事 · 祭器库。
+#
+# 只发一次面包。第二句话是"你领过了"——重复领取的口子必须在这里堵上。
+
+id: temple-steward
+speaker: 仓库执事
+style: chat
+entry: hail
+
+nodes:
+  hail:
+    lines:
+      - "「领东西？」他手上还沾着面粉。"
+    options:
+      - label: "领面包。"
+        goto: give
+      - label: "（摆手）"
+        close: true
+
+  give:
+    lines:
+      - "「三十个。教皇交代过。」"
+      - "「别在这儿吃，上面那层不许掉渣。」"
+    options:
+      - label: "（收下）"
+        close: true

@@ -29,7 +29,12 @@ public final class VesperaPlugin extends JavaPlugin {
             "dialogues/bell-test.yml",
             "dialogues/altar-warning.yml",
             "dialogues/dorm-night.yml",
-            "dialogues/patrol.yml"
+            "dialogues/patrol.yml",
+            "dialogues/temple-pope.yml",
+            "dialogues/temple-steward.yml",
+            "dialogues/temple-librarian.yml",
+            "dialogues/temple-herald.yml",
+            "dialogues/temple-warden.yml"
     };
 
     private StoryState state;
@@ -44,9 +49,10 @@ public final class VesperaPlugin extends JavaPlugin {
     private int cityX;
     private int cityZ;
     private ChurchBridge church;
+    private QuestService quest;
 
     /** 已建成的版本标记。改了平面就把它加一，下次启动重建。 */
-    public static final String CITY_VERSION = "12";
+    public static final String CITY_VERSION = "13";
     public static final String CAMPUS_VERSION = "1";
 
     @Override
@@ -63,9 +69,9 @@ public final class VesperaPlugin extends JavaPlugin {
         dialogues = new DialogueService(this, state, races, policy);
         clock = new ClockService(this);
         npcs = new NpcService(this);
+        quest = new QuestService(this);
 
         int loaded = dialogues.load();
-        npcs.spawnAll();
         city = new CityApplier(this);
         campus = new CampusBuilder(this);
         church = new ChurchBridge(this);
@@ -73,6 +79,8 @@ public final class VesperaPlugin extends JavaPlugin {
         buildCity();
         // 城铺完才有那块钻石，所以登记教堂必须排在建城之后
         registerChurch();
+        // 圣堂里那五个锚点用 city: 相对坐标，必须先有城心与基面
+        npcs.spawnAll();
         buildIfNeeded("campus", CAMPUS_VERSION, getConfig().getBoolean("campus.auto", false),
                 CampusBuilder::originFrom, (world, ox, oz) -> campus.build(world, ox, oz));
         grantAdmins();
@@ -276,5 +284,9 @@ public final class VesperaPlugin extends JavaPlugin {
 
     public ChurchBridge church() {
         return church;
+    }
+
+    public QuestService quest() {
+        return quest;
     }
 }

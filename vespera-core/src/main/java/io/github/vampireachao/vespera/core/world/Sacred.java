@@ -277,6 +277,9 @@ final class Sacred {
                 k.set(x, 7, z, Palette.GOLD);
             }
         }
+        // 地牢与服务点都要在大厅铺好之后再做：地牢是从大厅往下挖的
+        // （放在最后，顺序写反会把刚挖的洞重新铺上地板）
+
         // 正门开在<b>东面</b>，不开南面。
         //
         // 南面是那条直上顶坛的大台阶——台阶从广场一格一格爬到 y=8，
@@ -376,6 +379,8 @@ final class Sacred {
             }
         }
 
+        servicePoints(k);
+
         // 窗：每级台身四面各开几扇，光落在楼梯与房间里
         for (int t = 0; t < TIERS; t++) {
             int r = BASE - t * INSET;
@@ -393,6 +398,96 @@ final class Sacred {
                 }
             }
         }
+    }
+
+    /**
+     * 圣堂地牢，以及五处"办事的地方"。
+     *
+     * <p>地牢是这一轮唯一一处<b>往地下挖</b>的建筑。它必须用 {@code excavate} 而不是
+     * {@code carve}：carve 只是"场景里不画这一格"，落地器只写场景里有的方块，
+     * 所以在图上挖了个洞、进服一挖还是实心石头。excavate 会把它记成"明确挖掉"。
+     *
+     * <p>红石用块不用矿：一块红石块挖下来 9 个红石，任何镐都挖得动。
+     * 矿石要铁镐，一个刚进服、身上只有木镐的人会卡在这儿。
+     */
+    /**
+     * 地牢要从"整座城都铺完"之后才挖，所以它由 {@link MedievalCity} 在最后调用。
+     *
+     * <p>这一条是被量出来的：地牢原本写在塔内构造里，结果 {@code fillGaps} 后来
+     * 又把地面填缝填回去了——梯口那一格重新变成实心，人下不去，而图上完全正常。
+     */
+    static void undercroft(BuildKit k) {
+        int x1 = TempleSpots.DUNGEON_X1;
+        int x2 = TempleSpots.DUNGEON_X2;
+        int z1 = TempleSpots.DUNGEON_Z1;
+        int z2 = TempleSpots.DUNGEON_Z2;
+        int f = TempleSpots.DUNGEON_FLOOR;
+
+        // 先砌实一整块，再把当中挖空——比"四壁各砌一遍"少一半代码，也不会漏角
+        k.fill(x1, f, z1, x2, f + 5, z2, Palette.STONE_BRICK);
+        k.excavate(x1 + 1, f + 1, z1 + 1, x2 - 1, f + 4, z2 - 1);
+
+        // 血石：嵌在北墙与东西两壁。一块 9 个红石，够 8 个的门槛
+        for (int x = x1 + 4; x <= x2 - 4; x += 6) {
+            k.set(x, f + 2, z1, Palette.REDSTONE_BLOCK);
+            k.set(x, f + 3, z1, Palette.REDSTONE_BLOCK);
+        }
+        for (int z = z1 + 6; z <= z2 - 6; z += 8) {
+            k.set(x1, f + 2, z, Palette.REDSTONE_BLOCK);
+            k.set(x2, f + 2, z, Palette.REDSTONE_BLOCK);
+        }
+
+        // 灯：地牢里没有光就没有"往下走"的感觉
+        for (int x = x1 + 6; x <= x2 - 6; x += 10) {
+            for (int z = z1 + 6; z <= z2 - 6; z += 10) {
+                k.set(x, f + 4, z, Palette.LANTERN);
+            }
+        }
+        // 几间空牢房：铁栅一列，给"地牢"一个说法
+        for (int z = z1 + 4; z <= z1 + 12; z++) {
+            k.set(x1 + 6, f + 1, z, Palette.IRON_BARS);
+            k.set(x1 + 6, f + 2, z, Palette.IRON_BARS);
+        }
+        k.set(x1 + 6, f + 1, z1 + 8, null);
+        k.set(x1 + 6, f + 2, z1 + 8, null);
+
+        // -- 下行梯与通道，必须放在石室砌完之后 --
+        //
+        // 顺序写反过一次：先把通道挖开、再砌石室，石室那面南墙又把通道封上了。
+        // 结果就是"图上有梯、走过去掉不下去"，测试一量就红。
+        for (int i = 0; i < 8; i++) {
+            int y = -2 - i;
+            int z = 30 - i;
+            for (int x = -26; x <= -24; x++) {
+                k.set(x, y, z, Block.stairs("minecraft:stone_brick_stairs", "north"));
+                k.excavate(x, y + 1, z, x, y + 3, z);
+            }
+        }
+        // 梯口：大厅地面在三格宽的地方开一个口
+        k.excavate(-26, -1, 30, -24, -1, 31);
+        // 梯底接石室：打通南墙（z=22），并把 z=23 这一段也留空。
+        // 从 f+1 起：f 那一层是最后一级梯的踏面，挖掉就等于把人悬在梯口
+        k.excavate(-26, f + 1, 22, -24, f + 4, 23);
+
+        // 地牢里那只箱子必须放在挖空之后：放早了会被上面那一步 excavate 一起挖掉
+        k.set(TempleSpots.DUNGEON_CHEST.x(), TempleSpots.DUNGEON_CHEST.y(),
+                TempleSpots.DUNGEON_CHEST.z(), Palette.CHEST);
+    }
+
+    /**
+     * 五处服务点的"物件"。箱子、讲经台、座椅各就各位，人由插件站在旁边。
+     *
+     * <p>坐标全部来自 {@link TempleSpots}——建造和插件判定必须用同一份数字，
+     * 各写一遍的结果是"点了没反应"，而图上完全正常。
+     */
+    private static void servicePoints(BuildKit k) {
+        k.set(TempleSpots.WAREHOUSE_CHEST.x(), TempleSpots.WAREHOUSE_CHEST.y(),
+                TempleSpots.WAREHOUSE_CHEST.z(), Palette.CHEST);
+        k.set(TempleSpots.LIBRARY_LECTERN.x(), TempleSpots.LIBRARY_LECTERN.y(),
+                TempleSpots.LIBRARY_LECTERN.z(), Palette.LECTERN);
+        k.set(TempleSpots.COUNCIL_SEAT.x(), TempleSpots.COUNCIL_SEAT.y(),
+                TempleSpots.COUNCIL_SEAT.z(),
+                Block.stairs("minecraft:stone_brick_stairs", "east"));
     }
 
     /** 这一层的楼梯在哪个 z 上（楼板要在这里开洞）。 */

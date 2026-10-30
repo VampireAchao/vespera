@@ -1,0 +1,32 @@
+# 藏书阁执事 · 档案室。
+#
+# 讲经台上那一段"祝圣"的记载，是金锭的第一处来路。剧本只负责说"在哪儿"，
+# 真正给钱的是玩家去点讲经台那一下。
+#
+# 原来还有一个 hint2 节点（"查过了？那锭金你收着吧"），但没有任何一条 option
+# 指向它——剧本 lint 一次就点出来了：走不到的节点等于没写。
+
+id: temple-librarian
+speaker: 藏书阁执事
+style: dialog
+entry: hail
+
+nodes:
+  hail:
+    lines:
+      - "「找什么？」她没停下手里的抄写。"
+    options:
+      - label: "找「祝圣」的记载。"
+        goto: hint
+      - label: "随便看看。"
+        close: true
+
+  hint:
+    lines:
+      - "「第三排，靠里的那张台子。」"
+      - "「翻到就拿来给我看一眼。看过了才付钱。」"
+    options:
+      - label: "（去看）"
+        close: true
+        flags:
+          - told_archive

@@ -1,0 +1,28 @@
+# 议事司仪 · 祭司议事厅。
+#
+# 会议的"参与"就是入座。司仪只在旁边说一句规矩：末座不许开口。
+
+id: temple-herald
+speaker: 议事司仪
+style: chat
+entry: hail
+
+nodes:
+  hail:
+    lines:
+      - "「旁听？」他指了指末座。"
+    options:
+      - label: "是。"
+        goto: seat
+      - label: "（点头走开）"
+        close: true
+
+  seat:
+    lines:
+      - "「坐满一场，别出声。」"
+      - "「散会时有一锭金，按规矩给旁听的。」"
+    options:
+      - label: "（入座）"
+        close: true
+        flags:
+          - told_council

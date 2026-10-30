@@ -38,6 +38,37 @@ npcs:
     dialogue: bell-test
     enabled: true
 
+  # -- 圣堂里的五个人 ------------------------------------------------------
+  #
+  # at 用 city:x,y,z：场景坐标，跟着城心与基面走。城心是运行时算出来的
+  # （这张种子图落在 512,512），写死绝对坐标换张图他们就站到野地里了。
+  # 坐标来自 core 的 TempleSpots，与砌箱子/讲经台用的是同一份数字。
+  - id: temple-pope
+    name: "教皇"
+    world: world
+    at: city:-8,49,-11
+    dialogue: temple-pope
+  - id: temple-steward
+    name: "仓库执事"
+    world: world
+    at: city:-47,9,-49
+    dialogue: temple-steward
+  - id: temple-librarian
+    name: "藏书阁执事"
+    world: world
+    at: city:-43,17,-40
+    dialogue: temple-librarian
+  - id: temple-herald
+    name: "议事司仪"
+    world: world
+    at: city:-32,25,-36
+    dialogue: temple-herald
+  - id: temple-warden
+    name: "地牢看守"
+    world: world
+    at: city:-22,-8,16
+    dialogue: temple-warden
+
 # 世界资产目录（相对服务器根目录）。
 #
 # regions.yml、结构文件、布置清单都在这里，由 vespera-world 模块产出，./dev.sh 自动同步。

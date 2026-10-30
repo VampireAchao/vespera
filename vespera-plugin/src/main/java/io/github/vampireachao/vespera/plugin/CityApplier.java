@@ -57,8 +57,24 @@ public final class CityApplier {
      * <p>场景坐标 y=0 落在 {@code ground} 上，所以世界 Y = ground + 场景 y。
      */
     public int groundLevel(World world, int ox, int oz) {
-        return groundOf(world, ox, oz);
+        // 带一次缓存：groundOf 要在地形上采一圈样，而右键箱子、跟人说话、
+        // 每一条自检都会问它一遍。不缓存的话，一次右键要扫几百个方块。
+        if (world != null && world.equals(groundWorld) && ox == groundX && oz == groundZ
+                && groundY != Integer.MIN_VALUE) {
+            return groundY;
+        }
+        int ground = groundOf(world, ox, oz);
+        groundWorld = world;
+        groundX = ox;
+        groundZ = oz;
+        groundY = ground;
+        return ground;
     }
+
+    private World groundWorld;
+    private int groundX;
+    private int groundZ;
+    private int groundY = Integer.MIN_VALUE;
 
     // -- 入口 ---------------------------------------------------------------
 
@@ -414,6 +430,20 @@ public final class CityApplier {
             }
             world.getBlockAt(x, y, z).setBlockData(data, false);
             placed++;
+        }
+        // 明确要求挖掉的格子：地牢要真的在石头里凿出洞，而不是只从场景里删掉。
+        // 这一步必须在写方块之后——先挖后砌，砌的东西会被自己挖掉。
+        for (int[] cell : scene.airCells()) {
+            int x = ox + cell[0];
+            int y = ground + cell[1];
+            int z = oz + cell[2];
+            if (y < world.getMinHeight() || y >= world.getMaxHeight()) {
+                continue;
+            }
+            if (!world.getBlockAt(x, y, z).isEmpty()) {
+                world.getBlockAt(x, y, z).setType(Material.AIR, false);
+                placed++;
+            }
         }
         return placed;
     }

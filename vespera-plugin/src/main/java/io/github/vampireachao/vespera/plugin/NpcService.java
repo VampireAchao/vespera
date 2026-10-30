@@ -127,6 +127,22 @@ public final class NpcService {
         Location base;
         if (at == null || at.equals("world-spawn")) {
             base = world.getSpawnLocation();
+        } else if (at.startsWith("city:")) {
+            // city:x,y,z —— 场景坐标，跟着城心与基面走。
+            //
+            // 圣堂里的锚点必须用这种写法：城心是运行时算出来的（这张种子图落在了
+            // 512,512），写死绝对坐标的话，换一张种子图这五个人就站到野地里去了。
+            // 格式用逗号分隔，因为冒号已经占了前缀、空格留给 offset。
+            String[] parts = at.substring("city:".length()).trim().split("\\s*,\\s*");
+            World city = RegionService.resolve(plugin.getConfig().getString("city.world", "world"));
+            if (city == null || parts.length < 3) {
+                throw new IllegalArgumentException("city: 坐标写法是 city:x,y,z，收到的是 " + at);
+            }
+            int ground = plugin.city().groundLevel(city, plugin.cityX(), plugin.cityZ());
+            base = new Location(city,
+                    plugin.cityX() + Integer.parseInt(parts[0]) + 0.5,
+                    ground + Integer.parseInt(parts[1]),
+                    plugin.cityZ() + Integer.parseInt(parts[2]) + 0.5);
         } else if (at.equals("campus-gate")) {
             int ox = plugin.getConfig().getInt("campus.origin-x", 370);
             int oz = plugin.getConfig().getInt("campus.origin-z", 0)

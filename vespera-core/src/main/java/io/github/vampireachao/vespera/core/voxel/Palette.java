@@ -118,6 +118,13 @@ public final class Palette {
      * <b>吸血鬼</b>祭坛的触发块。材料放错，右键就永远不会有反应。
      */
     public static final Block DIAMOND = Block.of("minecraft:diamond_block");
+    /**
+     * 红石块。圣堂地牢的墙上嵌着它，是"血石"。
+     *
+     * <p>为什么用块而不是矿石：转职要 8 个红石粉，一块红石块挖下来正好 9 个，
+     * 而且任何镐都挖得动——矿石要铁镐，一个刚进服的人会卡在这里。
+     */
+    public static final Block REDSTONE_BLOCK = Block.of("minecraft:redstone_block");
     public static final Block COPPER = Block.of("minecraft:copper_block");
     public static final Block COPPER_OXIDIZED = Block.of("minecraft:oxidized_copper");
     // 1.21.9 之后 chain 拆成了 iron_chain / copper_chain，老的 minecraft:chain 已经不存在。
@@ -247,6 +254,7 @@ public final class Palette {
         // 金属与织物
         color("iron_block", 0xd2d2d2);
         color("diamond_block", 0x5cdbd5);
+        color("redstone_block", 0xb01818);
         color("iron_bars", 0x8d8d90);
         color("gold_block", 0xefcf4a);
         color("copper_block", 0xb06b4a);

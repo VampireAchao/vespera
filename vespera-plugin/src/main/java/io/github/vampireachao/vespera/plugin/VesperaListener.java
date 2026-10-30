@@ -2,7 +2,9 @@ package io.github.vampireachao.vespera.plugin;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -31,7 +33,27 @@ public final class VesperaListener implements Listener {
         if (event.getPlayer().isSneaking()) {
             return;
         }
+        // 先给东西再说话：道具挂在"第一次见面"上，不挂在剧本的某个选项上——
+        // 那样玩家读完就关，东西永远拿不到
+        plugin.quest().onTalk(event.getPlayer(), id);
         plugin.npcs().talk(event.getPlayer(), id);
+    }
+
+    /**
+     * 右键箱子/讲经台/座椅：圣堂里的四处服务点。
+     *
+     * <p>按坐标认，不按"箱子就是仓库"认——全城有上千只箱子。认错了的表现是
+     * "随手开个箱子，多了三十个面包"，比点了没反应更难查。
+     */
+    @EventHandler
+    public void onInteractBlock(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) {
+            return;
+        }
+        if (plugin.quest().click(event.getPlayer(), event.getClickedBlock())) {
+            // 认领了就把事件拦下来：别让箱子真的打开、别让讲经台翻页
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler

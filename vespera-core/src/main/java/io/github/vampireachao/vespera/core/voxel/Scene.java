@@ -18,6 +18,15 @@ import java.util.Map;
 public final class Scene {
 
     private final Map<Long, Block> blocks = new HashMap<>(1 << 20);
+    /**
+     * 明确要求清空的格子。
+     *
+     * <p>为什么需要它：{@link #set} 传 null 只是"把这一格从场景里删掉"，而落地器只写
+     * 场景里有的方块——删掉不等于在世界里挖开。地上的建筑从来不需要说这句话
+     * （那里原本就是空的），但<b>往地下挖</b>必须说：地牢要真的在石头里凿出一个洞，
+     * 而不是在图上画一个洞、进服一挖还是实心。
+     */
+    private final java.util.Set<Long> air = new java.util.HashSet<>();
     private int minX = Integer.MAX_VALUE;
     private int maxX = Integer.MIN_VALUE;
     private int minY = Integer.MAX_VALUE;
@@ -33,6 +42,7 @@ public final class Scene {
             blocks.remove(key(x, y, z));
             return;
         }
+        air.remove(key(x, y, z));
         blocks.put(key(x, y, z), block);
         if (x < minX) {
             minX = x;
@@ -65,6 +75,36 @@ public final class Scene {
     public boolean isAir(int x, int y, int z) {
         Block block = get(x, y, z);
         return block == null || block.isAir();
+    }
+
+    /**
+     * 把这一格标成"要挖掉"。落地器会真的把它写成空气。
+     *
+     * <p>和 {@code set(..., null)} 的区别：那个只是不在场景里画这一格，
+     * 世界里的石头还在。挖进地形必须用这个。
+     */
+    public void air(int x, int y, int z) {
+        blocks.remove(key(x, y, z));
+        air.add(key(x, y, z));
+    }
+
+    /** 这一格是不是被明确要求挖掉。 */
+    public boolean isCleared(int x, int y, int z) {
+        return air.contains(key(x, y, z));
+    }
+
+    /** 所有要挖掉的格子，给落地器用。 */
+    public java.util.List<int[]> airCells() {
+        java.util.List<int[]> out = new java.util.ArrayList<>(air.size());
+        for (long k : air) {
+            out.add(new int[] {xOf(k), yOf(k), zOf(k)});
+        }
+        return out;
+    }
+
+    /** 要挖掉的格子数。 */
+    public int airCount() {
+        return air.size();
     }
 
     public void fill(int x1, int y1, int z1, int x2, int y2, int z2, Block block) {
@@ -241,5 +281,18 @@ public final class Scene {
             throw new IllegalArgumentException("坐标超出场景范围：" + x + "," + y + "," + z);
         }
         return ((long) (x + LIMIT) << 26) | ((long) (z + LIMIT) << 11) | (y + 256);
+    }
+
+    /** 从 {@link #key} 反解。位序必须与它一致：x 高、z 中（15 位）、y 低（11 位）。 */
+    public static int xOf(long key) {
+        return (int) (key >> 26) - LIMIT;
+    }
+
+    public static int zOf(long key) {
+        return (int) ((key >> 11) & 0x7FFF) - LIMIT;
+    }
+
+    public static int yOf(long key) {
+        return (int) (key & 0x7FF) - 256;
     }
 }

@@ -30,7 +30,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS =
             List.of("doctor", "where", "talk", "dialogues", "state", "clock", "npc", "build", "verify",
-                    "church", "reload");
+                    "church", "quest", "reload");
 
     private final VesperaPlugin plugin;
 
@@ -45,6 +45,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "doctor" -> doctor(sender);
             case "church" -> church(sender);
+            case "quest" -> quest(sender);
             case "where" -> where(sender);
             case "talk" -> talk(sender, args);
             case "dialogues" -> dialogues(sender);
@@ -96,6 +97,31 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         String block = altar.getBlock().getType() == Material.DIAMOND_BLOCK ? "钻石块" : "不是钻石块";
         String church = plugin.church().registered(altar) ? "已登记教堂" : "教堂点未登记";
         return ChurchBridge.describe(altar) + " · " + block + " · " + church;
+    }
+
+    /**
+     * {@code /vespera quest}：朝圣备礼还差什么，以及每一样从哪儿来。
+     *
+     * <p>玩家真正会问的是"我还缺什么"。这个命令回答它，并且<b>只说背包里的数</b>——
+     * 我们不复述一套进度账本，因为转职那一刻查的是背包，不是我们的旗标。
+     */
+    private void quest(CommandSender sender) {
+        if (sender instanceof Player player) {
+            for (String line : plugin.quest().status(player)) {
+                sender.sendMessage(Component.text(line).color(NamedTextColor.GRAY));
+            }
+            return;
+        }
+        // 控制台：把四处服务点在世界里的实际坐标打出来，用来核对换算
+        World world = RegionService.resolve(plugin.getConfig().getString("city.world", "world"));
+        sender.sendMessage(Component.text("维斯佩拉 · 圣堂服务点").color(NamedTextColor.GRAY));
+        for (io.github.vampireachao.vespera.core.world.TempleSpots.Marker marker
+                : io.github.vampireachao.vespera.core.world.TempleSpots.MARKERS) {
+            Location at = world == null ? null : plugin.quest().where(world, marker);
+            sender.sendMessage(Component.text("  " + marker.label() + "  "
+                    + (at == null ? "找不到主城世界" : ChurchBridge.describe(at)))
+                    .color(NamedTextColor.GRAY));
+        }
     }
 
     /**

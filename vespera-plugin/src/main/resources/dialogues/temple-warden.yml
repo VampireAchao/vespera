@@ -1,0 +1,30 @@
+# 地牢看守 · 圣堂地牢。
+#
+# 红石不从他手里给——他自己也说过：墙上的血石得自己凿。
+# 他只在玩家带着八颗红石回来的时候，付两锭金。
+
+id: temple-warden
+speaker: 地牢看守
+style: dialog
+entry: hail
+
+nodes:
+  hail:
+    lines:
+      - "「下面没有灯，自己拿。」"
+      - "他朝墙角那只箱子抬了抬下巴。"
+    options:
+      - label: "墙上的红是什么？"
+        goto: blood
+      - label: "（走开）"
+        close: true
+
+  blood:
+    lines:
+      - "「血石。凿下来是红石，八颗就够。」"
+      - "「凿够了回来找我，我付金子——两锭，别嫌少。」"
+    options:
+      - label: "（记下了）"
+        close: true
+        flags:
+          - told_bloodstone

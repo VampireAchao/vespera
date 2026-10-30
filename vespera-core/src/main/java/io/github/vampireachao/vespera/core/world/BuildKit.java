@@ -156,6 +156,30 @@ public final class BuildKit {
     }
 
     /**
+     * 挖进地形：把这一块里的方块<b>真的</b>清掉。
+     *
+     * <p>和 {@link #carve} 的差别是它管到世界里去。carve 只是"场景里不画这一格"，
+     * 落地器只写场景里有的方块，所以地上的房子用 carve 就够了——那里本来就是空的。
+     * 但地下不是：地牢要在石头里凿出一个洞，用 carve 只会凿出一个"图上有、进服是实心"
+     * 的洞。
+     */
+    public void excavate(int x1, int y1, int z1, int x2, int y2, int z2) {
+        int ax = Math.min(x1, x2);
+        int bx = Math.max(x1, x2);
+        int ay = Math.min(y1, y2);
+        int by = Math.max(y1, y2);
+        int az = Math.min(z1, z2);
+        int bz = Math.max(z1, z2);
+        for (int x = ax; x <= bx; x++) {
+            for (int y = ay; y <= by; y++) {
+                for (int z = az; z <= bz; z++) {
+                    scene.air(x, y, z);
+                }
+            }
+        }
+    }
+
+    /**
      * 收尾：把所有门重新钉一遍，并把门口那一格腾出来。
      *
      * <p>城是一样一样堆上去的，后堆的会盖住先堆的。墙根种花的循环、指路牌、

@@ -274,6 +274,9 @@ public final class MedievalCity {
         outskirts(k);
         lights(k);
 
+        // 地牢要最后挖：fillGaps 会把"空着的列"重新填上土，挖早了等于白挖
+        Sacred.undercroft(k);
+
         // 门是最后一件事。上面这些都可能在门口摆过东西——墙根的花、指路牌、
         // 拴马桩。所以走完最后一遍：门重新钉上，门口那一格腾出来
         k.sealDoors();

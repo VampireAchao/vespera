@@ -1,0 +1,45 @@
+# 教皇 · 顶坛前厅。
+#
+# 这一场只说一件事：门就在上面，钥匙不是许可，是四样东西。
+# 不给他任何"你被选中了"的话——按设计书的铁律，转化必须由玩家亲手完成。
+
+id: temple-pope
+speaker: 教皇
+style: dialog
+entry: hail
+
+nodes:
+  hail:
+    lines:
+      - "「你走到这儿了。」他没有抬头，手还按在经页上。"
+      - "「上面那道门不认人，只认东西。」"
+    options:
+      - label: "什么东西？"
+        goto: list
+      - label: "我先看看。" 
+        close: true
+
+  list:
+    lines:
+      - "「三十个面包、八颗红石、四锭金、四撮荧石粉。」"
+      - "「面包在下面仓库。红石在更下面——那面墙会渗红。」"
+      - "「金子要靠做事挣。光……去问他们四个。」"
+    options:
+      - label: "为什么不直接给我？"
+        goto: why
+      - label: "（记下了）"
+        close: true
+        flags:
+          - told_recipe
+
+  why:
+    lines:
+      - "「给出去的东西不算数。」"
+      - "「你自己搬上来的，才压得住那扇门。」"
+      - "他终于抬眼：「也可以不从我这儿走。自己挖、自己去下面那层火里捞，一样。」"
+    options:
+      - label: "（点头）"
+        close: true
+        flags:
+          - told_recipe
+          - told_shortcut
