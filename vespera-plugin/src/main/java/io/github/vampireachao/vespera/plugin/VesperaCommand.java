@@ -7,6 +7,10 @@ import java.util.Locale;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -26,7 +30,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS =
             List.of("doctor", "where", "talk", "dialogues", "state", "clock", "npc", "build", "verify",
-                    "reload");
+                    "church", "reload");
 
     private final VesperaPlugin plugin;
 
@@ -40,6 +44,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         String sub = args.length == 0 ? "doctor" : args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
             case "doctor" -> doctor(sender);
+            case "church" -> church(sender);
             case "where" -> where(sender);
             case "talk" -> talk(sender, args);
             case "dialogues" -> dialogues(sender);
@@ -74,6 +79,81 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * 祭坛一行摘要。给 doctor 用——转职这件事最常见的失败方式是"右键没反应"，
+     * 一声不响；所以哪怕不敲 {@code /vespera church}，也要在自检里露一眼。
+     */
+    private String altarSummary() {
+        if (plugin.church() == null || !plugin.church().available()) {
+            return "种族插件未接上，祭坛不可用";
+        }
+        World world = RegionService.resolve(plugin.getConfig().getString("city.world", "world"));
+        if (world == null) {
+            return "找不到主城世界";
+        }
+        int ground = plugin.city().groundLevel(world, plugin.cityX(), plugin.cityZ());
+        Location altar = plugin.church().findAltar(world, plugin.cityX(), plugin.cityZ(), ground);
+        String block = altar.getBlock().getType() == Material.DIAMOND_BLOCK ? "钻石块" : "不是钻石块";
+        String church = plugin.church().registered(altar) ? "已登记教堂" : "教堂点未登记";
+        return ChurchBridge.describe(altar) + " · " + block + " · " + church;
+    }
+
+    /**
+     * {@code /vespera church}：把转职祭坛的四道闸逐条念一遍。
+     *
+     * <p>这四道分别是：插件在不在、那块方块是不是钻石、它有没有被登记成教堂、
+     * 周围有没有二十块黑曜石（有就会误触吸血鬼祭坛）。它们任何一条不过，
+     * 玩家看到的都只是"右键没反应"。
+     */
+    private void church(CommandSender sender) {
+        List<String> lines = new ArrayList<>();
+        lines.add("维斯佩拉 · 祭坛自检");
+        if (plugin.church() == null) {
+            lines.add("  祭坛      未初始化");
+        } else if (!plugin.church().available()) {
+            lines.add("  种族插件  未接上：" + plugin.church().problem());
+            lines.add("            缺它的时候右键不是没反应，是根本没有人监听");
+        } else {
+            lines.add("  种族插件  已加载（mmSupernaturals）");
+            World world = RegionService.resolve(plugin.getConfig().getString("city.world", "world"));
+            if (world == null) {
+                lines.add("  主城世界  找不到：" + plugin.getConfig().getString("city.world", "world"));
+            } else {
+                int ground = plugin.city().groundLevel(world, plugin.cityX(), plugin.cityZ());
+                Location altar = plugin.church().findAltar(world, plugin.cityX(), plugin.cityZ(), ground);
+                boolean diamond = altar.getBlock().getType() == Material.DIAMOND_BLOCK;
+                lines.add("  祭坛方块  " + ChurchBridge.describe(altar) + " · "
+                        + altar.getBlock().getType().getKey());
+                if (!diamond) {
+                    lines.add("            不是钻石块：mmSupernaturals 只认 DIAMOND_BLOCK");
+                }
+                boolean clear = altar.getBlock().getRelative(BlockFace.UP).isEmpty();
+                lines.add("  上方净空  " + (clear ? "空，右键点得到" : "被挡，右键会点到上面那块"));
+                lines.add("  教堂点    " + (plugin.church().registered(altar)
+                        ? "已登记（±10 格内的钻石块算这座教堂）"
+                        : "未登记：只有登记过，右键才会被认作祭司祭坛"));
+                int obsidian = 0;
+                for (int dx = -7; dx <= 7; dx++) {
+                    for (int dz = -7; dz <= 7; dz++) {
+                        for (int dy = -7; dy <= 7; dy++) {
+                            if (altar.getBlock().getRelative(dx, dy, dz).getType() == Material.OBSIDIAN) {
+                                obsidian++;
+                            }
+                        }
+                    }
+                }
+                lines.add("  半径 7 内  " + obsidian + " 块黑曜石"
+                        + (obsidian >= 20 ? " · 太多，会误触吸血鬼祭坛" : " · 安全"));
+            }
+        }
+        if (sender instanceof Player player) {
+            lines.add("  你        " + plugin.races().race(player) + "（转职要求 human）");
+        }
+        for (String line : lines) {
+            sender.sendMessage(Component.text(line).color(NamedTextColor.GRAY));
+        }
+    }
+
     private void doctor(CommandSender sender) {
         List<String> lines = new ArrayList<>();
         lines.add("维斯佩拉 · 自检");
@@ -93,6 +173,7 @@ public final class VesperaCommand implements CommandExecutor, TabCompleter {
         lines.add("  界面构建  " + (renderProblems.isEmpty()
                 ? "全部节点可渲染"
                 : renderProblems.size() + " 处失败：" + renderProblems.get(0)));
+        lines.add("  祭坛      " + altarSummary());
         lines.add("  NPC 锚点  " + plugin.npcs().count() + " 个");
         lines.add("  区域      " + (plugin.regions().book().isEmpty()
                 ? "未载入（server/vespera/regions/regions.yml）"

@@ -51,6 +51,15 @@ public final class CityApplier {
         this.plugin = plugin;
     }
 
+    /**
+     * 场地基面。给"要算某个建筑的世界坐标"的地方用（比如把顶坛登记成教堂）。
+     *
+     * <p>场景坐标 y=0 落在 {@code ground} 上，所以世界 Y = ground + 场景 y。
+     */
+    public int groundLevel(World world, int ox, int oz) {
+        return groundOf(world, ox, oz);
+    }
+
     // -- 入口 ---------------------------------------------------------------
 
     public int build(World world, int ox, int oz) {
@@ -69,11 +78,11 @@ public final class CityApplier {
 
         populate(world, ox, oz, ground);
 
-        // 出生点在圣座顶坛。但"顶坛"是个坐标，不是保证——所以要扫一遍确认脚下有地、身上有空
+        // 出生点在南门外。但"城门"是个坐标，不是保证——所以要扫一遍确认脚下有地、身上有空
         org.bukkit.Location spawn = safeSpawn(world, ox, oz, ground);
         world.setSpawnLocation(spawn);
         plugin.getLogger().info("  出生点 " + spawn.getBlockX() + "," + spawn.getBlockY()
-                + "," + spawn.getBlockZ() + "（圣座顶坛，祭坛前一步）");
+                + "," + spawn.getBlockZ() + "（南门外，进城必经）");
         long done = System.currentTimeMillis();
         plugin.getLogger().info("流明陨城已就位：" + scene.size() + " 个方块（写入 " + placed + "），"
                 + "塑形 " + (leveled - started) + "ms + 建造 " + (done - leveled) + "ms。");

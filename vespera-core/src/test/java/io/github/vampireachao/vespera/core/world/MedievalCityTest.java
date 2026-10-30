@@ -225,13 +225,31 @@ class MedievalCityTest {
     }
 
     @Test
-    @DisplayName("出生点站在祭坛上：脚下一格实心，身上两格是空气")
-    void spawnStandsOnAltar() {
+    @DisplayName("出生点在城外：脚下是路面，往前走能进南门")
+    void spawnIsOutsideSouthGate() {
         int[] spawn = MedievalCity.spawn();
-        int y = MedievalCity.spawnHeight();
-        assertNotNull(scene().get(spawn[0], y - 1, spawn[1]), "出生点脚下没有台面");
-        assertTrue(scene().get(spawn[0], y, spawn[1]) == null, "出生点那一格被方块占了");
-        assertTrue(scene().get(spawn[0], y + 1, spawn[1]) == null, "出生点头顶被占了");
+        assertTrue(spawn[1] > MedievalCity.HALF, "出生点应该在城墙外，否则入城这一段不存在");
+        Scene s = scene();
+        assertNotNull(s.get(spawn[0], -1, spawn[1]), "出生点脚下没有路面");
+        assertTrue(s.get(spawn[0], 0, spawn[1]) == null, "出生点那一格被方块占了");
+        assertTrue(s.get(spawn[0], 1, spawn[1]) == null, "出生点头顶被占了");
+
+        WalkAudit au = new WalkAudit(s, spawn[0] - 20, -2, MedievalCity.HALF - 40,
+                spawn[0] + 20, 12, spawn[1] + 20);
+        assertTrue(au.canStand(spawn[0], 0, spawn[1]), "出生点站不住人");
+        au.walk(spawn[0], 0, spawn[1]);
+        assertTrue(au.reached(spawn[0], 0, MedievalCity.HALF - 20), "从出生点走不进南门");
+    }
+
+    @Test
+    @DisplayName("转职祭坛：顶上那块是钻石块，且上方两格净空（右键点得到）")
+    void altarTriggerBlockIsDiamond() {
+        Scene s = scene();
+        assertNotNull(s.get(0, 60, 0), "祭台上没有方块");
+        assertEquals("minecraft:diamond_block", s.get(0, 60, 0).id(),
+                "祭台顶上不是钻石块——mmSupernaturals 只认 DIAMOND_BLOCK");
+        assertTrue(s.get(0, 61, 0) == null, "钻石块上面压着东西，右键会点到那一块");
+        assertTrue(s.get(0, 62, 0) == null, "钻石块上方两格必须是空的");
     }
 
     @Test

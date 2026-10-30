@@ -110,6 +110,14 @@ public final class Palette {
     public static final Block IRON = Block.of("minecraft:iron_block");
     public static final Block IRON_BARS = Block.of("minecraft:iron_bars");
     public static final Block GOLD = Block.of("minecraft:gold_block");
+    /**
+     * 钻石块。它在这座城里只出现在一个地方：圣座顶坛的祭台中央。
+     *
+     * <p>不是装饰。mmSupernaturals 判定"祭司祭坛"靠的就是 {@code DIAMOND_BLOCK}
+     * （{@code Priest.Church.AltarMaterial}）——原来那里放的是金块，而金块恰好是
+     * <b>吸血鬼</b>祭坛的触发块。材料放错，右键就永远不会有反应。
+     */
+    public static final Block DIAMOND = Block.of("minecraft:diamond_block");
     public static final Block COPPER = Block.of("minecraft:copper_block");
     public static final Block COPPER_OXIDIZED = Block.of("minecraft:oxidized_copper");
     // 1.21.9 之后 chain 拆成了 iron_chain / copper_chain，老的 minecraft:chain 已经不存在。
@@ -238,6 +246,7 @@ public final class Palette {
 
         // 金属与织物
         color("iron_block", 0xd2d2d2);
+        color("diamond_block", 0x5cdbd5);
         color("iron_bars", 0x8d8d90);
         color("gold_block", 0xefcf4a);
         color("copper_block", 0xb06b4a);

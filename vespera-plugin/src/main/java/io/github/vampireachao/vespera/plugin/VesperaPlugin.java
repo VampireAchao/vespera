@@ -43,9 +43,10 @@ public final class VesperaPlugin extends JavaPlugin {
     private CampusBuilder campus;
     private int cityX;
     private int cityZ;
+    private ChurchBridge church;
 
     /** 已建成的版本标记。改了平面就把它加一，下次启动重建。 */
-    public static final String CITY_VERSION = "11";
+    public static final String CITY_VERSION = "12";
     public static final String CAMPUS_VERSION = "1";
 
     @Override
@@ -67,8 +68,11 @@ public final class VesperaPlugin extends JavaPlugin {
         npcs.spawnAll();
         city = new CityApplier(this);
         campus = new CampusBuilder(this);
+        church = new ChurchBridge(this);
         // 先城后校：城定出生点。反过来会让玩家站在学院门口，看不见主城。
         buildCity();
+        // 城铺完才有那块钻石，所以登记教堂必须排在建城之后
+        registerChurch();
         buildIfNeeded("campus", CAMPUS_VERSION, getConfig().getBoolean("campus.auto", false),
                 CampusBuilder::originFrom, (world, ox, oz) -> campus.build(world, ox, oz));
         grantAdmins();
@@ -169,8 +173,25 @@ public final class VesperaPlugin extends JavaPlugin {
         world.getPersistentDataContainer().set(key, PersistentDataType.STRING, CITY_VERSION);
     }
 
-    /** 名单里的人进服即给 OP。私人服里这是最省事的一步。 */
-    private void grantAdmins() {
+    /**
+     * 把圣座顶坛登记成 mmSupernaturals 的教堂。
+     *
+     * <p>不这么做的话，顶坛那块钻石块永远只是"一块钻石"：{@code PriestManager.useAltar}
+     * 第一句就是 {@code isChurch(...) ?: return}，玩家右键什么都不会发生，也不会报错。
+     */
+    private void registerChurch() {
+        World world = RegionService.resolve(getConfig().getString("city.world", "world"));
+        if (world == null) {
+            return;
+        }
+        int ground = city.groundLevel(world, cityX, cityZ);
+        if (!church.ensure(world, cityX, cityZ, ground)) {
+            getLogger().warning("祭坛没有登记成教堂：" + church.problem()
+                    + "（转职会右键无反应，/vespera church 可复查）");
+        }
+    }
+
+    /** 名单里的人进服即给 OP。私人服里这是最省事的一步。 */    private void grantAdmins() {
         for (String name : getConfig().getStringList("admins")) {
             org.bukkit.OfflinePlayer player = Bukkit.getOfflinePlayerIfCached(name);
             if (player != null && player.isOnline() && !player.isOp()) {
@@ -251,5 +272,9 @@ public final class VesperaPlugin extends JavaPlugin {
 
     public NpcService npcs() {
         return npcs;
+    }
+
+    public ChurchBridge church() {
+        return church;
     }
 }

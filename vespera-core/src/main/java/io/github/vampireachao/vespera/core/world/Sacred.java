@@ -639,13 +639,18 @@ final class Sacred {
             k.set(px, y + 2, pz, Palette.GOLD);
         }
 
-        // 祭台：三级，最上一块金，四面刻纹
+        // 祭台：四级，顶上一圈金、正中一格钻石块
+        //
+        // 正中那块是**转职祭坛的触发块**，材料不能随便换：mmSupernaturals 只认
+        // DIAMOND_BLOCK（Priest.Church.AltarMaterial）。原来这里放的是金块，而金块
+        // 恰好是吸血鬼祭坛的触发块——放错料，右键就永远没有反应，图上也看不出来。
+        //
+        // 上面原本还压着一支蜡烛，右键顶面会命中蜡烛而不是钻石块，一并去掉。
         k.fill(-4, y + 1, -4, 4, y + 1, 4, Palette.STONE_CHISELED);
         k.fill(-3, y + 2, -3, 3, y + 2, 3, Palette.SANDSTONE);
         k.fill(-2, y + 3, -2, 2, y + 3, 2, Palette.STONE_CHISELED);
-        // 只有正中一格是金的：出生点就站在(z=1)这一格上，台面不能铺到那儿
-        k.set(0, y + 4, 0, Palette.GOLD);
-        k.set(0, y + 5, 0, Palette.CANDLE);
+        k.fill(-1, y + 4, -1, 1, y + 4, 1, Palette.GOLD);
+        k.set(0, y + 4, 0, Palette.DIAMOND);
         // 四角刻纹：凿制的竖槽，让台身不是一块整板
         for (int[] c : new int[][] {{-4, -4}, {4, -4}, {-4, 4}, {4, 4}}) {
             k.fill(c[0], y + 1, c[1], c[0], y + 1, c[1], Palette.STONE_BRICK);

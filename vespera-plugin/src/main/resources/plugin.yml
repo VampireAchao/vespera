@@ -16,7 +16,7 @@ softdepend:
 commands:
   vespera:
     description: 维斯佩拉管理命令
-    usage: /vespera <doctor|talk|dialogues|state|clock|npc|reload>
+    usage: /vespera <doctor|church|where|talk|dialogues|state|clock|npc|build|verify|reload>
     permission: vespera.command
     aliases:
       - vs

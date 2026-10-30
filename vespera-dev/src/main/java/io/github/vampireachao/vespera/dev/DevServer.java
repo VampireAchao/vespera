@@ -479,6 +479,19 @@ public final class DevServer {
             System.out.println("  警告：构建产物不存在（server/build/plugins/vespera-plugin.jar）。");
             System.out.println("        先跑 `mvn package`。");
         }
+        // 种族插件也要装：转职祭坛是它的机制，不是我们的。
+        //
+        // 这个 jar 不进仓库（GPL-3.0，可以跑但不能跟着我们分发），所以从暂存区拷。
+        // 暂存区没有就把它说出来——否则结果只会是进服之后"右键祭坛没反应"，
+        // 而那种症状看起来像 bug，其实是少了一个文件。
+        Path races = config.project.resolve("server/build/plugins/mmSupernaturals.jar");
+        if (Files.isRegularFile(races)) {
+            Files.copy(races, plugins.resolve("mmSupernaturals.jar"), StandardCopyOption.REPLACE_EXISTING);
+        } else {
+            System.out.println("  警告：缺少 mmSupernaturals.jar，圣座顶坛的祭坛将无法转职。");
+            System.out.println("        在 mmSupernaturals 仓库跑 `mvn package`，把产物");
+            System.out.println("        server/plugins/mmSupernaturals.jar 拷到 server/build/plugins/。");
+        }
         Path manifest = config.project.resolve("plugins.tsv");
         if (!Files.isRegularFile(manifest)) {
             return;
