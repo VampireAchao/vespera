@@ -908,107 +908,462 @@ final class Landmarks {
         k.bump("银行");
     }
 
-    // -- 钟下的床（餐旅店） ---------------------------------------------------
-
     /**
-     * 南门里的客栈：餐室、前台、客房、后厨、酒窖，外加一座马厩。
+     * 南门里的客栈：一座"车马店"（coaching inn），不是一座大房子。
      *
-     * <p>旅人进城第一站。它不属于任何一方，所以各方都在这里说话——委托的中转站。
+     * <p>形制照现实里的车马店来：临街主楼 + 穿堂拱门 + 三面回廊的内院 + 后院马厩。
+     * 这三样缺一样就散架——拱门是车马进来的路，回廊就是楼上客房的走廊，马厩必须在
+     * 院子里而不在街对面。照搬《Skyrim》烛炉厅那种"一栋楼塞满人"的做法在这儿不成立：
+     * 那在城中心，靠脚来；这里在城门口，人带着马和车来。
+     *
+     * <p>进门要一眼读得出三件事：柜台在哪、桌在哪、楼梯在哪。所以正门落在南半，
+     * 柜台在右手边贴北墙，楼梯在左手边贴西墙，长桌走中轴——三条视线互不遮挡。
+     *
+     * <p>用地由 {@code MedievalCity.RESERVED} 给死：x −76..−26、z 246..282。
      */
     static void inn(BuildKit k, int x, int z) {
-        int w = 43;
-        int d = 35;
-        k.claim("客栈", x - 1, z - 1, x + w, z + d);
-        k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.STONE_BRICK);
-        k.walls(x, 0, z, x + w - 1, 13, z + d - 1, Palette.STONE_BRICK);
-        k.carve(x + 1, 0, z + 1, x + w - 2, 12, z + d - 2);
-        // 三层楼板
-        for (int fy : new int[] {5, 9}) {
-            for (int dx = 1; dx < w - 1; dx++) {
-                for (int dz = 1; dz < d - 1; dz++) {
-                    k.set(x + dx, fy, z + dz, Palette.DARK_PLANK);
-                }
-            }
-        }
-        // 正门朝东（面向南大道）
-        for (int y = 0; y <= 4; y++) {
-            k.set(x + w - 1, y, z + d / 2 - 1, null);
-            k.set(x + w - 1, y, z + d / 2, null);
-        }
-        k.fill(x + w, 0, z + d / 2 - 2, x + w, 0, z + d / 2 + 1, Palette.STONE_CHISELED);
-        // 一层：餐室（长桌三排）、吧台、壁炉、行李架
-        for (int i = 0; i < 3; i++) {
-            k.fill(x + 4, 0, z + 8 + i * 6, x + 20, 0, z + 9 + i * 6, Palette.OAK_PLANK);
-            for (int dz = 0; dz <= 1; dz++) {
-                k.set(x + 5, 0, z + 6 + i * 6 + dz, Palette.OAK_FENCE);
-                k.set(x + 19, 0, z + 6 + i * 6 + dz, Palette.OAK_FENCE);
-            }
-        }
-        k.fill(x + 24, 0, z + 6, x + 24, 2, z + 24, Palette.DARK_PLANK);
-        k.fill(x + 24, 3, z + 6, x + 24, 3, z + 24, Palette.OAK_PLANK);
-        for (int i = 0; i < 6; i++) {
-            k.set(x + 26, 0, z + 7 + i * 3, i % 2 == 0 ? Palette.BARREL : Palette.CAULDRON);
-        }
-        k.fill(x + 30, 0, z + 4, x + 34, 0, z + 8, Palette.COBBLE);
-        k.set(x + 32, 0, z + 6, Palette.CAMPFIRE);
-        k.fill(x + 32, 1, z + 6, x + 32, 8, z + 6, Palette.COBBLE);
-        k.set(x + 2, 0, z + 2, Palette.CHEST);
-        k.set(x + 3, 1, z + 2, Palette.SIGN);
-        // 二层：客房（隔成四间，每间一床一灯）
-        for (int i = 0; i < 4; i++) {
-            int rx = x + 3 + i * 10;
-            k.fill(rx + 8, 5, z + 2, rx + 8, 8, z + 16, Palette.SPRUCE_PLANK);
-            k.set(rx + 2, 6, z + 4, Palette.WOOL_RED);
-            k.set(rx + 3, 6, z + 4, Palette.WOOL_RED);
-            k.set(rx + 2, 6, z + 12, Palette.WOOL_BLUE);
-            k.set(rx + 3, 6, z + 12, Palette.WOOL_BLUE);
-            k.set(rx + 5, 7, z + 8, Palette.LANTERN);
-        }
-        // 三层：伙计的通铺
-        for (int i = 0; i < 5; i++) {
-            k.set(x + 4 + i * 8, 10, z + 6, Palette.HAY);
-            k.set(x + 4 + i * 8, 10, z + 26, Palette.HAY);
-        }
-        // 地窖：酒
-        for (int dx = 6; dx <= 20; dx++) {
-            for (int dz = 6; dz <= 18; dz++) {
-                for (int y = -3; y <= -2; y++) {
-                    k.set(x + dx, y, z + dz, null);
-                }
-            }
-        }
-        for (int i = 0; i < 5; i++) {
-            k.set(x + 5, -1 - i, z + 4 + i, null);
-        }
-        for (int i = 0; i < 5; i++) {
-            k.set(x + 5, -4 - i, z + 4 + i, Palette.COBBLE);
-        }
-        for (int dx = 6; dx <= 20; dx++) {
-            for (int dz = 6; dz <= 18; dz++) {
-                k.set(x + dx, -4, z + dz, Palette.STONE_BRICK);
-                boolean edge = dx == 6 || dx == 20 || dz == 6 || dz == 18;
-                if (edge) {
-                    k.set(x + dx, -3, z + dz, Palette.STONE_BRICK);
-                    k.set(x + dx, -2, z + dz, Palette.STONE_BRICK);
-                }
-            }
-        }
-        for (int i = 0; i < 8; i++) {
-            k.set(x + 8 + (i % 4) * 3, -3, z + 15 - (i / 4) * 4, Palette.BARREL);
-        }
-        k.roof(x - 3, z - 3, x + w + 2, z + d + 2, 14, true, Palette.TILE_STAIR,
-                Palette.PLASTER_CREAM, 2);
-        // 招牌：门前挑出一盏灯
-        k.fill(x + w, 5, z + d / 2 + 2, x + w, 6, z + d / 2 + 2, Palette.DARK_FENCE);
-        k.set(x + w, 7, z + d / 2 + 2, Palette.LANTERN_HANGING);
-        k.bump("客栈");
+        int ax = x - 4;
+        int az = z;
+        innMain(k, ax, az);
+        innKitchen(k, ax, az);
+        innStable(k, ax, az);
+        innYard(k, ax, az);
+    }
 
-        // 马厩：西侧，六间
-        int sx = x - 28;
-        int sz = z + 4;
-        stalls(k, sx, sz, 22, 20, 0);
-        k.roof(sx - 2, sz - 2, sx + 23, sz + 20, 7, false, Palette.SHINGLE_STAIR,
-                Palette.SPRUCE_PLANK, 1);
-        k.bump("客栈马厩");
+    /** 临街主楼：一层大堂与私厅，二层四间客房，三层两间阁楼房。 */
+    private static void innMain(BuildKit k, int ax, int az) {
+        int x1 = ax + 32;
+        int x2 = ax + 46;
+        int z1 = az + 4;
+        int z2 = az + 34;
+        int top = 13;
+        int f2 = 5;
+        int f3 = 10;
+        k.claim("客栈主楼", x1, z1, x2, z2);
+
+        k.fill(x1 - 1, -3, z1 - 1, x2 + 1, -1, z2 + 1, Palette.STONE_BRICK);
+        k.fill(x1, -1, z1, x2, -1, z2, Palette.OAK_PLANK);
+        // 底下三格石砌（车马蹭得起），上面抹灰挂木架
+        k.walls(x1, 0, z1, x2, 2, z2, Palette.STONE_BRICK);
+        k.walls(x1, 3, z1, x2, top, z2, Palette.PLASTER_CREAM);
+
+        // 木构架：角柱、腰梁、每四格一根立柱。没有它，十五格宽的抹灰面是一块白板
+        for (int y = 3; y <= top; y++) {
+            for (int x = x1; x <= x2; x++) {
+                for (int z = z1; z <= z2; z++) {
+                    if (x != x1 && x != x2 && z != z1 && z != z2) {
+                        continue;
+                    }
+                    int along = (z == z1 || z == z2) ? x : z;
+                    boolean corner = (x == x1 || x == x2) && (z == z1 || z == z2);
+                    boolean beam = y == f2 || y == f3 || y == top;
+                    if (corner || beam || Math.floorMod(along, 4) == 0) {
+                        k.set(x, y, z, Palette.DARK_LOG);
+                    }
+                }
+            }
+        }
+
+        // 两层楼板。楼梯井那两段留空——不掏空就没有"上得去"这回事
+        for (int x = x1 + 1; x <= x2 - 1; x++) {
+            for (int z = z1 + 1; z <= z2 - 1; z++) {
+                boolean well1 = x <= x1 + 2 && z >= z1 + 2 && z <= z1 + 6;
+                boolean well2 = x >= x1 + 3 && x <= x1 + 4 && z >= z2 - 6 && z <= z2 - 2;
+                if (!well1) {
+                    k.set(x, f2, z, Palette.DARK_PLANK);
+                }
+                if (!well2) {
+                    k.set(x, f3, z, Palette.DARK_PLANK);
+                }
+            }
+        }
+
+        // 东立面：一道人行正门，一道车马拱门。两道分开，是车马店的规矩
+        k.door(x2, 0, az + 16, "east", "dark_oak", "客栈正门");
+        // 门套：整石的门框。深色门扇嵌在浅色石框里，从街上一眼就认得出那是门
+        for (int dz = -1; dz <= 1; dz += 2) {
+            k.fill(x2, 0, az + 16 + dz, x2, 2, az + 16 + dz, Palette.STONE_CHISELED);
+        }
+        k.set(x2, 2, az + 16, Palette.STONE_CHISELED);
+        k.set(x2, 3, az + 16, Palette.SIGN);
+        // 招牌：铁架挑出去三格，挂灯、挂木牌。中世纪的客人多数不识字，靠图认店
+        k.fill(x2 + 1, 4, az + 19, x2 + 3, 4, az + 19, Palette.DARK_FENCE);
+        k.set(x2 + 3, 3, az + 19, Palette.LANTERN_HANGING);
+        k.set(x2 + 2, 3, az + 19, Palette.OAK_TRAPDOOR);
+        k.set(x2 + 2, 2, az + 19, Palette.OAK_TRAPDOOR);
+        k.set(x2 + 1, 2, az + 16, Palette.LANTERN);
+
+        // 门廊：三级石台、两根柱子、一片雨棚、两盏挂灯。
+        //
+        // 客栈在街上要一眼认出来。靠的不是体量——十五格宽的三层楼在南门里并不稀奇——
+        // 而是"门口这一团"：有台阶、有柱子、有灯、有招牌。人从街上走过来，先看见的是
+        // 这一团光，然后才看见楼。
+        k.fill(x2 + 1, -1, az + 13, x2 + 3, -1, az + 19, Palette.STONE_CHISELED);
+        k.fill(x2 + 1, -1, az + 15, x2 + 3, -1, az + 17, Palette.STONE_BRICK);
+        for (int z : new int[] {az + 13, az + 19}) {
+            k.fill(x2 + 3, 0, z, x2 + 3, 3, z, Palette.SPRUCE_LOG);
+        }
+        k.fill(x2 + 1, 4, az + 13, x2 + 3, 4, az + 19,
+                Block.stairs(Palette.TILE_STAIR, "east"));
+        k.set(x2 + 3, 3, az + 13, Palette.LANTERN_HANGING);
+        k.set(x2 + 3, 3, az + 19, Palette.LANTERN_HANGING);
+
+        // 拱门：三格宽四格高，穿堂过楼到院子。券顶收成一格，才像拱而不像洞
+        k.carve(x1, 0, az + 22, x2, 3, az + 24);
+        for (int o = 0; o <= 3; o++) {
+            k.set(x1, o, az + 22, null);
+            k.set(x1, o, az + 24, null);
+            k.set(x2, o, az + 22, null);
+            k.set(x2, o, az + 24, null);
+        }
+        k.set(x1, 3, az + 23, Palette.STONE_CHISELED);
+        k.set(x2, 3, az + 23, Palette.STONE_CHISELED);
+        // 券石：拱门两侧的墙根用整石收边
+        for (int o = 0; o <= 3; o++) {
+            k.set(x1, o, az + 21, Palette.STONE_CHISELED);
+            k.set(x1, o, az + 25, Palette.STONE_CHISELED);
+            k.set(x2, o, az + 21, Palette.STONE_CHISELED);
+            k.set(x2, o, az + 25, Palette.STONE_CHISELED);
+        }
+        k.set(x1, 4, az + 23, Palette.STONE_CHISELED);
+        k.set(x2, 4, az + 23, Palette.STONE_CHISELED);
+        // 车辙：拱门底下铺一条石道
+        for (int x = x1; x <= x2; x++) {
+            k.set(x, -1, az + 23, Palette.STONE_CHISELED);
+        }
+
+        // 一层：柜台在北墙前，L 形，短边朝门。
+        //
+        // 柜台不能贴着墙：贴着墙就没有"掌柜站的那一边"，吧台成了墙上的一块凸起。
+        // 所以柜台退一格，墙根那一条留给掌柜与酒架。
+        k.fill(x1 + 8, 0, z1 + 2, x2 - 1, 0, z1 + 2, Palette.DARK_PLANK);
+        k.fill(x1 + 8, 1, z1 + 2, x2 - 1, 1, z1 + 2, Palette.OAK_PLANK);
+        k.fill(x1 + 8, 0, z1 + 2, x1 + 8, 1, z1 + 5, Palette.OAK_PLANK);
+        for (int x = x1 + 9; x <= x2 - 2; x += 2) {
+            k.set(x, 2, z1, Palette.BARREL);
+        }
+        k.set(x1 + 11, 3, z1 + 1, Palette.LANTERN);
+        k.set(x1 + 15, 3, z1 + 1, Palette.LANTERN);
+
+        // 长桌：中轴两侧各一列，中间留两格通道——说书人站中间。
+        //
+        // 一桌两凳，加起来四格，两条这样的"桌子带"之后还剩两格通道。原来的排法把
+        // 十三格填满到只剩一格，而且凳子用的是栅栏——那是一堵墙，不是凳子。
+        for (int i = 0; i < 2; i++) {
+            int bench = x1 + 3 + i * 6;
+            int tx = bench + 1;
+            k.fill(tx, 0, z1 + 8, tx + 1, 0, z1 + 16, Palette.OAK_PLANK);
+            for (int z = z1 + 8; z <= z1 + 16; z++) {
+                k.set(bench, 0, z, Block.stairs(Palette.SHINGLE_STAIR, "east"));
+                k.set(tx + 2, 0, z, Block.stairs(Palette.SHINGLE_STAIR, "west"));
+            }
+            k.set(tx, 1, z1 + 10, Palette.CAULDRON);
+            k.set(tx + 1, 1, z1 + 13, Palette.BARREL);
+        }
+
+        // 壁炉：南侧私厅的南墙。整栋楼只有一个火源，所有人围着它坐
+        int fx = x1 + 6;
+        k.fill(fx - 1, 0, z2 - 1, fx + 3, 0, z2 - 1, Palette.STONE_BRICK);
+        k.fill(fx, 0, z2 - 1, fx + 2, 0, z2 - 1, Palette.CAMPFIRE);
+        k.fill(fx, 1, z2 - 1, fx + 2, 4, z2 - 1, Palette.STONE_BRICK);
+        k.set(fx + 1, 0, z2 - 2, Palette.CARPET_RED);
+        k.set(fx - 1, 3, z2 - 1, Palette.LANTERN);
+        k.set(fx + 3, 3, z2 - 1, Palette.LANTERN);
+
+        // 悬灯：沿中轴挂四盏，从门口望进去，一路有光到底
+        for (int z = z1 + 5; z <= z1 + 26; z += 7) {
+            k.set(x1 + 7, 4, z, Palette.CHAIN);
+            k.set(x1 + 7, 3, z, Palette.LANTERN_HANGING);
+        }
+        // 拱门里两盏：穿堂不能是黑洞
+        k.set(x1 + 1, 3, az + 22, Palette.LANTERN);
+        k.set(x1 + 1, 3, az + 24, Palette.LANTERN);
+
+        // 私厅：拱门南边那半间。一张小桌、两把椅子——付得起钱的人不坐大堂
+        k.fill(x1 + 2, 0, az + 27, x1 + 3, 0, az + 28, Palette.DARK_PLANK);
+        k.set(x1 + 2, 1, az + 27, Palette.CANDLE);
+        k.set(x1 + 4, 0, az + 27, Palette.OAK_FENCE);
+        k.set(x1 + 1, 0, az + 28, Palette.OAK_FENCE);
+        k.set(x2 - 2, 0, z2 - 3, Palette.CHEST);
+
+        // 两道直跑楼梯：一层→二层在北端，二层→三层在南端
+        flight(k, x1 + 1, z1 + 6, 0, 5, "north", 2);
+        flight(k, x1 + 3, z2 - 2, 5, 5, "north", 2);
+
+        // -- 二层：四间客房 ------------------------------------------------
+        // 走廊三格宽贴西侧，房间沿东侧一列排开；走廊尽头一道门通院子回廊
+        // 隔墙只砌到二层顶（f3−1）。砌到屋檐的话，这些墙会穿到三层，
+        // 把阁楼切成一条条走不进去的窄缝——图上什么也看不出来
+        k.fill(x1 + 6, f2 + 1, z1 + 1, x1 + 6, f3 - 1, z2 - 1, Palette.SPRUCE_PLANK);
+        for (int z : new int[] {z1 + 7, z1 + 14, z1 + 21}) {
+            k.fill(x1 + 6, f2 + 1, z, x2 - 1, f3 - 1, z, Palette.SPRUCE_PLANK);
+        }
+        k.door(x1, 6, az + 19, "west", "oak", "客栈回廊门");
+        int[][] rooms = {
+                {z1 + 1, z1 + 6},
+                {z1 + 8, z1 + 13},
+                {z1 + 15, z1 + 20},
+                {z1 + 22, z2 - 1}};
+        for (int[] r : rooms) {
+            k.door(x1 + 6, f2 + 1, r[0] + 2, "west", "spruce", "客房门");
+            k.set(x1 + 10, f2 + 1, r[0] + 1, Palette.WOOL_RED);
+            k.set(x1 + 11, f2 + 1, r[0] + 1, Palette.WOOL_RED);
+            k.set(x1 + 10, f2 + 1, r[0] + 2, Palette.WOOL_CREAM);
+            k.set(x1 + 11, f2 + 1, r[0] + 2, Palette.WOOL_CREAM);
+            k.set(x1 + 12, f2 + 1, r[1] - 1, Palette.CHEST);
+            k.set(x1 + 7, f2 + 3, r[1] - 1, Palette.LANTERN);
+            k.set(x2 - 1, f2 + 2, r[0] + 2, Palette.WOOL_BLUE);
+            window(k, x2, f2 + 3, r[0] + 2, "west");
+        }
+
+        // -- 三层：两间阁楼房 ----------------------------------------------
+        k.fill(x1 + 6, f3 + 1, z1 + 1, x1 + 6, top - 1, z2 - 1, Palette.SPRUCE_PLANK);
+        k.fill(x1 + 6, f3 + 1, z1 + 13, x2 - 1, top - 1, z1 + 13, Palette.SPRUCE_PLANK);
+        k.door(x1 + 6, f3 + 1, az + 8, "west", "spruce", "阁楼房");
+        k.door(x1 + 6, f3 + 1, az + 28, "west", "spruce", "通铺门");
+        for (int z = z1 + 3; z <= z1 + 8; z += 2) {
+            k.set(x1 + 9, f3 + 1, z, Palette.WOOL_RED);
+            k.set(x1 + 10, f3 + 1, z, Palette.WOOL_RED);
+            k.set(x1 + 11, f3 + 1, z, Palette.WOOL_CREAM);
+        }
+        // 通铺：干草铺地，一条被子都没有
+        for (int z = z1 + 16; z <= z2 - 3; z += 2) {
+            k.set(x1 + 9, f3 + 1, z, Palette.HAY);
+            k.set(x1 + 11, f3 + 1, z, Palette.HAY);
+        }
+        k.set(x1 + 8, f3 + 3, az + 22, Palette.LANTERN);
+        k.set(x1 + 8, f3 + 3, az + 30, Palette.LANTERN);
+        // 背街两面也要有窗。只有临街一面开窗的房子，从院子里看是一堵白墙
+        for (int x : new int[] {x1 + 4, x1 + 8, x1 + 12}) {
+            window(k, x, f2 + 3, z1, "south");
+            window(k, x, f3 + 2, z1, "south");
+        }
+        for (int z : new int[] {az + 26, az + 31}) {
+            window(k, x1, f2 + 3, z, "east");
+            window(k, x1, f3 + 2, z, "east");
+        }
+        window(k, x2, f3 + 2, az + 20, "west");
+        window(k, x2, f3 + 2, az + 28, "west");
+        for (int wz : new int[] {az + 11, az + 27}) {
+            window(k, x2, 2, wz, "west");
+            window(k, x2, 2, wz + 1, "west");
+        }
+
+        // 屋面：坡高七格。旧版按"进深一半"起坡，四十三格进深就是二十三米高的一个尖，
+        // 整栋楼成了一口倒扣的锅
+        k.hipRoof(x1, z1, x2, z2, top + 1, 7, Palette.TILE_STAIR, Palette.TILE, 1);
+        // 烟囱：壁炉的烟要出去，它同时也是这条街的天际线
+        k.fill(fx, 5, z2 - 1, fx + 2, 20, z2 - 1, Palette.STONE_BRICK);
+        k.set(fx + 1, 21, z2 - 1, Palette.STONE_CHISELED);
+        k.bump("客栈");
+    }
+
+    /** 后厨北楼：一层灶、二层存货与伙计的床。 */
+    private static void innKitchen(BuildKit k, int ax, int az) {
+        int x1 = ax + 12;
+        int x2 = ax + 31;
+        int z1 = az + 4;
+        int z2 = az + 16;
+        int top = 8;
+        k.claim("客栈后厨", x1, z1, x2, z2);
+
+        k.fill(x1 - 1, -3, z1 - 1, x2 + 1, -1, z2 + 1, Palette.COBBLE);
+        k.fill(x1, -1, z1, x2, -1, z2, Palette.STONE_BRICK);
+        k.walls(x1, 0, z1, x2, 1, z2, Palette.STONE_BRICK);
+        k.walls(x1, 2, z1, x2, top, z2, Palette.PLASTER_CREAM);
+        for (int x = x1 + 1; x <= x2 - 1; x++) {
+            for (int z = z1 + 1; z <= z2 - 1; z++) {
+                boolean well = x <= x1 + 2 && z >= z1 + 2 && z <= z1 + 6;
+                if (!well) {
+                    k.set(x, 5, z, Palette.DARK_PLANK);
+                }
+            }
+        }
+        // 门朝院子（南），另一道双开门进货
+        k.door(x1 + 10, 0, z2, "south", "spruce", "后厨门");
+        k.gate(x1 + 18, 0, z2, "south", true, "spruce", "后厨货门");
+        window(k, x1 + 6, 2, z2, "north");
+        window(k, x1 + 14, 2, z2, "north");
+
+        // 灶：三口灶眼一字排开，中间一口大锅。厨房的墙是黑的，因为烟一直在这儿
+        k.fill(x1 + 2, 0, z1 + 1, x1 + 7, 0, z1 + 2, Palette.STONE_BRICK);
+        k.set(x1 + 2, 1, z1 + 1, Palette.FURNACE);
+        k.set(x1 + 4, 1, z1 + 1, Palette.CAULDRON);
+        k.set(x1 + 6, 1, z1 + 1, Palette.SMOKER);
+        k.fill(x1 + 2, 2, z1 + 1, x1 + 7, 3, z1 + 1, Palette.STONE_BRICK);
+        // 长案：和面、切肉、摆盘都在这张板上
+        k.fill(x1 + 10, 0, z1 + 3, x1 + 17, 0, z1 + 4, Palette.OAK_PLANK);
+        k.set(x1 + 11, 1, z1 + 3, Palette.CRAFTING);
+        k.set(x1 + 15, 1, z1 + 3, Palette.BARREL);
+        for (int i = 0; i < 4; i++) {
+            k.set(x1 + 3 + i * 2, 0, z2 - 3, Palette.BARREL);
+        }
+        k.set(x1 + 2, 0, z2 - 5, Palette.CHEST);
+        for (int x = x1 + 11; x <= x1 + 16; x += 2) {
+            k.set(x, 3, z1 + 6, Palette.CHAIN);
+            k.set(x, 2, z1 + 6, Palette.LANTERN);
+        }
+        flight(k, x1 + 1, z1 + 6, 0, 5, "north", 2);
+        for (int z = z1 + 3; z <= z1 + 9; z += 3) {
+            k.set(x1 + 8, 6, z, Palette.HAY);
+            k.set(x1 + 10, 6, z, Palette.HAY);
+        }
+        for (int i = 0; i < 5; i++) {
+            k.set(x2 - 2, 6, z1 + 7 + i, i % 2 == 0 ? Palette.BARREL : Palette.CRATE);
+        }
+        k.set(x1 + 12, 7, z1 + 3, Palette.LANTERN);
+
+        k.hipRoof(x1, z1, x2, z2, top + 1, 5, Palette.TILE_STAIR, Palette.TILE, 1);
+        k.fill(x1 + 4, 9, z1 + 1, x1 + 5, 15, z1 + 1, Palette.STONE_BRICK);
+        k.bump("客栈后厨");
+    }
+
+    /** 后院马厩：六栏、草料、水槽，门朝着院子。 */
+    private static void innStable(BuildKit k, int ax, int az) {
+        int x1 = ax;
+        int x2 = ax + 11;
+        int z1 = az + 6;
+        int z2 = az + 34;
+        k.claim("客栈马厩", x1, z1, x2, z2);
+
+        k.fill(x1 - 1, -3, z1 - 1, x2 + 1, -1, z2 + 1, Palette.COBBLE);
+        k.fill(x1, -1, z1, x2, -1, z2, Palette.COARSE);
+        k.walls(x1, 0, z1, x2, 5, z2, Palette.SPRUCE_PLANK);
+        k.carve(x1 + 1, 0, z1 + 1, x2 - 1, 4, z2 - 1);
+        // 院墙那面（东）开双开大门，正对回廊
+        k.gate(x2, 0, az + 18, "east", false, "spruce", "马厩门");
+        k.set(x2, 3, az + 17, Palette.LANTERN);
+        k.set(x2, 3, az + 21, Palette.LANTERN);
+
+        // 分栏：每五格一间，栏到胸口——人看得见马，马跨不出来
+        int boxes = 0;
+        for (int z = z1 + 5; z <= z2 - 5; z += 5) {
+            k.fill(x1 + 1, 1, z, x2 - 3, 3, z, Palette.SPRUCE_FENCE);
+            boxes++;
+        }
+        for (int z = z1 + 2; z <= z2 - 3; z += 5) {
+            k.set(x1 + 1, 1, z, Palette.HAY);
+            k.set(x1 + 1, 2, z, Palette.HAY);
+            k.set(x1 + 2, 1, z, Palette.BARREL);
+        }
+        // 水槽：进门右手，石沿围一格水
+        k.fill(x2 - 5, 0, az + 16, x2 - 4, 0, az + 16, Palette.STONE_CHISELED);
+        k.set(x2 - 4, 0, az + 16, Palette.WATER);
+        k.fill(x1 + 1, 4, z1 + 1, x2 - 3, 4, z1 + 4, Palette.HAY);
+
+        k.hipRoof(x1, z1, x2, z2, 6, 4, Palette.SHINGLE_STAIR, Palette.SPRUCE_PLANK, 1);
+        k.bump("马厩");
+        if (boxes < 5) {
+            k.bump("马厩栏位不足");
+        }
+    }
+
+    /** 内院：车辙、草料、马车，两面二层回廊。回廊接着主楼二层的门。 */
+    private static void innYard(BuildKit k, int ax, int az) {
+        int x1 = ax + 12;
+        int x2 = ax + 31;
+        int z1 = az + 17;
+        int z2 = az + 34;
+
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                boolean rut = z == az + 23 || z == az + 24;
+                k.set(x, -1, z, rut ? Palette.STONE_CHISELED
+                        : (k.rnd.nextInt(100) < 22 ? Palette.GRAVEL : Palette.COBBLE));
+            }
+        }
+        // 南院墙：实墙，不开门。
+        //
+        // 本来在这儿留了一道小门"给货走"，墙外却是隔壁车马店的墙——门开出来正对着
+        // 别人的立面，推门就撞墙。车马店本来也只有一道拱门：车和马都从那儿进。
+        k.fill(x1, 0, z2 + 1, x2, 2, z2 + 1, Palette.STONE_BRICK);
+
+        gallery(k, x1, z1, x2, z2, 5);
+
+        k.fill(x1 + 1, 0, z2 - 3, x1 + 2, 2, z2 - 2, Palette.HAY);
+        k.set(x1 + 4, -1, z2 - 5, Palette.CART);
+        k.set(x1 + 7, 0, z2 - 5, Palette.BARREL);
+        k.set(x1 + 7, 0, z2 - 6, Palette.BARREL);
+        k.set(x2 - 2, 0, z1 + 3, Palette.CHEST);
+        k.set(x1 + 1, 4, z1, Palette.LANTERN_HANGING);
+        k.set(x2 - 1, 4, z1, Palette.LANTERN_HANGING);
+        k.bump("客栈内院");
+    }
+
+    /**
+     * 一道两层高的木回廊：柱子落地、板铺在五格高、栏杆到腰。
+     *
+     * <p>它不是装饰。车马店的回廊就是楼上客房的走廊——客人从二楼的门出来，
+     * 沿着廊走到院子另一头那间房。所以廊必须<b>上得去</b>。
+     *
+     * <p>廊要两格深：一格走人、一格立栏杆。栏杆跟走道同格的话，那条廊一步都迈不动——
+     * 栏杆在体素里是一整块，人站不进去。
+     */
+    private static void gallery(BuildKit k, int x1, int z1, int x2, int z2, int deckY) {
+        int rail = deckY + 1;
+        // 北廊：走道在 z1，栏杆在 z1+1（往下看的是院子）
+        for (int x = x1; x <= x2; x++) {
+            for (int z = z1; z <= z1 + 1; z++) {
+                k.set(x, deckY, z, Palette.OAK_PLANK);
+            }
+            // 东北角不留栏杆：两条廊要在这里转弯，栏杆一立就把弯堵死了
+            if (x != x2) {
+                k.set(x, rail, z1 + 1, Palette.OAK_FENCE);
+            }
+            if (Math.floorMod(x, 4) == 0) {
+                k.fill(x, 1, z1, x, deckY - 1, z1, Palette.SPRUCE_LOG);
+                k.fill(x, 1, z1 + 1, x, deckY - 1, z1 + 1, Palette.OAK_PLANK);
+            }
+        }
+        // 东廊：走道在 x2（贴主楼），栏杆在 x2-1
+        int stairZ = z2 - 4;
+        for (int z = z1 + 2; z <= z2; z++) {
+            k.set(x2 - 1, deckY, z, Palette.OAK_PLANK);
+            k.set(x2, deckY, z, Palette.OAK_PLANK);
+            if (z != stairZ) {
+                k.set(x2 - 1, rail, z, Palette.OAK_FENCE);
+            }
+            if (Math.floorMod(z, 4) == 0) {
+                k.fill(x2 - 1, 1, z, x2 - 1, deckY - 1, z, Palette.SPRUCE_LOG);
+            }
+        }
+        // 院里的上廊梯：五级，正对栏杆断开的那一格
+        for (int o = 0; o < 5; o++) {
+            k.set(x2 - 2 - o, o, stairZ, Block.stairs(Palette.SHINGLE_STAIR, "east"));
+        }
+    }
+
+    /** 墙上的窗：玻璃嵌进墙里，下面一块石台，上面一道挑檐。 */
+    private static void window(BuildKit k, int x, int y, int z, String hood) {
+        k.set(x, y, z, Palette.GLASS);
+        k.set(x, y - 1, z, Block.slab("minecraft:stone_brick_slab", "bottom"));
+        k.set(x, y + 1, z, Block.stairs(Palette.TILE_STAIR, hood));
+    }
+
+    /**
+     * 一道直跑楼梯，往 {@code dir} 走 {@code steps} 级，{@code w} 格宽。
+     *
+     * <p>一级一格。玩家一次抬一格，所以一格一级就是"走得上去"；做成两格一跳，
+     * 图上好看，脚上过不去。
+     */
+    private static void flight(BuildKit k, int x, int z, int y, int steps, String dir, int w) {
+        String face = switch (dir) {
+            case "north" -> "south";
+            case "south" -> "north";
+            case "west" -> "east";
+            default -> "west";
+        };
+        for (int i = 0; i < steps; i++) {
+            int cx = x + (dir.equals("east") ? i : dir.equals("west") ? -i : 0);
+            int cz = z + (dir.equals("south") ? i : dir.equals("north") ? -i : 0);
+            for (int j = 0; j < w; j++) {
+                int px = cx + (dir.equals("north") || dir.equals("south") ? j : 0);
+                int pz = cz + (dir.equals("east") || dir.equals("west") ? j : 0);
+                k.set(px, y + i, pz, Block.stairs(Palette.SHINGLE_STAIR, face));
+                if (y + i - 1 >= 0) {
+                    k.set(px, y + i - 1, pz, Palette.DARK_PLANK);
+                }
+            }
+        }
     }
 }
