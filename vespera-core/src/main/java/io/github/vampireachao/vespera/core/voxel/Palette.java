@@ -135,6 +135,7 @@ public final class Palette {
     public static final Block BLAST = Block.of("minecraft:blast_furnace", "facing=south,lit=true");
     public static final Block BOOKSHELF = Block.of("minecraft:bookshelf");
     public static final Block LECTERN = Block.of("minecraft:lectern", "facing=south");
+    public static final Block CANDLE = Block.of("minecraft:candle", "lit=true");
     public static final Block CAULDRON = Block.of("minecraft:cauldron");
     public static final Block POT = Block.of("minecraft:flower_pot");
     public static final Block BELL = Block.of("minecraft:bell", "attachment=floor,facing=north");

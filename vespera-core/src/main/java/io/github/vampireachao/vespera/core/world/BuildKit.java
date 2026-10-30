@@ -347,6 +347,51 @@ public final class BuildKit {
     }
 
     /** 屋面的坡：沿某条轴起脊，两侧铺楼梯。 */
+    /**
+     * 四坡屋顶，坡高由调用方定。
+     *
+     * <p>{@link #roof} 的坡高是"进深的一半"——放在民居上正好，放在一座七十一格宽的
+     * 大殿上就是二十一格高的一个尖，比旁边的塔还高，远看像一座山压在屋顶上。
+     * 真实的宫殿屋顶是缓的：坡高与进深之比大约一比五。所以这里把坡高拆出来单独给。
+     *
+     * @param rise 从檐口到脊一共抬几格
+     */
+    public void hipRoof(int x1, int z1, int x2, int z2, int y, int rise, String stairId,
+            Block body, int overhang) {
+        int ax = Math.min(x1, x2) - overhang;
+        int bx = Math.max(x1, x2) + overhang;
+        int az = Math.min(z1, z2) - overhang;
+        int bz = Math.max(z1, z2) + overhang;
+        int half = Math.min((bx - ax) / 2, (bz - az) / 2);
+        if (rise < 1) {
+            rise = 1;
+        }
+        for (int i = 0; i <= rise; i++) {
+            int level = y + i;
+            int inset = (int) Math.round((double) i * half / rise);
+            int xa = ax + inset;
+            int xb = bx - inset;
+            int za = az + inset;
+            int zb = bz - inset;
+            if (xa > xb || za > zb) {
+                break;
+            }
+            for (int x = xa; x <= xb; x++) {
+                for (int z = za; z <= zb; z++) {
+                    set(x, level, z, body);
+                }
+            }
+            for (int x = xa; x <= xb; x++) {
+                set(x, level, za, Block.stairs(stairId, "south"));
+                set(x, level, zb, Block.stairs(stairId, "north"));
+            }
+            for (int z = za; z <= zb; z++) {
+                set(xa, level, z, Block.stairs(stairId, "east"));
+                set(xb, level, z, Block.stairs(stairId, "west"));
+            }
+        }
+    }
+
     public void roof(int x1, int z1, int x2, int z2, int y, boolean ridgeAlongZ, String stairId,
             Block gableBlock, int overhang) {
         int ax = Math.min(x1, x2);
