@@ -99,6 +99,18 @@ public final class CityApplier {
         world.setSpawnLocation(spawn);
         plugin.getLogger().info("  出生点 " + spawn.getBlockX() + "," + spawn.getBlockY()
                 + "," + spawn.getBlockZ() + "（南门外，进城必经）");
+        // 在真实世界里走一遍。场景能走不等于世界能走——地形、填缝、上一版留下的
+        // 方块都不在场景里，而玩家只会遇到世界。这一步只打日志，不拦住启动。
+        java.util.List<String> blocked = new RouteAudit().audit(world, ox, oz, ground);
+        if (blocked.isEmpty()) {
+            plugin.getLogger().info("  路线自检：南门 → 主街 → 圣座 → 六层 → 地牢 → 顶坛 全部可达。");
+        } else {
+            plugin.getLogger().warning("  路线自检：有 " + blocked.size() + " 处走不到——");
+            for (String line : blocked) {
+                plugin.getLogger().warning("    " + line);
+            }
+        }
+
         long done = System.currentTimeMillis();
         plugin.getLogger().info("流明陨城已就位：" + scene.size() + " 个方块（写入 " + placed + "），"
                 + "塑形 " + (leveled - started) + "ms + 建造 " + (done - leveled) + "ms。");
@@ -238,9 +250,14 @@ public final class CityApplier {
                     }
                 }
 
-                // 台地与陡坎：与场景里那圈裙边逐格对齐（y = -1 - drop）
+                // 台地与陡坎：与场景里那圈裙边逐格对齐（场景 y = -1 - drop）。
+                //
+                // 这里的 -1 是整座城的命门。场景里"地表方块层"是 y=-1，落地时
+                // 世界 Y = ground + (-1)。而塑形这一段原本把表层方块放在 ground，
+                // 正好比铺装高出一格——于是整座城被一层土盖住：街上看不到石板、
+                // 室内地上全是粗土、门里像被埋了半截。图上完全正常，进服才知道。
                 int drop = r <= MedievalCity.HALF + 2 ? 0 : (r <= MedievalCity.HALF + 4 ? 1 : 2);
-                int edge = ground - drop;
+                int edge = ground - 1 - drop;
                 int target;
                 if (r <= FOOT) {
                     target = edge;

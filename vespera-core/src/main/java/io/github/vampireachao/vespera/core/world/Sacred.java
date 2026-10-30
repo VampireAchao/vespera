@@ -308,7 +308,16 @@ final class Sacred {
         }
 
         // 每级一道楼板 + 四个角上的房间；楼板在梯子经过的地方开洞
-        String[] use = {"祭器库", "档案室", "议事厅", "神谕室", "大祭司居所", "顶坛前厅"};
+        // 每层该有什么房间。顺序就是铺房间的顺序（北→南→西→东），
+        // 名字用完就循环——一座塔里"酒窖"有两间是正常的，"每层四间一样的"不是。
+        String[][] use = {
+            {"祭器库", "面粉仓", "酒窖", "油坊", "账房", "杂役房", "柴房", "器皿室"},
+            {"书库", "抄经室", "阅览厅", "禁书柜", "残卷室", "装帧房", "目录厅", "藏经阁"},
+            {"议事厅", "书记处", "前厅", "休息室", "档案柜", "侍从房", "书记处", "议事厅"},
+            {"占卜室", "观星房", "静修室", "药柜", "香室", "净室"},
+            {"大祭司居所", "书房", "更衣", "侍者房", "小礼拜堂"},
+            {"顶坛前厅", "值守室", "净手处"},
+        };
         for (int t = 1; t <= 6; t++) {
             int y = t * TIER_H;
             int h = BASE - INSET * t - SHELL - 1;
@@ -336,14 +345,8 @@ final class Sacred {
                 }
             }
 
-            // 四角房间：正方形，门朝中庭
-            int c = h - 6;
-            if (c >= 8) {
-                int[][] corners = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
-                for (int[] q : corners) {
-                    cell(k, q[0] * c, q[1] * c, y, use[Math.min(t - 1, use.length - 1)]);
-                }
-            }
+            // 每层平面：四角敞厅 + 四边成排的房间
+            floorPlan(k, t, h, y);
         }
 
         // 中轴大梯：五格宽，一站一格，从底层大厅直上顶坛。
@@ -488,6 +491,316 @@ final class Sacred {
         k.set(TempleSpots.COUNCIL_SEAT.x(), TempleSpots.COUNCIL_SEAT.y(),
                 TempleSpots.COUNCIL_SEAT.z(),
                 Block.stairs("minecraft:stone_brick_stairs", "east"));
+    }
+
+    /** 四个角的方向。 */
+    private static final int[][] CORNERS = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
+
+    /**
+     * 一层的平面：四角留敞厅，四条边排房间。
+     *
+     * <p>上一版每层只有四间 11×11 的盒子，四间还都叫同一个名字。一座底边 133 格、
+     * 高 84 格的塔，每层就四个房间——从外面看是座宫殿，走进去是一间仓库。
+     *
+     * <p>这一版按"角敞、边密"排：四个角是开敞的（楼梯上来先看见一片空，不是走廊），
+     * 四条边各排四五间房，深度随楼层收窄。房间名字按层分配，同一层不重样。
+     */
+    private static void floorPlan(BuildKit k, int t, int h, int y) {
+        String[] names = roomNames(t);
+        // 角厅要跟着楼层收：写死 16 的话，到了 h=30 的楼层两个角厅会在中间撞上，
+        // 整层被凿穿成一间空屋——上面三层就是这么一间房都没有的。
+        int ch = Math.max(7, Math.min(16, h - 16));
+        for (int[] q : CORNERS) {
+            cornerHall(k, q[0] * (h - ch + 1), q[1] * (h - ch + 1), ch, y);
+        }
+        int depth = h >= 34 ? 9 : (h >= 24 ? 7 : 5);
+        int span = h - ch - 2;
+        if (span < 10) {
+            return;
+        }
+        int idx = 0;
+        for (int[] side : new int[][] {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}) {
+            idx = sideRooms(k, side[0], side[1], h, depth, y, names, idx, span);
+        }
+        colonnade(k, h - depth - 2, y);
+        if (t == 2) {
+            libraryHall(k, h - depth - 6, y);
+        }
+    }
+
+    /**
+     * 中庭一圈柱子：每八格一根，柱头贴金。
+     *
+     * <p>一条环廊加一圈柱子，是"宫里"和"仓库里"最直接的区别——它把一片空场
+     * 变成一个有边界的厅。柱子只占一格，人不挡路。
+     */
+    private static void colonnade(BuildKit k, int d, int y) {
+        if (d < 10) {
+            return;
+        }
+        for (int i = -d; i <= d; i += 8) {
+            for (int[] s : new int[][] {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}) {
+                int x = s[0] != 0 ? s[0] * d : i;
+                int z = s[1] != 0 ? s[1] * d : i;
+                // 中轴大梯在 x −12..−8 上一路贯通，柱子不能立在那儿
+                if (x >= -14 && x <= -6) {
+                    continue;
+                }
+                for (int up = 1; up <= 6; up++) {
+                    k.set(x, y + up, z, Palette.STONE_CHISELED);
+                }
+                k.set(x, y + 7, z, Palette.GOLD);
+            }
+        }
+    }
+
+    /**
+     * 藏书大层：中央一张长阅桌，四周书架围成读经区。
+     *
+     * <p>用户说藏书阁"空间过小、布置过于简陋"。这一层现在有十八间房（书库、抄经室、
+     * 阅览厅、禁书柜、残卷室、装帧房、目录厅、藏经阁），中庭再摆一张贯通两端的
+     * 长桌与四排书架——站在门口就能看出这是一个"能待一整天"的地方。
+     */
+    private static void libraryHall(BuildKit k, int d, int y) {
+        if (d < 8) {
+            return;
+        }
+        for (int x = -d; x <= d; x++) {
+            for (int z = -3; z <= 3; z++) {
+                if (x >= -14 && x <= -6) {
+                    continue;
+                }
+                k.set(x, y + 1, z, Palette.DARK_PLANK);
+            }
+        }
+        for (int z : new int[] {-5, 5}) {
+            for (int x = -d; x <= d; x += 2) {
+                if (x >= -14 && x <= -6) {
+                    continue;
+                }
+                k.set(x, y + 1, z, Block.stairs("minecraft:oak_stairs", z < 0 ? "south" : "north"));
+            }
+        }
+        // 四排书架，每排之间留过道
+        for (int z : new int[] {-d + 3, -d + 7, d - 7, d - 3}) {
+            for (int x = -d + 3; x <= d - 3; x++) {
+                if (x >= -14 && x <= -6) {
+                    continue;
+                }
+                for (int up = 1; up <= 3; up++) {
+                    k.set(x, y + up, z, Palette.BOOKSHELF);
+                }
+            }
+        }
+        for (int x = -d + 4; x <= d - 4; x += 8) {
+            k.set(x, y + 7, 0, Palette.LANTERN_HANGING);
+        }
+    }
+
+    private static String[] roomNames(int t) {
+        String[][] table = {
+            {"祭器库", "面粉仓", "酒窖", "油坊", "账房", "杂役房", "柴房", "器皿室"},
+            {"书库", "抄经室", "阅览厅", "禁书柜", "残卷室", "装帧房", "目录厅", "藏经阁"},
+            {"议事厅", "书记处", "前厅", "休息室", "档案柜", "侍从房"},
+            {"占卜室", "观星房", "静修室", "药柜", "香室", "净室"},
+            {"大祭司居所", "书房", "更衣", "侍者房", "小礼拜堂"},
+            {"顶坛前厅", "值守室", "净手处"},
+        };
+        return table[Math.min(Math.max(t - 1, 0), table.length - 1)];
+    }
+
+    /** 角厅：不砌墙，只放四根柱与一盏灯——让每层都有一个"空"的地方。 */
+    private static void cornerHall(BuildKit k, int cx, int cz, int half, int y) {
+        // 先凿空。台身是实心砌体，越往上的楼层，角厅越会陷进那圈实心环里——
+        // 不凿的话"角厅"其实是一整块砂岩，人站不进去（藏书阁执事就是这么被埋的）。
+        for (int x = cx - half + 1; x <= cx + half - 1; x++) {
+            for (int z = cz - half + 1; z <= cz + half - 1; z++) {
+                for (int up = 1; up <= 6; up++) {
+                    k.set(x, y + up, z, null);
+                }
+            }
+        }
+        for (int[] p : CORNERS) {
+            int x = cx + p[0] * (half - 2);
+            int z = cz + p[1] * (half - 2);
+            for (int up = 1; up <= 6; up++) {
+                k.set(x, y + up, z, Palette.STONE_CHISELED);
+            }
+            k.set(x, y + 7, z, Palette.GOLD);
+        }
+        k.set(cx, y + 7, cz, Palette.LANTERN_HANGING);
+    }
+
+    /** 一条边上的房间：从这头排到那头，宽窄交替。 */
+    private static int sideRooms(BuildKit k, int nx, int nz, int h, int depth, int y,
+            String[] names, int idx, int span) {
+        int t = -span;
+        int to = span;
+        while (t <= to) {
+            int w = 8 + (idx % 3) * 3;
+            int t2 = Math.min(t + w - 1, to);
+            if (t2 - t < 5) {
+                break;
+            }
+            room(k, nx, nz, t, t2, h, depth, y, names[idx % names.length], idx);
+            idx++;
+            t = t2 + 2;
+        }
+        return idx;
+    }
+
+    /**
+     * 一间房：四壁、一道门、两扇窗，按名字摆东西。
+     *
+     * <p>房间深 5–9 格、高 6 格，门开在朝中庭那一面——所以每间房都能从环廊推门进去，
+     * 不需要穿过别的房间。
+     */
+    private static void room(BuildKit k, int nx, int nz, int t1, int t2, int h, int depth,
+            int y, String name, int idx) {
+        int dIn = h - depth;
+        int dOut = h - 1;
+        for (int t = t1; t <= t2; t++) {
+            for (int d = dIn; d <= dOut; d++) {
+                int x = nx != 0 ? nx * d : t;
+                int z = nz != 0 ? nz * d : t;
+                boolean edge = t == t1 || t == t2 || d == dIn || d == dOut;
+                if (!edge) {
+                    for (int up = 1; up <= 6; up++) {
+                        k.set(x, y + up, z, null);
+                    }
+                    continue;
+                }
+                for (int up = 1; up <= 7; up++) {
+                    k.set(x, y + up, z, Palette.STONE_BRICK);
+                }
+            }
+        }
+        // 门：内沿正中
+        int tm = (t1 + t2) / 2;
+        int dx = nx != 0 ? nx * dIn : tm;
+        int dz = nz != 0 ? nz * dIn : tm;
+        String facing = nz < 0 ? "south" : nz > 0 ? "north" : nx < 0 ? "east" : "west";
+        k.door(dx, y + 1, dz, facing, wood(idx), name);
+        // 窗：外沿每三格一扇，两格高
+        for (int t = t1 + 2; t <= t2 - 2; t += 3) {
+            int wx = nx != 0 ? nx * dOut : t;
+            int wz = nz != 0 ? nz * dOut : t;
+            k.set(wx, y + 4, wz, Palette.GLASS_GRAY);
+            k.set(wx, y + 5, wz, Palette.GLASS_GRAY);
+        }
+        furnish(k, nx, nz, t1, t2, dIn, dOut, y, name);
+    }
+
+    private static String wood(int idx) {
+        return switch (Math.floorMod(idx, 4)) {
+            case 1 -> "spruce";
+            case 2 -> "birch";
+            case 3 -> "dark_oak";
+            default -> "oak";
+        };
+    }
+
+    /**
+     * 房间里的东西。每一类都有自己的"脸"：酒窖是桶与架，抄经室是斜面的案，
+     * 议事厅是长桌与两排椅子。
+     *
+     * <p>写成一个 switch 而不是十几个方法：房间类型会一直加，加一类的成本
+     * 应该只有几行，而不是再写一个方法、再改一次调用。
+     */
+    private static void furnish(BuildKit k, int nx, int nz, int t1, int t2, int dIn, int dOut,
+            int y, String name) {
+        int cx = nx != 0 ? nx * (dIn + 2) : (t1 + t2) / 2;
+        int cz = nz != 0 ? nz * (dIn + 2) : (t1 + t2) / 2;
+        int tMid = (t1 + t2) / 2;
+        int dMid = (dIn + dOut) / 2;
+        switch (name) {
+            case "酒窖", "面粉仓", "柴房" -> {
+                for (int i = 0; i < 4; i++) {
+                    int t = t1 + 1 + i * Math.max(1, (t2 - t1 - 1) / 4);
+                    int x = nx != 0 ? nx * (dOut - 1) : t;
+                    int z = nz != 0 ? nz * (dOut - 1) : t;
+                    k.set(x, y + 1, z, Palette.BARREL);
+                    k.set(x, y + 2, z, i % 2 == 0 ? Palette.BARREL : Palette.HAY);
+                }
+                k.set(cx, y + 1, cz, Palette.HAY);
+            }
+            case "祭器库", "器皿室", "账房", "档案柜", "书库", "藏经阁", "禁书柜", "残卷室",
+                    "目录厅" -> {
+                for (int t = t1 + 1; t <= t2 - 1; t++) {
+                    int x = nx != 0 ? nx * (dOut - 1) : t;
+                    int z = nz != 0 ? nz * (dOut - 1) : t;
+                    for (int up = 1; up <= 3; up++) {
+                        k.set(x, y + up, z, Palette.BOOKSHELF);
+                    }
+                }
+                k.set(cx, y + 1, cz, name.equals("账房") ? Palette.LECTERN : Palette.CHEST);
+            }
+            case "抄经室", "装帧房" -> {
+                for (int i = 0; i < 3; i++) {
+                    int t = t1 + 2 + i * Math.max(1, (t2 - t1 - 3) / 3);
+                    int x = nx != 0 ? nx * (dMid - 1) : t;
+                    int z = nz != 0 ? nz * (dMid - 1) : t;
+                    k.set(x, y + 1, z, Palette.LECTERN);
+                    k.set(nx != 0 ? nx * (dMid + 1) : t, y + 1,
+                            nz != 0 ? nz * (dMid + 1) : t,
+                            Block.stairs("minecraft:oak_stairs", "south"));
+                }
+            }
+            case "阅览厅", "议事厅", "前厅", "顶坛前厅" -> {
+                // 长桌 + 两排座：一进门就知道这是"办事的地方"
+                for (int t = t1 + 2; t <= t2 - 2; t++) {
+                    int x = nx != 0 ? nx * dMid : t;
+                    int z = nz != 0 ? nz * dMid : t;
+                    k.set(x, y + 1, z, Palette.DARK_PLANK);
+                    for (int side = -1; side <= 1; side += 2) {
+                        int sx = nx != 0 ? nx * (dMid + 2 * side) : t;
+                        int sz = nz != 0 ? nz * (dMid + 2 * side) : t;
+                        if (Math.floorMod(t - t1, 2) == 0) {
+                            k.set(sx, y + 1, sz, Palette.OAK_PLANK);
+                        }
+                    }
+                }
+                k.set(nx != 0 ? nx * dIn : tMid, y + 7,
+                        nz != 0 ? nz * dIn : tMid, Palette.LANTERN_HANGING);
+            }
+            case "占卜室", "静修室", "香室", "净室", "小礼拜堂", "净手处" -> {
+                k.set(cx, y + 1, cz, Palette.STONE_CHISELED);
+                k.set(cx, y + 2, cz, Palette.GOLD);
+                for (int[] p : new int[][] {{-2, 0}, {2, 0}, {0, -2}, {0, 2}}) {
+                    k.set(cx + p[0], y + 1, cz + p[1], Palette.CANDLE);
+                }
+                k.set(cx, y + 7, cz, Palette.LANTERN_HANGING);
+            }
+            case "观星房" -> {
+                k.set(cx, y + 6, cz, Palette.GLASS_GRAY);
+                k.set(cx, y + 1, cz, Palette.STONE_CHISELED);
+                k.set(cx, y + 2, cz, Palette.CANDLE);
+            }
+            case "大祭司居所" -> {
+                for (int i = -2; i <= 2; i++) {
+                    int x = nx != 0 ? nx * (dOut - 2) : tMid + i;
+                    int z = nz != 0 ? nz * (dOut - 2) : tMid + i;
+                    k.set(x, y + 1, z, Palette.WOOL_RED);
+                }
+                k.set(cx, y + 1, cz, Palette.CHEST);
+                k.set(cx, y + 7, cz, Palette.LANTERN_HANGING);
+            }
+            case "书房", "更衣", "侍者房", "休息室", "书记处", "侍从房" -> {
+                k.set(cx, y + 1, cz, Palette.DARK_PLANK);
+                k.set(cx + 1, y + 1, cz, Block.stairs("minecraft:oak_stairs", "east"));
+                k.set(nx != 0 ? nx * (dOut - 1) : t1 + 1, y + 1,
+                        nz != 0 ? nz * (dOut - 1) : t1 + 1, Palette.CHEST);
+            }
+            case "药柜", "油坊" -> {
+                for (int t = t1 + 1; t <= t2 - 1; t++) {
+                    int x = nx != 0 ? nx * (dOut - 1) : t;
+                    int z = nz != 0 ? nz * (dOut - 1) : t;
+                    k.set(x, y + 1, z, Palette.CAULDRON);
+                }
+            }
+            default -> k.set(cx, y + 1, cz, Palette.BARREL);
+        }
+        k.set(cx, y + 7, cz, Palette.LANTERN_HANGING);
     }
 
     /** 这一层的楼梯在哪个 z 上（楼板要在这里开洞）。 */
