@@ -175,6 +175,67 @@ public final class Scene {
         return list;
     }
 
+    /**
+     * 转 90° 的整数倍，返回一个新的场景。
+     *
+     * <p>渲染器是固定的等轴视角，只有一个方向。要看背面、看侧面，就得把场景转过来。
+     * 转的时候方块状态也要跟着转——楼梯的 {@code facing}、原木的 {@code axis}。
+     * 只转坐标不转朝向的话，屋顶会变成一片横七竖八的半砖，比不转还糟。
+     *
+     * @param quarter 逆时针转几个 90°
+     */
+    public Scene rotated(int quarter) {
+        int q = Math.floorMod(quarter, 4);
+        if (q == 0) {
+            return this;
+        }
+        Scene out = new Scene();
+        for (Entry e : entries()) {
+            int x = e.x();
+            int z = e.z();
+            for (int i = 0; i < q; i++) {
+                int nx = z;
+                int nz = -x;
+                x = nx;
+                z = nz;
+            }
+            out.set(x, e.y(), z, rotateBlock(e.block(), q));
+        }
+        return out;
+    }
+
+    private static Block rotateBlock(Block b, int q) {
+        if (b.props().isEmpty()) {
+            return b;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String part : b.props().split(",")) {
+            String[] kv = part.split("=", 2);
+            if (kv.length != 2) {
+                continue;
+            }
+            String k = kv[0].trim();
+            String v = kv[1].trim();
+            for (int i = 0; i < q; i++) {
+                if (k.equals("facing")) {
+                    v = switch (v) {
+                        case "north" -> "west";
+                        case "west" -> "south";
+                        case "south" -> "east";
+                        default -> "north";
+                    };
+                } else if (k.equals("axis")) {
+                    v = v.equals("x") ? "z" : v.equals("z") ? "x" : v;
+                }
+            }
+            if (sb.length() > 0) {
+                sb.append(',');
+            }
+            sb.append(k).append('=').append(v);
+        }
+        return Block.of(b.id(), sb.toString());
+    }
+
     public long key(int x, int y, int z) {
         if (x < -LIMIT || x > LIMIT || z < -LIMIT || z > LIMIT || y < -256 || y > 1791) {
             throw new IllegalArgumentException("坐标超出场景范围：" + x + "," + y + "," + z);

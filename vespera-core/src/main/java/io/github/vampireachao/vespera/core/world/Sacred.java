@@ -867,39 +867,33 @@ final class Sacred {
                     side > 0 ? hx + 1 : -hx, floor + 4, (wz1 + wz2) / 2 + 2, null);
         }
 
-        // -- 4) 正门廊：八柱、额枋、山花，伸出一个开间 -----------------------
+        // -- 4) 正门廊：八柱、额枋、山花 -------------------------------------
         //
-        // 上一版的山花是"贴在立面上的一层三角形"——柱子在外面，屋顶却在墙里，
-        // 人站在柱廊下抬头是空的。门廊必须是伸出主体的一段：柱子、额枋、山花一起
-        // 往前挪十二格，山花才有厚度，才有"从这里进去"这件事。
+        // 门廊只有六格深，原因很实在：它再往南伸，就盖到最高一级台地的大台阶头上了。
+        // 台阶从 y=5 一格一格爬到 y=10，头顶正好是门廊的地板——人爬到第八级就撞头。
+        // 所以门廊退到台面标高（y=10），台阶爬到台面就接上，中间不再有悬空的地板。
         int pz1 = z2 + 1;
-        int pz2 = z2 + 12;
-        // 平台与一级踏跺
+        int pz2 = z2 + 6;
+        // 门廊地面：与最高一级台面同高，只是换了铺装
         for (int z = pz1; z <= pz2; z++) {
             for (int x = -15; x <= 15; x++) {
-                k.set(x, floor, z, Math.abs(x) <= 3 ? Palette.CARPET_RED
+                k.set(x, floor - 1, z, Math.abs(x) <= 3 ? Palette.CARPET_RED
                         : Palette.STONE_CHISELED);
             }
         }
-        for (int x = -15; x <= 15; x++) {
-            k.set(x, floor - 1, pz2 + 1, Palette.STONE_CHISELED);
-        }
-        // 八根柱：柱础放大两格，柱头贴金
+        // 八根柱：站在台面上，柱头贴金
         for (int i = 0; i < 8; i++) {
             int x = -14 + i * 4;
-            k.fill(x - 1, floor + 1, pz2 - 1, x + 1, floor + 1, pz2, Palette.STONE_CHISELED);
-            k.fill(x, floor + 2, pz2 - 1, x, floor + 15, pz2, Palette.STONE_CHISELED);
-            k.set(x, floor + 16, pz2 - 1, Palette.GOLD);
-            k.set(x, floor + 16, pz2, Palette.GOLD);
+            k.fill(x - 1, floor, pz2 - 1, x + 1, floor, pz2, Palette.STONE_CHISELED);
+            k.fill(x, floor + 1, pz2 - 1, x, floor + 14, pz2, Palette.STONE_CHISELED);
+            k.set(x, floor + 15, pz2 - 1, Palette.GOLD);
+            k.set(x, floor + 15, pz2, Palette.GOLD);
         }
-        // 额枋：柱头之上一圈，连同两侧的壁柱
-        k.fill(-16, floor + 17, pz1, 16, floor + 17, pz2 + 1, Palette.STONE_BRICK);
-        k.fill(-16, floor + 18, pz1, 16, floor + 18, pz2 + 1, Palette.STONE_CHISELED);
-        k.fill(-16, floor + 19, pz1, 16, floor + 19, pz2, Palette.STONE_BRICK);
-        // 山花：实心三角，进深十二格，坡比 3:4。
-        //
-        // 起坡八格、收到顶还剩十七格宽——那不是山花，那是一堵被削了角的墙。
-        // 一座三十三格宽的门廊，山花要起到十二格左右才收得成一个尖。
+        // 额枋与檐口
+        k.fill(-16, floor + 16, pz1, 16, floor + 16, pz2 + 1, Palette.STONE_BRICK);
+        k.fill(-16, floor + 17, pz1, 16, floor + 17, pz2 + 1, Palette.STONE_CHISELED);
+        k.fill(-16, floor + 18, pz1, 16, floor + 18, pz2, Palette.STONE_BRICK);
+        // 山花：实心三角，起十二格收成尖
         int pedRise = 12;
         int pedHalf = 16;
         for (int i = 0; i <= pedRise; i++) {
@@ -907,26 +901,23 @@ final class Sacred {
             int xb = pedHalf - i;
             for (int x = xa; x <= xb; x++) {
                 for (int z = pz1; z <= pz2; z++) {
-                    k.set(x, floor + 20 + i, z, Palette.STONE_BRICK);
+                    k.set(x, floor + 19 + i, z, Palette.STONE_BRICK);
                 }
             }
-            // 斜边压顶：一圈凿制石，远看才有轮廓
             for (int z = pz1; z <= pz2; z++) {
-                k.set(xa, floor + 20 + i, z, Palette.STONE_CHISELED);
-                k.set(xb, floor + 20 + i, z, Palette.STONE_CHISELED);
+                k.set(xa, floor + 19 + i, z, Palette.STONE_CHISELED);
+                k.set(xb, floor + 19 + i, z, Palette.STONE_CHISELED);
             }
         }
-        // 正面：一扇圆窗 + 一枚金印
         for (int x = -2; x <= 2; x++) {
-            for (int yy = floor + 22; yy <= floor + 25; yy++) {
+            for (int yy = floor + 21; yy <= floor + 24; yy++) {
                 k.set(x, yy, pz2, Palette.GLASS_GRAY);
             }
         }
-        k.set(0, floor + 26, pz2, Palette.GOLD);
-        // 顶尖：一块压顶石与一枚金饰
-        k.fill(-2, floor + 20 + pedRise, pz1, 2, floor + 20 + pedRise, pz2,
+        k.set(0, floor + 25, pz2, Palette.GOLD);
+        k.fill(-2, floor + 19 + pedRise, pz1, 2, floor + 19 + pedRise, pz2,
                 Palette.STONE_CHISELED);
-        k.set(0, floor + 21 + pedRise, pz2, Palette.GOLD);
+        k.set(0, floor + 20 + pedRise, pz2, Palette.GOLD);
         // 正门：两格高，装深色橡木门扇
         k.door(0, floor + 1, z2, "south", "dark_oak", "王座厅正门");
         for (int x : new int[] {-2, 2}) {
@@ -953,6 +944,10 @@ final class Sacred {
         int tz = -272;
         k.fill(-9, floor + 1, tz - 9, 9, wallTop + 6, tz + 9, Palette.STONE_BRICK);
         k.carve(-8, floor + 1, tz - 8, 8, wallTop + 5, tz + 8);
+        // 塔的南面开一道大券。塔不是"立在厅里的一根柱子"——它是王座的龛：
+        // 原来四面封死，五级台阶与金座都砌在里头，从大厅看不见也走不进。
+        k.carve(-6, floor + 1, tz + 9, 6, floor + 9, tz + 9);
+        k.carve(-5, floor + 1, tz + 10, 5, floor + 8, tz + 10);
         k.crenellate(-9, tz - 9, 9, tz + 9, wallTop + 7, Palette.STONE_BRICK);
         for (int[] b : new int[][] {{-9, tz - 9}, {9, tz - 9}, {-9, tz + 9}, {9, tz + 9}}) {
             k.fill(b[0], floor + 1, b[1], b[0], wallTop + 6, b[1], Palette.STONE_CHISELED);
@@ -1021,13 +1016,20 @@ final class Sacred {
         }
 
         // -- 8) 王座 ----------------------------------------------------------
-        int seatZ = z1 + 12;
+        // 王座龛：五级台从大厅地面一级一级抬到金座。
+        //
+        // 原来是五块各自五格深的实心台，从 z=-266 铺到 -262，而金座摆在 -274——
+        // 座在半空，台阶又堵在门口，人走进券洞就上不去。现在改成"一级一格、
+        // 越往上越窄"，每一级都从龛门口一路铺到座前。
+        int seatZ = -274;
         for (int i = 0; i < 5; i++) {
-            k.fill(-9 + i, floor + 1 + i, seatZ + 8 - i, 9 - i, floor + 1 + i, seatZ + 12 - i,
-                    Palette.STONE_CHISELED);
+            int y = floor + 1 + i;
+            int zs = -262 - 3 * i;
+            k.fill(-9 + i, y, zs - 2, 9 - i, y, zs, Palette.STONE_CHISELED);
         }
-        k.fill(-2, floor + 6, seatZ, 2, floor + 7, seatZ + 2, Palette.GOLD);
-        k.fill(-3, floor + 8, seatZ, 3, floor + 13, seatZ, Palette.STONE_CHISELED);
+        // 金座与背屏
+        k.fill(-2, 17, seatZ, 2, 18, seatZ + 2, Palette.GOLD);
+        k.fill(-3, 20, seatZ - 2, 3, 26, seatZ - 2, Palette.STONE_CHISELED);
         for (int x : new int[] {-6, 6}) {
             k.fill(x, floor + 6, seatZ + 7, x, floor + 7, seatZ + 7, Palette.STONE_BRICK);
             k.set(x, floor + 8, seatZ + 7, Palette.CAMPFIRE);
