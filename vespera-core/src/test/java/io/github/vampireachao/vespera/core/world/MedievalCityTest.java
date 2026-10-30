@@ -187,7 +187,8 @@ class MedievalCityTest {
             if (Math.abs(x - cx) <= 3 || Math.abs(z - cz) <= 3) {
                 continue;
             }
-            Block block = scene().get(x, 20, z);
+            // 顶阁那一层：拱廊三层都有券洞，只有在实墙上才量得出"墙是闭的"
+            Block block = scene().get(x, 24, z);
             if (block == null) {
                 holes++;
             }

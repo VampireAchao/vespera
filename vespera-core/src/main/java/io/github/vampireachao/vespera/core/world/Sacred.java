@@ -1522,6 +1522,122 @@ final class Sacred {
         return 3 + row;
     }
 
+    // -- 外立面：三层拱廊 + 一层顶阁 --------------------------------------------
+
+    /** 外立面总高三十一格：三层拱廊各八格，顶阁七格。 */
+    private static final int FACADE_H = 31;
+    /**
+     * 开间数。罗马是八十个；我们的周长约四百八十格，四十八个正好一格十格，
+     * 再密就成了一排牙，再疏就不成节奏。
+     */
+    private static final int FACADE_BAYS = 48;
+    /** 墙壳由内到外四层，每层差一格——薄了漏光，厚了看不出券洞有多深。 */
+    private static final double FACADE_SHELL = 0.0125;
+
+    /**
+     * 角斗场的外立面：三层拱廊加一层顶阁。
+     *
+     * <p>为什么非做四层不可：一整面二十四格高的砂岩从远处看就是一圈灰带，
+     * 眼睛量不出它有多高，也认不出这是罗马的斗兽场还是随便一座围栏。真实的
+     * 斗兽场靠三样东西立住：<b>券洞的节奏</b>（八十个开间等距排开）、
+     * <b>柱式的递进</b>（下重上轻）、<b>顶阁的实墙</b>（拱到此为止，上面是墙）。
+     * 三样凑齐，人才会在照片上认出它。
+     *
+     * <p>券洞不是画的，是真的凹进去两格：外面两层空着，里面两层砌暗色石头。
+     * 于是远看是黑洞、近看有厚度——贴一张"拱形壁纸"永远做不出这个。
+     */
+    private static void arenaFacade(BuildKit k, int cx, int cz) {
+        int n = 720;
+        double[] gx = new double[n];
+        double[] gz = new double[n];
+        double[] arc = new double[n];
+        double total = 0;
+        for (int i = 0; i < n; i++) {
+            double a = 2 * Math.PI * i / n;
+            gx[i] = Math.cos(a);
+            gz[i] = Math.sin(a);
+            if (i > 0) {
+                total += Math.hypot(ARENA_RX * (gx[i] - gx[i - 1]),
+                        ARENA_RZ * (gz[i] - gz[i - 1]));
+            }
+            arc[i] = total;
+        }
+        double bayW = total / FACADE_BAYS;
+
+        for (int i = 0; i < n; i++) {
+            int bay = Math.min(FACADE_BAYS - 1, (int) (arc[i] / bayW));
+            double c = arc[i] - bay * bayW - bayW / 2;
+            boolean pier = Math.abs(c) > bayW / 2 - 1.1;
+
+            for (int layer = 0; layer <= 3; layer++) {
+                double r = 1.0 + layer * FACADE_SHELL;
+                int x = cx + (int) Math.round(ARENA_RX * r * gx[i]);
+                int z = cz + (int) Math.round(ARENA_RZ * r * gz[i]);
+                int axis = Math.min(Math.abs(x - cx), Math.abs(z - cz));
+                boolean gate = axis <= 3;
+                boolean inner = layer <= 1;
+
+                for (int y = 0; y < FACADE_H; y++) {
+                    if (y >= 24) {
+                        // 顶阁：实墙、长方形窗、半露方柱。拱到这里为止
+                        if (y >= 26 && y <= 27 && Math.abs(c) <= 1.4) {
+                            if (!inner) {
+                                continue;
+                            }
+                            k.set(x, y, z, Palette.DEEPSLATE_TILE);
+                            continue;
+                        }
+                        k.set(x, y, z, pier ? Palette.STONE_CHISELED : Palette.SANDSTONE);
+                        continue;
+                    }
+                    if (gate) {
+                        // 四座中轴门：中间三格七格高，两侧各两格五格高
+                        if (y <= (axis <= 1 ? 6 : 4)) {
+                            continue;
+                        }
+                        k.set(x, y, z, Palette.STONE_CHISELED);
+                        continue;
+                    }
+                    int base = y < 9 ? 0 : y < 17 ? 9 : 17;
+                    boolean cornice = y == 8 || y == 16 || y == 23;
+                    int archTop = Math.min(23, base + 4
+                            + (int) Math.round(Math.sqrt(Math.max(0, 9 - c * c))));
+                    if (Math.abs(c) <= 3.0 && y <= archTop) {
+                        if (!inner) {
+                            continue;
+                        }
+                        // 洞里砌深色：同色的话，券洞只是墙上一块浅色补丁，不成"洞"
+                        k.set(x, y, z, Palette.DEEPSLATE_TILE);
+                        continue;
+                    }
+                    k.set(x, y, z, cornice || pier
+                            ? Palette.STONE_CHISELED : Palette.SANDSTONE);
+                }
+            }
+
+            // 腰线与檐口：一整圈挑出一格。没有这条线，三十一格高的墙是糊成一片的
+            for (int y : new int[] {8, 16, 23, 30}) {
+                int ex = cx + (int) Math.round(ARENA_RX * 1.045 * gx[i]);
+                int ez = cz + (int) Math.round(ARENA_RZ * 1.045 * gz[i]);
+                k.set(ex, y, ez, Palette.STONE_CHISELED);
+            }
+            if (pier) {
+                // 半露柱：开间之间往外凸一格，柱身比墙浅、柱头比墙亮
+                int px = cx + (int) Math.round(ARENA_RX * 1.05 * gx[i]);
+                int pz = cz + (int) Math.round(ARENA_RZ * 1.05 * gz[i]);
+                for (int y = 0; y < 24; y++) {
+                    boolean capital = y == 7 || y == 8 || y == 15 || y == 16 || y == 22 || y == 23;
+                    k.set(px, y, pz, capital ? Palette.STONE_CHISELED : Palette.ANDESITE_POLISHED);
+                }
+                k.set(px, 24, pz, Palette.STONE_CHISELED);
+                // 梁托与桅杆：罗马用二百四十个，撑一张能收放的遮阳篷。
+                // 桅杆不撑布，它就只是桅杆；但不立桅杆，顶阁就只是一圈墙
+                k.set(px, FACADE_H - 1, pz, Palette.STONE_CHISELED);
+                k.fill(px, FACADE_H, pz, px, FACADE_H + 4, pz, Palette.SPRUCE_FENCE);
+            }
+        }
+    }
+
     /**
      * 罗马式角斗场：椭圆看台、四座门、八道台阶、沙地、地下关押区。
      *
@@ -1529,58 +1645,8 @@ final class Sacred {
      * 沙地上被放逐的不是战俘，是"不该留在城里的人"。
      */
     static void colosseum(BuildKit k, int cx, int cz) {
-        int wallH = 24;
 
-        // 外墙：按角度参数化。
-        // 用 dx/dz 包围盒去判椭圆，一定会漏掉四个极点——要求 |dx|>82，
-        // 而循环只走到 80。东西两极整段消失，南北各缺 39 格。
-        for (double deg = 0; deg < 360; deg += 0.5) {
-            double t = Math.toRadians(deg);
-            for (double s = 1.0; s <= 1.076; s += 0.025) {
-                int x = cx + (int) Math.round(ARENA_RX * Math.sqrt(s) * Math.cos(t));
-                int z = cz + (int) Math.round(ARENA_RZ * Math.sqrt(s) * Math.sin(t));
-                boolean gate = Math.abs(x - cx) <= 3 || Math.abs(z - cz) <= 3;
-                for (int y = 0; y < wallH; y++) {
-                    if (gate && y <= 4) {
-                        continue;
-                    }
-                    boolean cornice = y == 7 || y == 15 || y == wallH - 1;
-                    Block block = cornice ? Palette.STONE_CHISELED
-                            : (((x + z) & 7) == 0 ? Palette.STONE_BRICK : Palette.SANDSTONE);
-                    k.set(x, y, z, block);
-                }
-                if (gate) {
-                    // 门洞上方的拱
-                    k.set(x, 5, z, Palette.STONE_CHISELED);
-                } else if ((x + z) % 5 == 0) {
-                    k.set(x, 4, z, Palette.DARK_PLANK);
-                    k.set(x, 12, z, Palette.DARK_PLANK);
-                    k.set(x, 20, z, Palette.DARK_PLANK);
-                }
-            }
-        }
-
-        // 壁柱：每六格一道，贴着墙外皮往外凸两格。
-        // 二十四格高的墙如果只有一层砂岩，从远处看就是一圈灰带——没有竖线，
-        // 眼睛量不出它有多高。柱子只加在墙外面，不动墙身，所以不会漏光。
-        for (double deg = 0; deg < 360; deg += 0.5) {
-            double t = Math.toRadians(deg);
-            int x = cx + (int) Math.round(ARENA_RX * Math.cos(t));
-            int z = cz + (int) Math.round(ARENA_RZ * Math.sin(t));
-            if (Math.abs(x - cx) <= 4 || Math.abs(z - cz) <= 4) {
-                continue;
-            }
-            if (Math.floorMod(x + z, 6) != 0) {
-                continue;
-            }
-            for (double s = 1.0; s <= 1.05; s += 0.02) {
-                int px = cx + (int) Math.round(ARENA_RX * Math.sqrt(s) * Math.cos(t));
-                int pz = cz + (int) Math.round(ARENA_RZ * Math.sqrt(s) * Math.sin(t));
-                for (int y = 0; y <= wallH - 2; y++) {
-                    k.set(px, y, pz, y % 8 == 0 ? Palette.STONE_CHISELED : Palette.ANDESITE_POLISHED);
-                }
-            }
-        }
+        arenaFacade(k, cx, cz);
 
         // 看台：实心台地。
         // 行距 (0.90-0.55)/16，最外一排恰好收在 e=0.81；再往外是回廊，
@@ -1609,7 +1675,8 @@ final class Sacred {
                 int surface = arenaSurface(e);
                 int top = surface - 1;
                 // 门洞位置留成隧道：下五格空，上面回填，从外面看仍是完整的看台
-                int from = gate ? 5 : 0;
+                // 门洞通高与立面对齐：立面上开七格，这里就只从第七格往上回填
+                int from = gate ? 7 : 0;
                 for (int y = from; y <= top; y++) {
                     Block block;
                     if (y != top) {
@@ -1640,11 +1707,13 @@ final class Sacred {
                         break;
                     }
                     if (u * u + v * v > ARENA_SAND) {
-                        for (int y = 0; y <= 4; y++) {
+                        for (int y = 0; y <= 6; y++) {
                             k.set(x, y, z, null);
                         }
+                        // 铺石只在隧道里铺。原来这一句写在判断外面，从场心一路铺到墙外，
+                        // 四条石道横穿沙地，看上去像跑道
+                        k.set(x, -1, z, Palette.COBBLE);
                     }
-                    k.set(x, -1, z, Palette.COBBLE);
                 }
             }
         }
@@ -1657,13 +1726,6 @@ final class Sacred {
             }
         }
 
-        // 檐口的桅杆：用来撑遮阳篷
-        for (int i = 0; i < 12; i++) {
-            double angle = i / 12.0 * Math.PI * 2;
-            int x = cx + (int) Math.round(Math.cos(angle) * (ARENA_RX + 2));
-            int z = cz + (int) Math.round(Math.sin(angle) * (ARENA_RZ + 2));
-            k.fill(x, wallH, z, x, wallH + 5, z, Palette.SPRUCE_FENCE);
-        }
         k.bump("角斗场");
         k.bump("地标");
     }
@@ -1705,7 +1767,8 @@ final class Sacred {
                 // 一次只抬一格：护墙那两格落差靠这里补平，不许凭空跳上去
                 h = Math.min(want[i], h + 1);
                 if (want[i] == 0) {
-                    k.set(x, -1, z, Palette.STONE_CHISELED);
+                    // 沙地上不许铺石。原来从 p=40 就开始铺，八条石道从场心射出去，
+                    // 把整片沙地切成四块——那是跑道，不是竞技场
                     continue;
                 }
                 // 挖到与脚下齐平，上面留两格净空
@@ -1763,155 +1826,255 @@ final class Sacred {
         k.bump("放逐点");
     }
 
+    /** 贵宾席与主持台的地面高度：比第一排高四格，从沙地一眼就看得见。 */
+    private static final int LOGE_FLOOR = 6;
+
     /**
-     * 贵宾席：东侧圆环正中，东门正上方。
+     * 贵宾席：东中轴上，一座从沙地立起来的石台，前脸悬在场边。
      *
-     * <p>位置不是挑出来的：门在中轴上，包厢也在中轴上，从沙地抬头看，包厢就悬在
-     * 那道门的拱顶上。西侧对称的位置给主持人——两座台子对着摆，中间那片看台
-     * 才是"给普通人"的。
+     * <p>为什么不在看台顶上（原来就在那儿）：包厢的意义是"离沙地最近"。
+     * 罗马的 pulvinar 放在竞技场围墙后面的荣誉席上，抬头就是皇帝——不是放在
+     * 最后一排。放上去了，它就只有"高"，没有"贵"。
      *
-     * <p>台基底下的东门隧道要留着（y 0..4 那七格），填实之前先跳过它。
+     * <p>所以这一版把石台直接推进场边：前脸立在沙地上，前沿挑出两格，四根柱子
+     * 撑一片瓦顶，一根金栏杆压住边。从沙地抬头，它是一块压在头顶的黑影；
+     * 从看台望去，它把东门整个罩住了。
+     *
+     * <p>怎么上去：从沙地沿北侧一道七级石梯直上。这道梯子就在场子里，
+     * 所有人都看得见"贵宾是从哪儿进去的"——这比藏一条内部通道更像古罗马。
      */
     private static void vipBox(BuildKit k, int cx, int cz) {
-        int x1 = cx + 70;
-        int x2 = cx + 80;
+        int x1 = cx + 42;
+        int x2 = cx + 58;
         int z1 = cz - 8;
         int z2 = cz + 8;
-        int floor = ARENA_TOP;
-        int eave = floor + 5;
+        int lip = cx + 40;
+        int floor = LOGE_FLOOR;
+        int eave = floor + 7;
 
+        // 台基：从沙地起一整块实心石台。东门隧道从它底下穿过去
         for (int x = x1; x <= x2; x++) {
             for (int z = z1; z <= z2; z++) {
+                boolean tunnel = Math.abs(z - cz) <= 3;
                 for (int y = 0; y < floor; y++) {
-                    if (y <= 4 && Math.abs(z - cz) <= 3) {
+                    if (tunnel) {
                         continue;
                     }
-                    k.set(x, y, z, Palette.STONE_BRICK);
+                    k.set(x, y, z, y == floor - 1
+                            ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
                 }
                 k.set(x, floor, z, Palette.DARK_PLANK);
-                for (int y = floor + 1; y < eave; y++) {
-                    k.set(x, y, z, null);
-                }
-                k.set(x, eave, z, Palette.SPRUCE_PLANK);
             }
         }
-        // 屋顶：不封平。平顶从外面看就是一块棕板，站在场里也认不出那是包厢
-        k.roof(x1 - 1, z1 - 1, x2 + 1, z2 + 1, eave, true, Palette.TILE_STAIR,
-                Palette.PLASTER_CREAM, 1);
-
-        // 前沿：一道矮栏，坐着能看见沙地。再高就挡视线，再矮就危险
-        for (int z = z1; z <= z2; z++) {
-            k.set(x1, floor + 1, z, z % 3 == 0 ? Palette.STONE_BRICK : Palette.STONE_CHISELED);
+        // 前沿挑出两格：底下一排石托，把这块悬空的部分交代清楚
+        for (int x = lip; x < x1; x++) {
+            for (int z = z1; z <= z2; z++) {
+                k.set(x, floor, z, Palette.DARK_PLANK);
+                k.set(x, floor - 1, z, Palette.STONE_CHISELED);
+                k.set(x, floor - 2, z, Palette.STONE_BRICK);
+            }
         }
-        // 三面墙：南墙开门，其余开窗
+
+        // 前沿：金栏杆。压住边，也告诉场上"这一圈不属于你"
+        for (int z = z1; z <= z2; z++) {
+            k.set(lip, floor + 1, z, Math.floorMod(z, 4) == 0
+                    ? Palette.GOLD : Palette.STONE_CHISELED);
+        }
+        // 四根柱子撑瓦顶。柱头包金
+        for (int z = z1 + 1; z <= z2 - 1; z += 4) {
+            k.fill(lip + 1, floor + 1, z, lip + 1, eave - 1, z, Palette.SPRUCE_LOG);
+            k.set(lip + 1, eave - 1, z, Palette.GOLD);
+        }
+        // 后墙与两侧：抹灰挂旗
         for (int y = floor + 1; y < eave; y++) {
+            for (int z = z1; z <= z2; z++) {
+                k.set(x2, y, z, Palette.PLASTER_CREAM);
+            }
             for (int x = x1; x <= x2; x++) {
                 k.set(x, y, z1, Palette.PLASTER_CREAM);
                 k.set(x, y, z2, Palette.PLASTER_CREAM);
             }
-            for (int z = z1; z <= z2; z++) {
-                k.set(x2, y, z, Palette.PLASTER_CREAM);
+        }
+        for (int y = floor + 2; y <= floor + 5; y++) {
+            for (int z = cz - 3; z <= cz + 3; z++) {
+                k.set(x2, y, z, y % 2 == 0 ? Palette.WOOL_RED : Palette.WOOL_BLACK);
             }
         }
-        for (int z = cz - 4; z <= cz + 4; z += 4) {
-            k.set(x2 - 0, floor + 3, z, Palette.GLASS_GRAY);
+        // 平顶：罗马的包厢是石头的，不是瓦房。
+        // 盖一片瓦，它就是场边一间小屋；压一块石板，它才是一座看台
+        for (int x = lip; x <= x2; x++) {
+            for (int z = z1; z <= z2; z++) {
+                k.set(x, eave, z, Palette.STONE_CHISELED);
+            }
+        }
+        for (int x = lip; x <= x2; x++) {
+            k.set(x, eave + 1, z1, Palette.STONE_BRICK);
+            k.set(x, eave + 1, z2, Palette.STONE_BRICK);
+        }
+        for (int z = z1; z <= z2; z++) {
+            k.set(lip, eave + 1, z, Palette.STONE_BRICK);
+            k.set(x2, eave + 1, z, Palette.STONE_BRICK);
+        }
+        for (int x : new int[] {lip, x2}) {
+            for (int z : new int[] {z1, z2}) {
+                k.set(x, eave + 2, z, Palette.GOLD);
+            }
+        }
+        // 前沿垂一圈红白布幔：皇宫的包厢在赛期要挂布，这是它和石头看台唯一的区别
+        for (int z = z1; z <= z2; z++) {
+            k.set(lip, eave - 1, z, (z & 1) == 0 ? Palette.WOOL_RED : Palette.WOOL_CREAM);
+            k.set(lip + 1, eave - 1, z, Palette.WOOL_RED);
+        }
+        // 外三面压一道红饰带：从场外看，包厢和看台之间需要一条"这是皇宫"的界线
+        for (int z = z1; z <= z2; z++) {
+            k.set(x2, eave - 1, z, (z & 3) == 0 ? Palette.WOOL_RED : Palette.STONE_CHISELED);
+        }
+        for (int x = x1; x <= x2; x++) {
+            k.set(x, eave - 1, z1, (x & 3) == 0 ? Palette.WOOL_RED : Palette.STONE_CHISELED);
+            k.set(x, eave - 1, z2, (x & 3) == 0 ? Palette.WOOL_RED : Palette.STONE_CHISELED);
+        }
+        // 侧墙与后墙加壁柱：一整面灰墙是没有尺度的
+        for (int z = z1 + 3; z <= z2 - 3; z += 4) {
+            k.fill(x2, floor + 1, z, x2, eave - 1, z, Palette.DARK_LOG);
         }
         for (int x = x1 + 3; x <= x2 - 3; x += 4) {
-            k.set(x, floor + 3, z1, Palette.GLASS_GRAY);
-            k.set(x, floor + 3, z2, Palette.GLASS_GRAY);
+            k.fill(x, floor + 1, z1, x, eave - 1, z1, Palette.DARK_LOG);
+            k.fill(x, floor + 1, z2, x, eave - 1, z2, Palette.DARK_LOG);
         }
-        // 四角立柱：把这座木头盒子撑起来
-        for (int x : new int[] {x1, x2}) {
-            for (int z : new int[] {z1, z2}) {
-                k.fill(x, floor + 1, z, x, eave, z, Palette.DARK_LOG);
+
+        // 里面：红毯一直铺到前沿，尽头一座两级台、一张金座
+        for (int x = lip + 1; x <= x2 - 1; x++) {
+            k.set(x, floor, cz, Palette.CARPET_RED);
+        }
+        k.fill(x2 - 4, floor, cz - 1, x2 - 2, floor, cz + 1, Palette.STONE_CHISELED);
+        k.fill(x2 - 5, floor, cz, x2 - 5, floor, cz, Palette.STONE_CHISELED);
+        k.set(x2 - 3, floor + 1, cz, Palette.WOOL_RED);
+        k.set(x2 - 3, floor + 2, cz, Palette.GOLD);
+        // 两侧条凳：随行的元老坐这儿
+        for (int z : new int[] {z1 + 2, z2 - 2}) {
+            k.fill(x1 + 4, floor + 1, z, x2 - 5, floor + 1, z, Palette.OAK_PLANK);
+        }
+        // 吊灯四盏、案上一只金杯
+        for (int z : new int[] {z1 + 3, cz - 2, cz + 2, z2 - 3}) {
+            k.set(x1 + 5, eave - 2, z, Palette.CHAIN);
+            k.set(x1 + 5, eave - 3, z, Palette.LANTERN_HANGING);
+        }
+        k.set(x1 + 6, floor + 1, cz - 4, Palette.CHEST);
+        for (int z : new int[] {cz - 6, cz + 6}) {
+            k.set(lip + 3, floor + 1, z, Palette.LANTERN);
+        }
+
+        // 上座梯：北侧七级，从沙地直上包厢。梯子就在场子里，人人看得见
+        String rise = "south";
+        for (int i = 0; i <= 6; i++) {
+            int x = lip + i;
+            k.set(x, i, z2 + 1, Block.stairs("minecraft:stone_brick_stairs", rise));
+            if (i > 0) {
+                k.set(x, i - 1, z2 + 1, Palette.STONE_BRICK);
             }
         }
-        // 门：南墙，正对回廊
-        for (int x = cx + 76; x <= cx + 77; x++) {
+        // 梯顶进包厢：北墙开一道两格宽的门
+        for (int x = lip + 5; x <= lip + 6; x++) {
             for (int y = floor + 1; y <= floor + 2; y++) {
                 k.set(x, y, z2, null);
             }
         }
-
-        // 里面：一条红毯、三排长凳、两盏吊灯、后墙的旗
-        for (int z = z1 + 2; z <= z2 - 2; z++) {
-            k.set(cx + 74, floor, z, Palette.CARPET_RED);
-        }
-        for (int i = 0; i < 3; i++) {
-            int bx = x2 - 2 - i * 2;
-            k.fill(bx, floor + 1, z1 + 1, bx, floor + 1, z2 - 1, Palette.OAK_PLANK);
-            if (i > 0) {
-                k.fill(bx, floor, z1 + 1, bx, floor, z2 - 1, Palette.OAK_PLANK);
-                k.fill(bx, floor + 1, z1 + 1, bx, floor + 1, z2 - 1, Palette.OAK_PLANK);
-            }
-        }
-        for (int z : new int[] {z1 + 3, z2 - 3}) {
-            k.set(cx + 73, eave - 1, z, Palette.LANTERN_HANGING);
-        }
-        for (int y = floor + 2; y <= floor + 4; y++) {
-            for (int z = cz - 2; z <= cz + 2; z++) {
-                k.set(x2, y, z, y % 2 == 0 ? Palette.WOOL_RED : Palette.WOOL_BLACK);
-            }
-        }
+        k.set(lip + 4, floor + 3, z2, Palette.STONE_CHISELED);
+        k.set(lip + 7, floor + 3, z2, Palette.STONE_CHISELED);
         k.bump("贵宾席");
     }
 
     /**
-     * 主持台：西侧，与贵宾席一东一西对着。
+     * 主持台：西中轴上，与贵宾席一东一西对着。
      *
-     * <p>贵宾席是封起来的，这座是敞的——主持人和听差的本来就该站在风里，
-     * 让沙地上的人看得见他们。
+     * <p>贵宾席是封的，这座是敞的——传令官本来就该站在风里，让沙地上的人
+     * 看得见是谁在喊开始。四根柱子挑一块红白条纹布棚，正中一座石讲台。
+     *
+     * <p>讲台必须朝东：他喊的是场上的人，不是背后的城墙。方向错了，
+     * 那就是一座摆在台上的书桌。
      */
     private static void hostStand(BuildKit k, int cx, int cz) {
-        int x1 = cx - 80;
-        int x2 = cx - 70;
+        int x1 = cx - 58;
+        int x2 = cx - 42;
         int z1 = cz - 8;
         int z2 = cz + 8;
-        int floor = ARENA_TOP;
-        int eave = floor + 5;
+        int lip = cx - 40;
+        int floor = LOGE_FLOOR;
+        int eave = floor + 6;
 
         for (int x = x1; x <= x2; x++) {
             for (int z = z1; z <= z2; z++) {
+                boolean tunnel = Math.abs(z - cz) <= 3;
                 for (int y = 0; y < floor; y++) {
-                    if (y <= 4 && Math.abs(z - cz) <= 3) {
+                    if (tunnel) {
                         continue;
                     }
-                    k.set(x, y, z, Palette.STONE_BRICK);
+                    k.set(x, y, z, y == floor - 1
+                            ? Palette.STONE_CHISELED : Palette.STONE_BRICK);
                 }
                 k.set(x, floor, z, Palette.OAK_PLANK);
             }
         }
-
-        // 栏杆：沿前沿，以及南北两侧的里半边。外侧留给回廊，人能走进来
+        // 前沿挑出两格与石托，和贵宾席对称
+        for (int x = x2 + 1; x <= lip; x++) {
+            for (int z = z1; z <= z2; z++) {
+                k.set(x, floor, z, Palette.OAK_PLANK);
+                k.set(x, floor - 1, z, Palette.STONE_CHISELED);
+                k.set(x, floor - 2, z, Palette.STONE_BRICK);
+            }
+        }
+        // 前沿矮栏：中间留四格，传令官要能探身出去喊
         for (int z = z1; z <= z2; z++) {
-            k.set(x2, floor + 1, z, Palette.STONE_CHISELED);
+            if (Math.abs(z - cz) <= 2) {
+                continue;
+            }
+            k.set(lip, floor + 1, z, Palette.STONE_CHISELED);
         }
-        for (int x = x1; x <= cx - 74; x++) {
-            k.set(x, floor + 1, z1, Palette.STONE_CHISELED);
-            k.set(x, floor + 1, z2, Palette.STONE_CHISELED);
-        }
-        // 四根柱子 + 条纹布棚
+        // 四根柱子
         for (int x : new int[] {x1 + 1, x2 - 1}) {
             for (int z : new int[] {z1 + 1, z2 - 1}) {
                 k.fill(x, floor + 1, z, x, eave - 1, z, Palette.SPRUCE_LOG);
             }
         }
+        // 红白条纹布棚：整片铺满。原来只铺了四周一圈边框，
+        // 看上去是两根红白横梁架在柱子上，不像棚
         for (int x = x1; x <= x2; x++) {
             for (int z = z1; z <= z2; z++) {
-                if (x == x1 || x == x2 || z == z1 || z == z2) {
-                    k.set(x, eave, z, ((x + z) & 1) == 0 ? Palette.WOOL_RED : Palette.WOOL_CREAM);
-                }
+                k.set(x, eave, z, ((x + z) & 1) == 0
+                        ? Palette.WOOL_RED : Palette.WOOL_CREAM);
             }
         }
-        // 正中一张讲台，台上一盏灯、一本册子
-        k.fill(cx - 77, floor + 1, cz - 1, cx - 75, floor + 1, cz + 1, Palette.STONE_CHISELED);
-        k.set(cx - 76, floor + 2, cz, Palette.LECTERN);
-        k.set(cx - 76, floor + 2, cz - 2, Palette.LANTERN);
-        k.set(cx - 76, floor + 2, cz + 2, Palette.LANTERN);
-        // 工作人员的条凳：靠外墙那半边
+        // 后墙：挂一面场旗，也让背后不是空的
+        for (int y = floor + 1; y < eave; y++) {
+            for (int z = z1 + 4; z <= z2 - 4; z++) {
+                k.set(x1, y, z, y % 2 == 0 ? Palette.WOOL_RED : Palette.WOOL_BLACK);
+            }
+        }
+        // 讲台：三级石阶，台面朝东
+        k.fill(x2 - 5, floor + 1, cz - 1, x2 - 3, floor + 1, cz + 1, Palette.STONE_CHISELED);
+        k.set(x2 - 4, floor + 2, cz, Block.of("minecraft:lectern", "facing=east"));
+        k.set(x2 - 4, floor + 2, cz - 2, Palette.LANTERN);
+        k.set(x2 - 4, floor + 2, cz + 2, Palette.LANTERN);
+        // 火盆：开场前点着，全场都看得见那一点火
+        k.fill(x2 - 3, floor + 1, z1 + 2, x2 - 2, floor + 1, z1 + 2, Palette.STONE_CHISELED);
+        k.set(x2 - 3, floor + 2, z1 + 2, Palette.CAMPFIRE);
+        // 传令官的条凳：靠外墙那半边
         for (int z = z1 + 2; z <= z2 - 2; z += 3) {
-            k.set(x1 + 2, floor + 1, z, Palette.OAK_PLANK);
             k.set(x1 + 3, floor + 1, z, Palette.OAK_PLANK);
+        }
+
+        // 上台的梯子：同样在北侧，七级，从沙地直上
+        for (int i = 0; i <= 6; i++) {
+            int x = lip - i;
+            k.set(x, i, z2 + 1, Block.stairs("minecraft:stone_brick_stairs", "south"));
+            if (i > 0) {
+                k.set(x, i - 1, z2 + 1, Palette.STONE_BRICK);
+            }
+        }
+        for (int x = lip - 6; x <= lip - 5; x++) {
+            for (int y = floor + 1; y <= floor + 2; y++) {
+                k.set(x, y, z2, null);
+            }
         }
         k.bump("主持台");
     }
@@ -1922,8 +2085,9 @@ final class Sacred {
      * <p>原来是往看台里开门的——门外是实心的石头，那间房谁也进不去。
      */
     private static void rooms(BuildKit k, int cx, int cz) {
-        int x1 = cx + 52;
-        int x2 = cx + 66;
+        // 往东挪了八格：贵宾席的台基现在占到 x+58，原来这间房有一半压在台基里
+        int x1 = cx + 62;
+        int x2 = cx + 76;
         int z1 = cz - 14;
         int z2 = cz - 4;
         for (int x = x1; x <= x2; x++) {
@@ -1948,12 +2112,12 @@ final class Sacred {
             }
         }
         // 门：南墙，正对门洞（隧道在 z=cz-3..cz+3，y 0..4）
-        for (int x = cx + 56; x <= cx + 57; x++) {
+        for (int x = cx + 66; x <= cx + 67; x++) {
             for (int y = 1; y <= 3; y++) {
                 k.set(x, y, z2, null);
             }
         }
-        k.fill(cx + 58, 0, z2 - 1, cx + 65, 0, z2 - 1, Palette.SPRUCE_PLANK);
+        k.fill(cx + 68, 0, z2 - 1, cx + 75, 0, z2 - 1, Palette.SPRUCE_PLANK);
         // 值更的那几格：床、桌、灯、牌、柜
         k.set(x2 - 2, 1, z1 + 2, Palette.WOOL_RED);
         k.set(x2 - 3, 1, z1 + 2, Palette.WOOL_RED);

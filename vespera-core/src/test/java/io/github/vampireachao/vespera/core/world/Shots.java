@@ -63,6 +63,37 @@ class Shots {
     }
 
     @Test
+    void colosseum() throws IOException {
+        if (!System.getProperty("shots", "").contains("colosseum")) {
+            return;
+        }
+        Scene s = city();
+        List<String> made = new ArrayList<>();
+        int x0 = 96;
+        int z0 = 114;
+        int x1 = 274;
+        int z1 = 272;
+        made.addAll(five("角斗场", s, x0, z0, x1, z1, 1400, 1000, 40));
+        made.add(shotNamed("角斗场-5东门与贵宾席", s, 0, 205, 150, 285, 240, 1100, 880, 40));
+        for (String p : made) {
+            System.out.println("SHOT " + p);
+        }
+    }
+
+    @Test
+    void colosseumDebug() throws IOException {
+        if (!System.getProperty("shots", "").contains("arenadebug")) {
+            return;
+        }
+        Scene s = city();
+        System.out.println("SHOT " + shotNamed("调试-场心", s, 0, 130, 140, 240, 250, 1100, 900, 40,
+                cut(s, 9)));
+        System.out.println("SHOT " + shotNamed("调试-东立面", s, 0, 255, 150, 290, 240, 900, 900, 40));
+        System.out.println("SHOT " + shotNamed("调试-主持台", s, 0, 132, 176, 156, 214, 900, 760, 40));
+        System.out.println("SHOT " + shotNamed("调试-包厢内", s, 0, 218, 178, 250, 210, 900, 760, 40));
+    }
+
+    @Test
     void innDebug() throws IOException {
         if (!System.getProperty("shots", "").contains("inndebug")) {
             return;

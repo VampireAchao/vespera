@@ -70,17 +70,17 @@ class CirculationTest {
     }
 
     @Test
-    @DisplayName("贵宾席与主持台都上得去：从回廊进门")
+    @DisplayName("贵宾席与主持台都上得去：各自从沙地一道石梯直上")
     void boxesAreReachable() {
         WalkAudit w = arena(6);
         w.walk(CX, 0, CZ + 20);
-        // 贵宾席在东，主持台在西，都在中轴线上、都压着门洞
-        int boxY = w.standY(CX + 75, CZ, 21);
-        assertEquals(19, boxY, "贵宾席地板高度不对");
-        assertTrue(w.reached(CX + 75, boxY, CZ), "贵宾席进不去");
-        int standY = w.standY(CX - 72, CZ + 4, 21);
-        assertEquals(19, standY, "主持台地板高度不对");
-        assertTrue(w.reached(CX - 72, standY, CZ + 4), "主持台上不去");
+        // 贵宾席在东、主持台在西，都降到场边（台面 y=6，人站 7）
+        int boxY = w.standY(CX + 50, CZ, 12);
+        assertEquals(7, boxY, "贵宾席地板高度不对");
+        assertTrue(w.reached(CX + 50, boxY, CZ), "贵宾席进不去");
+        int standY = w.standY(CX - 50, CZ + 4, 12);
+        assertEquals(7, standY, "主持台地板高度不对");
+        assertTrue(w.reached(CX - 50, standY, CZ + 4), "主持台上不去");
     }
 
     @Test
@@ -88,9 +88,10 @@ class CirculationTest {
     void serviceRoomsAreReachable() {
         WalkAudit w = arena(6);
         w.walk(CX, 0, CZ + 20);
-        int roomY = w.standY(CX + 60, CZ - 9, 8);
+        // 场务室往东挪了八格，避让贵宾席的台基
+        int roomY = w.standY(CX + 68, CZ - 9, 8);
         assertEquals(1, roomY, "场务室地板高度不对：" + roomY);
-        assertTrue(w.reached(CX + 60, roomY, CZ - 9), "场务室进不去（门开在看台里）");
+        assertTrue(w.reached(CX + 68, roomY, CZ - 9), "场务室进不去（门开在看台里）");
         int cageY = w.standY(CX + 5, CZ + 25, -2);
         assertEquals(-3, cageY, "兽笼地板高度不对：" + cageY);
         assertTrue(w.reached(CX + 5, cageY, CZ + 25), "兽笼下不去");
