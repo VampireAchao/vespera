@@ -837,75 +837,418 @@ final class Landmarks {
     // -- 天平与钥匙（银行 + 典当行） -------------------------------------------
 
     /**
-     * 银行与典当行二合一：一层是柜台与账，地下是库。
+     * 银行与典当行二合一：一座两层的账房，一层对外的客户厅，二层账房，地下是库。
      *
-     * <p>它同时干三件事：换钱、押物、替人查一件东西的来路。第三件才是委托的入口。
+     * <p>形制照意大利的 counting house 来。这一行的全部家当本来只是一张长凳——
+     * 「banca」就是柜台，银行家的钱赔光了，公会当街把他的长凳砸断，那叫 bancarotta，
+     * 也就是破产。所以这座楼的第一件事不是"气派"，是<b>柜台</b>：进门穿过大厅，
+     * 正对一道横贯整面墙的长柜台，柜台上有铁栅窗口，柜台后面是职员与账架。
+     *
+     * <p>第二件事是<b>那扇铁门</b>。柜台正中断开两格，装一扇铁门，门后就是向下的
+     * 石梯。玩家的记忆点全在这儿：钱在柜台后面，柜台后面有一扇锁着的门。
+     *
+     * <p>第三件事是<b>典当窗口挂红布</b>。中世纪佛罗伦萨的当铺在门拱上挂一块红布，
+     * 那是"公开的高利贷者"的标记——不需要识字的招牌。
+     *
+     * <p>旧版是一间三十七乘二十三的盒子：西墙凿一个两格宽的洞当门，屋顶按"进深一半"
+     * 起坡，二十格高，把整栋楼压成一口倒扣的锅；地下库房的斜道没有垫实也没有梯子，
+     * 人根本下不去。这里整栋重砌。
      */
     static void bankAndPawn(BuildKit k, int x, int z) {
-        int w = 37;
-        int d = 23;
-        k.claim("银行", x - 1, z - 1, x + w, z + d);
-        k.fill(x - 1, -3, z - 1, x + w, -1, z + d, Palette.STONE_BRICK);
-        k.walls(x, 0, z, x + w - 1, 11, z + d - 1, Palette.STONE_BRICK);
-        k.carve(x + 1, 0, z + 1, x + w - 2, 10, z + d - 2);
-        // 正门朝西（面向南大道）
-        for (int y = 0; y <= 4; y++) {
-            k.set(x, y, z + d / 2 - 1, null);
-            k.set(x, y, z + d / 2, null);
-        }
-        k.fill(x - 1, 5, z + d / 2 - 2, x, 5, z + d / 2 + 1, Palette.STONE_CHISELED);
-        // 三个柜台：石砌半墙，上开窗口
-        for (int i = 0; i < 3; i++) {
-            int bx = x + 6 + i * 9;
-            k.fill(bx, 0, z + 6, bx + 5, 2, z + 6, Palette.STONE_BRICK);
-            k.fill(bx, 3, z + 6, bx + 5, 3, z + 6, Palette.OAK_PLANK);
-            k.fill(bx + 1, 3, z + 6, bx + 4, 5, z + 6, null);
-            k.set(bx + 2, 3, z + 6, Palette.GOLD);
-        }
-        // 账桌与鉴定台
-        k.fill(x + 4, 0, z + 14, x + 12, 0, z + 15, Palette.DARK_PLANK);
-        k.set(x + 8, 0, z + 16, Palette.SMITHING);
-        k.set(x + 10, 0, z + 16, Palette.ANVIL);
-        k.set(x + 14, 0, z + 16, Palette.CHEST);
-        // 灯与告示牌
-        for (int i = 0; i < 4; i++) {
-            k.fill(x + 3, 6, z + 3 + i * 5, x + 3, 8, z + 3 + i * 5, Palette.SPRUCE_FENCE);
-            k.set(x + 3, 9, z + 3 + i * 5, Palette.LANTERN_HANGING);
-        }
-        k.set(x + 2, 3, z + 2, Palette.SIGN);
-        k.set(x + 3, 3, z + 2, Palette.SIGN);
-        // 地下库房：单铁门、铁栅内衬
-        for (int dx = 8; dx <= 28; dx++) {
-            for (int dz = 8; dz <= 20; dz++) {
-                for (int y = -3; y <= -2; y++) {
-                    k.set(x + dx, y, z + dz, null);
-                }
-            }
-        }
-        for (int i = 0; i < 7; i++) {
-            k.set(x + 4, -1 - i, z + 10 + i, null);
-        }
-        for (int i = 0; i < 7; i++) {
-            k.set(x + 4, -4 - i, z + 10 + i, Palette.COBBLE);
-        }
-        for (int dx = 8; dx <= 28; dx++) {
-            for (int dz = 8; dz <= 20; dz++) {
-                k.set(x + dx, -4, z + dz, Palette.STONE_BRICK);
-                boolean edge = dx == 8 || dx == 28 || dz == 8 || dz == 20;
-                if (edge) {
-                    for (int y = -3; y <= -2; y++) {
-                        k.set(x + dx, y, z + dz, Palette.STONE_BRICK);
+        int x1 = x - 1;
+        int x2 = x + 37;
+        int z1 = z - 1;
+        int z2 = z + 23;
+        int deck = 7;
+        int eave = 12;
+        k.claim("银行", x1, z1, x2, z2);
+        // 正门在北墙。棚子是后建的、柱距三格，门要落在两根柱子之间
+        int doorX = x + 19;
+
+        // 地面与墙。地基只铺一层：再往下要挖库房，填实了就得再凿开
+        k.fill(x1 - 1, -1, z1 - 1, x2 + 1, -1, z2 + 1, Palette.STONE_BRICK);
+        k.walls(x1, 0, z1, x2, eave, z2, Palette.STONE_BRICK);
+        k.carve(x1 + 1, 0, z1 + 1, x2 - 1, deck - 1, z2 - 1);
+        k.carve(x1 + 1, deck + 1, z1 + 1, x2 - 1, eave - 1, z2 - 1);
+
+        // 立面：整石的 palazzo。壁柱每五格一根、腰线一道、檐口一道
+        for (int y = 0; y <= eave; y++) {
+            for (int xx = x1; xx <= x2; xx++) {
+                for (int zz = z1; zz <= z2; zz++) {
+                    boolean edge = xx == x1 || xx == x2 || zz == z1 || zz == z2;
+                    if (!edge) {
+                        continue;
+                    }
+                    boolean band = y == deck || y == eave;
+                    int along = (zz == z1 || zz == z2) ? xx : zz;
+                    if (band || Math.floorMod(along, 5) == 0) {
+                        k.set(xx, y, zz, Palette.STONE_CHISELED);
                     }
                 }
             }
         }
-        for (int i = 0; i < 5; i++) {
-            k.set(x + 10 + i * 4, -3, z + 18, Palette.CHEST);
+        // 壁柱往外凸一格：没有这条竖线，三十九格宽的石墙是一整片灰
+        for (int y = 0; y <= eave; y++) {
+            for (int xx = x1; xx <= x2; xx++) {
+                if (Math.floorMod(xx, 5) != 0) {
+                    continue;
+                }
+                k.set(xx, y, z1 - 1, Palette.STONE_CHISELED);
+                k.set(xx, y, z2 + 1, Palette.STONE_CHISELED);
+            }
+            for (int zz = z1; zz <= z2; zz++) {
+                if (Math.floorMod(zz, 5) != 0) {
+                    continue;
+                }
+                k.set(x1 - 1, y, zz, Palette.STONE_CHISELED);
+                k.set(x2 + 1, y, zz, Palette.STONE_CHISELED);
+            }
         }
-        k.fill(x + 18, -3, z + 20, x + 22, -2, z + 20, Palette.IRON_BARS);
-        k.roof(x - 2, z - 2, x + w + 1, z + d + 1, 12, true, Palette.SLATE_STAIR,
-                Palette.STONE_BRICK, 1);
+
+        // 勒脚：底下三格既换料、又往外长一格。
+        //
+        // 只换颜色不够——同一面墙上深浅差一档，远看还是平的。真正让 palazzo 站住的是
+        // 底座比墙宽：眼睛先看见一道台阶，才知道上面那堵墙是"立"着的。
+        for (int y = 0; y <= 2; y++) {
+            for (int xx = x1; xx <= x2; xx++) {
+                for (int zz = z1; zz <= z2; zz++) {
+                    boolean edge = xx == x1 || xx == x2 || zz == z1 || zz == z2;
+                    if (edge) {
+                        Block now = k.scene.get(xx, y, zz);
+                        if (now != null && now.id().contains("stone_bricks")) {
+                            k.set(xx, y, zz, Palette.ANDESITE);
+                        }
+                    }
+                }
+            }
+            // 外扩那一圈。西面门口三格留空，让出一小块门斗
+            for (int xx = x1 - 1; xx <= x2 + 1; xx++) {
+                // 门口四格让开：台基比墙宽一圈，不留口子的话门就被自家勒脚堵死
+                if (xx < doorX - 1 || xx > doorX + 2) {
+                    k.set(xx, y, z1 - 1, Palette.ANDESITE);
+                }
+                k.set(xx, y, z2 + 1, Palette.ANDESITE);
+            }
+            for (int zz = z1 - 1; zz <= z2 + 1; zz++) {
+                k.set(x2 + 1, y, zz, Palette.ANDESITE);
+                if (zz >= z + 10 && zz <= z + 13) {
+                    continue;
+                }
+                k.set(x1 - 1, y, zz, Palette.ANDESITE);
+            }
+        }
+        // 勒脚上沿一条线脚，把台基和墙分开
+        for (int xx = x1 - 1; xx <= x2 + 1; xx++) {
+            k.set(xx, 3, z1 - 1, Palette.STONE_CHISELED);
+            k.set(xx, 3, z2 + 1, Palette.STONE_CHISELED);
+        }
+        for (int zz = z1 - 1; zz <= z2 + 1; zz++) {
+            k.set(x2 + 1, 3, zz, Palette.STONE_CHISELED);
+            if (zz < z + 10 || zz > z + 13) {
+                k.set(x1 - 1, 3, zz, Palette.STONE_CHISELED);
+            }
+        }
+        // 檐口：整圈挑出一格。二十四格高的墙要有压顶，否则屋顶像扣上去的盖子
+        for (int xx = x1 - 1; xx <= x2 + 1; xx++) {
+            k.set(xx, eave, z1 - 1, Palette.STONE_CHISELED);
+            k.set(xx, eave, z2 + 1, Palette.STONE_CHISELED);
+        }
+        for (int zz = z1 - 1; zz <= z2 + 1; zz++) {
+            k.set(x1 - 1, eave, zz, Palette.STONE_CHISELED);
+            k.set(x2 + 1, eave, zz, Palette.STONE_CHISELED);
+        }
+
+        // 正门朝北。
+        //
+        // 原来朝西——那是打算面向"南大道"，可西边早就被一排铺面封死了：
+        // 出门三格就是一堵两格高的邻居墙，门外那块地永远走不进来。图上看着有门，
+        // 进服推门只能对着墙。北面是环市集退下来的空地，那才是真有人走的一面。
+        k.gate(doorX, 0, z1, "north", true, "dark_oak", "银行正门");
+        // 券顶与横匾
+        for (int y = 2; y <= 3; y++) {
+            for (int dx = -2; dx <= 3; dx++) {
+                k.set(doorX + dx, y, z1, Palette.STONE_CHISELED);
+            }
+        }
+        for (int dx = -1; dx <= 2; dx++) {
+            k.set(doorX + dx, 4, z1, Palette.SIGN);
+        }
+        // 门前檐：外挑一格，门就有了"框"
+        for (int dx = -2; dx <= 3; dx++) {
+            k.set(doorX + dx, 5, z1 - 1, Palette.STONE_CHISELED);
+        }
+        k.set(doorX, 4, z1 - 1, Palette.LANTERN_HANGING);
+        k.set(doorX - 2, 3, z1 - 1, Palette.GOLD);
+        k.set(doorX + 3, 3, z1 - 1, Palette.GOLD);
+
+        // 门前不用另铺广场：这面墙外面就是环城路（RING=120），城里最热闹的一条。
+        // 我一开始在这儿铺了块"银行广场"，把马路挖开重铺——那是把街当院子用。
+        // 银行本来就该开在大街上，门口那排柱子是环路的柱廊，门落在两根柱子之间就行
+
+        // 一层：客户厅。地面铺成棋盘，柱子撑住楼板
+        for (int xx = x1 + 1; xx <= x + 30; xx++) {
+            for (int zz = z1 + 1; zz <= z2 - 1; zz++) {
+                k.set(xx, -1, zz, Math.floorMod(xx + zz, 2) == 0
+                        ? Palette.STONE_CHISELED : Palette.ANDESITE_POLISHED);
+            }
+        }
+        for (int xx : new int[] {x1 + 11, x1 + 21}) {
+            for (int zz = z1 + 3; zz <= z2 - 3; zz += 6) {
+                k.fill(xx, 1, zz, xx, deck - 1, zz, Palette.STONE_BRICK);
+                k.set(xx, 1, zz, Palette.STONE_CHISELED);
+                k.set(xx, deck - 1, zz, Palette.STONE_CHISELED);
+            }
+        }
+        // 靠门一侧的长凳：坐着等号的人。银行里最多的就是等待
+        for (int zz = z1 + 3; zz <= z1 + 8; zz++) {
+            k.set(x1 + 2, 0, zz, Block.stairs(Palette.SLATE_STAIR, "east"));
+        }
+        for (int zz = z2 - 8; zz <= z2 - 3; zz++) {
+            k.set(x1 + 2, 0, zz, Block.stairs(Palette.SLATE_STAIR, "east"));
+        }
+
+        // 门前的小广场。银行这门手艺本来就在广场上——一张长凳、一架天平，
+        // 当街换钱。后来才搬进屋子，但"门口要有一块能站人的地"这条没变。
+        // 西边原本是一片长草的空地，门开在那儿等于开在野地里
+        for (int xx = x1 - 12; xx <= x1 - 2; xx++) {
+            for (int zz = z1 + 2; zz <= z2 - 2; zz++) {
+                boolean belt = xx <= x1 - 10;
+                k.set(xx, -1, zz, belt ? Palette.STONE_BRICK
+                        : (Math.floorMod(xx + zz, 3) == 0 ? Palette.ANDESITE : Palette.COBBLE));
+            }
+        }
+        // 广场中央立一根兑换牌：石柱顶一块牌子，旁边挂一串钱
+        int px = x1 - 7;
+        int pz = z + 11;
+        k.fill(px, 0, pz, px, 3, pz, Palette.STONE_CHISELED);
+        k.set(px, 4, pz, Palette.SIGN);
+        k.set(px - 1, 3, pz, Palette.GOLD);
+        k.set(px + 1, 3, pz, Palette.LANTERN);
+        // 两张当街的长凳：等着开门的人
+        for (int zz : new int[] {z + 4, z + 18}) {
+            k.fill(x1 - 5, 0, zz, x1 - 4, 0, zz, Palette.OAK_PLANK);
+        }
+
+        bankCounter(k, x, z, x1, x2, z1, z2);
+        bankVault(k, x, z, x1, x2, z1, z2);
+        bankUpstairs(k, x, z, x1, x2, z1, z2, deck, eave);
+
+        // 屋面：坡高六格。旧版按"进深一半"起坡，二十格高
+        k.hipRoof(x1, z1, x2, z2, eave + 1, 3, Palette.SLATE_STAIR, Palette.SLATE, 1);
+        // 女儿墙：屋顶收成缓坡，再压一圈矮墙。这样从街上抬头，看到的是一条水平线，
+        // 不是一片斜坡——公共建筑靠水平线立威
+        for (int xx = x1 - 1; xx <= x2 + 1; xx++) {
+            k.set(xx, eave + 1, z1 - 1, Palette.STONE_CHISELED);
+            k.set(xx, eave + 1, z2 + 1, Palette.STONE_CHISELED);
+        }
+        for (int zz = z1 - 1; zz <= z2 + 1; zz++) {
+            k.set(x1 - 1, eave + 1, zz, Palette.STONE_CHISELED);
+            k.set(x2 + 1, eave + 1, zz, Palette.STONE_CHISELED);
+        }
         k.bump("银行");
+    }
+
+    /** 柜台、铁门、上二层的梯子。银行的全部体面都在这三样上。 */
+    private static void bankCounter(BuildKit k, int x, int z, int x1, int x2, int z1, int z2) {
+        int bx = x + 31;
+        int doorZ = z + 11;
+        // 柜台横贯东半面：从 z1+5 一直到 z2-5，正中断开两格做铁门
+        for (int zz = z1 + 5; zz <= z2 - 5; zz++) {
+            if (Math.abs(zz - doorZ) <= 1) {
+                continue;
+            }
+            k.fill(bx, 0, zz, bx + 1, 0, zz, Palette.STONE_BRICK);
+            k.fill(bx, 1, zz, bx + 1, 1, zz, Palette.OAK_PLANK);
+            // 铁栅：每五格留三格窗口。窗口是钱过的地方，栅栏是人不许过的地方
+            if (Math.floorMod(zz - z1, 5) >= 3) {
+                for (int y = 2; y <= 4; y++) {
+                    k.set(bx, y, zz, Palette.IRON_BARS);
+                }
+            }
+            // 典当那半边挂红布：佛罗伦萨的当铺就是这么挂牌的
+            if (zz >= z2 - 8) {
+                k.set(bx, 5, zz, Palette.WOOL_RED);
+            } else {
+                k.set(bx, 5, zz, Palette.STONE_CHISELED);
+            }
+        }
+        // 柜台上：金堆、天平（用铁砧代）、账册、烛台
+        for (int i = 0; i < 4; i++) {
+            k.set(bx + 1, 2, z1 + 7 + i * 4, Palette.GOLD);
+        }
+        k.set(bx + 1, 2, z1 + 6, Palette.ANVIL);
+        k.set(bx + 1, 2, z2 - 6, Palette.LECTERN);
+        k.set(bx + 1, 3, z2 - 6, Palette.CANDLE);
+        // 柜台后的账架：一墙的皮面账本
+        for (int zz = z1 + 6; zz <= z2 - 6; zz++) {
+            if (Math.abs(zz - doorZ) <= 2) {
+                continue;
+            }
+            k.set(x2 - 1, 2, zz, Palette.BOOKSHELF);
+            k.set(x2 - 1, 4, zz, Palette.BOOKSHELF);
+        }
+        k.set(x2 - 1, 1, z1 + 8, Palette.CHEST);
+        k.set(x2 - 1, 1, z2 - 8, Palette.CHEST);
+
+        // 铁门：柜台正中，两格宽。门后是一道向下的石梯
+        k.carve(bx, 0, doorZ - 1, bx + 1, 3, doorZ + 1);
+        k.fill(bx, 4, doorZ - 1, bx + 1, 4, doorZ + 1, Palette.STONE_CHISELED);
+        k.gate(bx, 0, doorZ, "west", false, "iron", "库房门");
+        // 门框：整石收边，铁门嵌在里面
+        for (int dz : new int[] {-2, 2}) {
+            k.fill(bx, 0, doorZ + dz, bx, 3, doorZ + dz, Palette.STONE_CHISELED);
+        }
+
+        // 上二层：西墙根一道直跑，七级到楼板
+        int sx = x1 + 1;
+        for (int i = 0; i <= 6; i++) {
+            int zz = z1 + 9 - i;
+            for (int w = 0; w <= 1; w++) {
+                k.set(sx + w, i, zz, Block.stairs(Palette.SLATE_STAIR, "south"));
+                k.set(sx + w, Math.max(0, i - 1), zz, Palette.STONE_BRICK);
+            }
+        }
+    }
+
+    /** 地下库房：一道石梯下来，四壁整石，中间一座铁库。 */
+    private static void bankVault(BuildKit k, int x, int z, int x1, int x2, int z1, int z2) {
+        int vx1 = x + 16;
+        int vx2 = x + 36;
+        int vz1 = z + 6;
+        int vz2 = z + 20;
+        int floor = -6;
+        int top = -2;
+
+        // 真的把土挖掉。只 carve 不 excavate 的话，图上有洞、进服是实心
+        k.excavate(vx1, floor + 1, vz1, vx2, top, vz2);
+        k.fill(vx1, floor, vz1, vx2, floor, vz2, Palette.STONE_BRICK);
+        k.walls(vx1, floor + 1, vz1, vx2, top, vz2, Palette.STONE_BRICK);
+        // 天花板：一层的地面就是它的顶，再补一层，免得从上面看下去一眼到底
+        for (int xx = vx1; xx <= vx2; xx++) {
+            for (int zz = vz1; zz <= vz2; zz++) {
+                k.set(xx, -1, zz, Math.floorMod(xx + zz, 3) == 0
+                        ? Palette.STONE_CRACKED : Palette.STONE_BRICK);
+            }
+        }
+
+        // 下行石梯：从铁门进来，五级落到库房
+        int doorZ = z + 11;
+        int sx = x + 32;
+        for (int i = 0; i <= 5; i++) {
+            k.set(sx, -1 - i, doorZ + 1 + i, Block.stairs(Palette.SLATE_STAIR, "north"));
+            k.set(sx, Math.max(floor, -2 - i), doorZ + 1 + i, Palette.STONE_BRICK);
+        }
+        // 梯子两侧各留一格净空。
+        // 从第二级开始清：第一级旁边那一格正好是铁门的门槛，清了推门就掉下去
+        for (int i = 1; i <= 5; i++) {
+            k.set(sx - 1, -1 - i, doorZ + 1 + i, null);
+            k.set(sx + 1, -1 - i, doorZ + 1 + i, null);
+        }
+
+        // 库中库：一道铁栅隔开的内库，放最要紧的东西
+        int ix = vx2 - 8;
+        k.fill(ix, floor + 1, vz1 + 2, ix, top - 1, vz2 - 2, Palette.IRON_BARS);
+        k.carve(ix, floor + 1, vz1 + 6, ix, floor + 2, vz1 + 7);
+        k.set(ix, floor + 3, vz1 + 6, Palette.STONE_CHISELED);
+        k.set(ix, floor + 3, vz1 + 7, Palette.STONE_CHISELED);
+        // 铁栅后面：一排锁箱、一只金柜
+        for (int zz = vz1 + 3; zz <= vz2 - 3; zz += 2) {
+            k.set(vx2 - 2, floor + 1, zz, Palette.CHEST);
+        }
+        k.fill(vx2 - 5, floor + 1, vz1 + 8, vx2 - 4, floor + 2, vz1 + 9, Palette.IRON);
+        k.set(vx2 - 4, floor + 3, vz1 + 8, Palette.GOLD);
+        // 外间：钱袋、账簿、一只验金的砧
+        for (int i = 0; i < 5; i++) {
+            k.set(vx1 + 2 + i * 2, floor + 1, vz2 - 3, Palette.CHEST);
+        }
+        k.set(vx1 + 3, floor + 1, vz1 + 3, Palette.ANVIL);
+        k.set(vx1 + 5, floor + 1, vz1 + 3, Palette.BARREL);
+        for (int zz = vz1 + 4; zz <= vz2 - 4; zz += 5) {
+            k.set(vx1 + 8, top - 1, zz, Palette.LANTERN_HANGING);
+        }
+        // 天窗：一格铁栅，正午一道光打到库房中间
+        k.set(vx1 + 9, -1, vz1 + 7, Palette.IRON_BARS);
+        k.set(vx1 + 9, -2, vz1 + 7, null);
+        k.bump("银行库房");
+    }
+
+    /** 二层：一条走廊、两间办公室、一间档案室。 */
+    private static void bankUpstairs(BuildKit k, int x, int z, int x1, int x2, int z1, int z2,
+            int deck, int eave) {
+        // 楼板，楼梯井那一段留空
+        for (int xx = x1 + 1; xx <= x2 - 1; xx++) {
+            for (int zz = z1 + 1; zz <= z2 - 1; zz++) {
+                boolean well = xx <= x1 + 2 && zz >= z1 + 3 && zz <= z1 + 9;
+                if (!well) {
+                    k.set(xx, deck, zz, Palette.DARK_PLANK);
+                }
+            }
+        }
+        // 走廊贴西墙，两间办公室沿东侧排开，东端是档案室
+        int wall = x1 + 5;
+        k.fill(wall, deck + 1, z1 + 1, wall, eave - 1, z2 - 1, Palette.PLASTER_CREAM);
+        k.fill(wall, deck + 1, z + 11, x + 20, eave - 1, z + 11, Palette.PLASTER_CREAM);
+        k.door(wall, deck + 1, z1 + 5, "west", "spruce", "总管室门");
+        k.door(wall, deck + 1, z2 - 6, "west", "spruce", "首席室门");
+        // 办公室：一张长桌、两把椅子、一墙账本、一扇窗
+        for (int side = 0; side < 2; side++) {
+            int tz = side == 0 ? z1 + 5 : z2 - 6;
+            k.fill(wall + 3, deck + 1, tz - 2, wall + 7, deck + 1, tz - 2, Palette.DARK_PLANK);
+            k.set(wall + 4, deck + 1, tz - 1, Block.stairs(Palette.SHINGLE_STAIR, "north"));
+            k.set(wall + 6, deck + 1, tz - 1, Block.stairs(Palette.SHINGLE_STAIR, "north"));
+            k.set(wall + 6, deck + 2, tz - 2, Palette.LECTERN);
+            k.set(wall + 4, deck + 2, tz - 2, Palette.CANDLE);
+            k.set(wall + 8, deck + 1, tz, Palette.CHEST);
+            for (int zz = tz - 4; zz <= tz + 4; zz += 2) {
+                k.set(x2 - 1, deck + 1, zz, Palette.BOOKSHELF);
+            }
+        }
+        // 档案室：一排一排的账架，中间只留走道
+        for (int xx = x + 22; xx <= x2 - 3; xx += 3) {
+            for (int zz = z1 + 2; zz <= z2 - 2; zz++) {
+                k.set(xx, deck + 1, zz, Palette.BOOKSHELF);
+                k.set(xx, deck + 2, zz, Palette.BOOKSHELF);
+            }
+        }
+        // 窗：四面都开，一格宽两格高不算窗，得有三格、有窗台、有过梁。
+        // 一层朝街的窗一律带铁栅——钱庄的窗是防人的，不是观景的
+        for (int xx = x1 + 5; xx <= x2 - 6; xx += 7) {
+            bankWindow(k, xx, z1, true, deck);
+            bankWindow(k, xx, z2, true, deck);
+        }
+        for (int zz = z1 + 5; zz <= z2 - 6; zz += 7) {
+            if (Math.abs(zz - (z1 + 11)) <= 2) {
+                continue;
+            }
+            bankWindow(k, x1, zz, false, deck);
+            bankWindow(k, x2, zz, false, deck);
+        }
+        k.bump("银行账房");
+    }
+
+    /**
+     * 一扇临街的窗：窗台一块石、三格玻璃、上面一道过梁。
+     *
+     * <p>一层带铁栅、二层不带——这一条不是装饰，是这栋楼的态度：底下的钱有人惦记，
+     * 楼上的账本没人抢。
+     */
+    private static void bankWindow(BuildKit k, int x, int z, boolean alongX, int deck) {
+        for (int i = 0; i <= 1; i++) {
+            int px = alongX ? x + i : x;
+            int pz = alongX ? z : z + i;
+            // 一层：y4..5，带铁栅。窗放高一点，人够不着，栅栏才有用
+            k.set(px, 3, pz, Palette.STONE_CHISELED);
+            for (int y = 4; y <= 5; y++) {
+                k.set(px, y, pz, Palette.IRON_BARS);
+            }
+            k.set(px, 6, pz, Palette.STONE_CHISELED);
+            // 二层：y9..10，玻璃
+            k.set(px, deck + 1, pz, Palette.STONE_CHISELED);
+            for (int y = deck + 2; y <= deck + 3; y++) {
+                k.set(px, y, pz, Palette.GLASS);
+            }
+            k.set(px, deck + 4, pz, Palette.STONE_CHISELED);
+        }
     }
 
     /**

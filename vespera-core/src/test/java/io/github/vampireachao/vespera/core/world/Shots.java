@@ -94,6 +94,32 @@ class Shots {
     }
 
     @Test
+    void bank() throws IOException {
+        if (!System.getProperty("shots", "").contains("bank")) {
+            return;
+        }
+        Scene s = city();
+        List<String> made = new ArrayList<>();
+        made.addAll(five("银行", s, 19, 112, 65, 151, 1280, 940, 40));
+        made.add(shotNamed("银行-5入口（北立面）", s, 3, 33, 111, 55, 128, 1120, 860, 40));
+        for (String p : made) {
+            System.out.println("SHOT " + p);
+        }
+    }
+
+    @Test
+    void bankDebug() throws IOException {
+        if (!System.getProperty("shots", "").contains("bankdebug")) {
+            return;
+        }
+        Scene s = city();
+        System.out.println("SHOT " + shotNamed("调试-一层", s, 0, 19, 119, 65, 151, 1200, 900, 40,
+                cut(s, 6)));
+        System.out.println("SHOT " + shotNamed("调试-地下", s, 0, 19, 119, 65, 151, 1200, 900, 40,
+                cut(s, -2)));
+    }
+
+    @Test
     void innDebug() throws IOException {
         if (!System.getProperty("shots", "").contains("inndebug")) {
             return;

@@ -219,7 +219,7 @@ class MedievalCityTest {
         assertNotNull(scene().get(0, 3, -86), "演讲台没有台面");
         assertEquals("minecraft:iron_block", scene().get(-72, 1, -290).id(), "国库铁门不是铁");
         assertNotNull(scene().get(-40, 5, 265), "客栈二层没有楼板");
-        assertNotNull(scene().get(40, 2, 130), "银行没有柜台");
+        assertNotNull(scene().get(55, 1, 130), "银行没有柜台");
         assertNotNull(scene().get(85, 2, 99), "圣器库院墙没有立起来");
         assertEquals("minecraft:water", scene().get(134, -1, -282).id(), "府邸水池没有水");
         assertEquals("minecraft:iron_bars", scene().get(160, 2, -30).id(), "公会铁门不在巷中");
